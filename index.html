@@ -75,10 +75,15 @@
   .step-standard{border-color:#28a74522;background:#fff}
   .exclaim{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:#dc3545;color:#fff;font-weight:800;margin-left:6px}
 
-  .dashboard-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:20px}
+  .since-reset{display:flex;gap:12px;align-items:center;margin:10px 0 16px 0;font-size:12px;color:#444}
+  .since-reset .dot{width:6px;height:6px;border-radius:50%;background:var(--ekfc-red)}
+  .since-reset .muted{color:#777}
+
+  .dashboard-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;margin-bottom:20px}
   .metric-card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:15px;box-shadow:0 2px 4px rgba(0,0,0,.05)}
   .metric-value{font-size:28px;font-weight:bold;color:var(--ekfc-red);margin-bottom:5px}
   .metric-label{font-size:12px;color:var(--muted);text-transform:uppercase}
+  .metric-sub{font-size:11px;color:#555;margin-top:6px}
   .metric-change{font-size:11px;margin-top:5px}
   .positive{color:#28a745}.negative{color:#dc3545}
   .dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
@@ -140,13 +145,13 @@
           <div class="form-group"><label>Requester Name *</label><input type="text" value="Tobias Taubner"/></div>
           <div class="form-group">
             <label>Business Unit *</label>
-            <select>
+            <select id="buSelect">
               <option>DIA Lounges</option><option>East Wing Production</option><option>West Wing Production</option><option>Commercial Kitchen</option>
             </select>
           </div>
           <div class="form-group">
             <label>Request Type *</label>
-            <select>
+            <select id="typeSelect">
               <option>Health Claim Verification</option><option>Allergen Declaration Review</option>
               <option>Nutritional Analysis</option><option>Special Diet Menu Development</option>
             </select>
@@ -166,7 +171,7 @@
           <button class="submit-btn" onclick="submitRequest()">Submit Request</button>
 
           <div id="ticketInfo" class="ticket-info">
-            <strong>Ticket Created</strong><br/><span class="ticket-number">HD-2025-0142</span><br/>Track your request using this number
+            <strong>Ticket Created</strong><br/><span class="ticket-number" id="ticketNum">HD-2025-0142</span><br/>Track your request using this number
           </div>
         </div>
 
@@ -276,25 +281,54 @@
 
     <!-- ===== VP Dashboard ===== -->
     <div id="dashboard-view" class="content-area">
+      <div class="since-reset">
+        <span class="dot"></span>
+        <div><strong>Since reset:</strong> <span id="sinceResetStamp">—</span> <span class="muted">•</span> Elapsed <span id="sinceResetElapsed">—</span></div>
+        <div class="muted">| Window:</div>
+        <div><strong id="windowLen">15</strong> <span class="muted">min</span></div>
+        <div class="muted">| Created:</div><div><strong id="sinceCreated">0</strong></div>
+        <div class="muted">| Completed:</div><div><strong id="sinceCompleted">0</strong></div>
+      </div>
+
       <div class="dashboard-metrics">
-        <div class="metric-card"><div class="metric-value">37</div><div class="metric-label">Total Active Requests</div><div class="metric-change positive">Stable (target ≤ 40)</div></div>
-        <div class="metric-card"><div class="metric-value">94%</div><div class="metric-label">SLA Compliance</div><div class="metric-change positive">↑ 3% improvement</div></div>
-        <div class="metric-card"><div class="metric-value">3.2</div><div class="metric-label">Avg Days to Complete</div><div class="metric-change positive">↓ 0.5 days faster</div></div>
-        <div class="metric-card"><div class="metric-value">18.5</div><div class="metric-label">Avg Hours per Request</div><div class="metric-change negative">↑ 2.1 hours</div></div>
-        <div class="metric-card"><div class="metric-value">89%</div><div class="metric-label">First-Pass Acceptance</div><div class="metric-change positive">↑ 5% improvement</div></div>
+        <div class="metric-card">
+          <div id="mActive" class="metric-value">—</div>
+          <div class="metric-label">Total Active Requests</div>
+          <div class="metric-sub">Live</div>
+        </div>
+
+        <div class="metric-card">
+          <div id="mSla" class="metric-value">—</div>
+          <div class="metric-label">SLA Compliance</div>
+          <div class="metric-sub">Since reset</div>
+        </div>
+
+        <div class="metric-card">
+          <div id="mAvgDays" class="metric-value">—</div>
+          <div class="metric-label">Avg Days to Complete</div>
+          <div class="metric-sub">Since reset</div>
+        </div>
+
+        <div class="metric-card">
+          <div id="mSlaWin" class="metric-value">—</div>
+          <div class="metric-label">SLA Compliance</div>
+          <div class="metric-sub">Rolling window (<span id="winLenA">15</span> min)</div>
+        </div>
+
+        <div class="metric-card">
+          <div id="mAvgDaysWin" class="metric-value">—</div>
+          <div class="metric-label">Avg Days to Complete</div>
+          <div class="metric-sub">Rolling window (<span id="winLenB">15</span> min)</div>
+        </div>
       </div>
 
       <div class="dashboard-grid">
         <div class="panel">
           <h3 class="panel-title">Department Workload &amp; Performance</h3>
           <table class="table">
-            <thead><tr><th>Department</th><th>Open</th><th>Avg hrs/req</th></tr></thead>
-            <tbody>
-              <tr><td>S&amp;S</td><td>26</td><td>21.2</td></tr>
-              <tr><td>H&amp;D</td><td>23</td><td>15.8</td></tr>
-              <tr><td>Food Tech</td><td>17</td><td>24.5</td></tr>
-              <tr><td>Menu Dev</td><td>14</td><td>18.3</td></tr>
-              <tr><td>I&amp;I</td><td>11</td><td>12.7</td></tr>
+            <thead><tr><th>Department</th><th>Open</th><th>Avg hrs/req (age)</th></tr></thead>
+            <tbody id="tbodyDeptWorkload">
+              <tr><td>S&amp;S</td><td>—</td><td>—</td></tr>
             </tbody>
           </table>
         </div>
@@ -303,12 +337,8 @@
           <h3 class="panel-title">Priority Queue Status</h3>
           <table class="table">
             <thead><tr><th>Ticket</th><th>Type</th><th>Priority</th><th>Age</th></tr></thead>
-            <tbody>
-              <tr><td><strong>HD-2025-0142</strong></td><td>Allergen Review</td><td><span class="priority-badge priority-urgent">Urgent</span></td><td>4 hrs</td></tr>
-              <tr><td><strong>SS-2025-0385</strong></td><td>Recipe Standard</td><td><span class="priority-badge priority-urgent">Urgent</span></td><td>8 hrs</td></tr>
-              <tr><td><strong>FT-2025-0100</strong></td><td>Shelf Life</td><td><span class="priority-badge priority-high">High</span></td><td>2 days</td></tr>
-              <tr><td><strong>MD-2025-0257</strong></td><td>Menu Costing</td><td><span class="priority-badge priority-high">High</span></td><td>3 days</td></tr>
-              <tr><td><strong>II-2025-0089</strong></td><td>Forecast Analysis</td><td><span class="priority-badge priority-normal">Normal</span></td><td>5 days</td></tr>
+            <tbody id="tbodyPriority">
+              <tr><td>—</td><td>—</td><td>—</td><td>—</td></tr>
             </tbody>
           </table>
         </div>
@@ -317,12 +347,8 @@
           <h3 class="panel-title">Departmental Overtime</h3>
           <table class="table">
             <thead><tr><th>Department</th><th>FTE</th><th>Utilization</th><th>Overtime</th></tr></thead>
-            <tbody>
-              <tr><td>S&amp;S</td><td>12</td><td>92%</td><td>45 hrs</td></tr>
-              <tr><td>H&amp;D</td><td>8</td><td>88%</td><td>28 hrs</td></tr>
-              <tr><td>Food Tech</td><td>6</td><td>95%</td><td>52 hrs</td></tr>
-              <tr><td>Menu Dev</td><td>10</td><td>78%</td><td>15 hrs</td></tr>
-              <tr><td>I&amp;I</td><td>5</td><td>82%</td><td>22 hrs</td></tr>
+            <tbody id="tbodyOvertime">
+              <tr><td>S&amp;S</td><td>12</td><td>—</td><td>—</td></tr>
             </tbody>
           </table>
         </div>
@@ -331,11 +357,8 @@
           <h3 class="panel-title">Business Unit Request Analysis</h3>
           <table class="table">
             <thead><tr><th>Business Unit</th><th>Requests</th><th>Avg Time</th><th>SLA %</th></tr></thead>
-            <tbody>
-              <tr><td>East Wing</td><td>13</td><td>3.1 days</td><td>96%</td></tr>
-              <tr><td>West Wing</td><td>10</td><td>3.5 days</td><td>92%</td></tr>
-              <tr><td>DIA Lounges</td><td>7</td><td>2.8 days</td><td>98%</td></tr>
-              <tr><td>Commercial</td><td>7</td><td>3.9 days</td><td>89%</td></tr>
+            <tbody id="tbodyBU">
+              <tr><td>East Wing</td><td>—</td><td>—</td><td>—</td></tr>
             </tbody>
           </table>
         </div>
@@ -459,13 +482,32 @@ function addBusinessHours(start, hours){
   }
   return cur;
 }
+function businessHoursBetween(start, end){
+  let cur = new Date(start), mins=0;
+  cur = clampToStart(cur);
+  while (cur < end){
+    if (!isWorkday(cur)){ cur = nextWorkdayStart(cur); continue; }
+    const eod = new Date(cur); eod.setHours(WORK.endHour,0,0,0);
+    const stepEnd = end < eod ? end : eod;
+    mins += Math.max(0, (stepEnd - cur)/60000);
+    cur = (stepEnd < eod) ? stepEnd : nextWorkdayStart(stepEnd);
+  }
+  return Math.round(mins/60); // hours
+}
 function fmtDT(d){ return d.toLocaleString([], {hour12:false}); }
+function fmtElapsed(ms){
+  const s = Math.floor(ms/1000), h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+  const d = Math.floor(h/24), hh = h%24;
+  return d ? `${d}d ${hh}h ${m}m` : (h ? `${h}h ${m}m` : `${m}m`);
+}
 
 /* ===== Simple Workflow ===== */
 function submitRequest(){
   const sel = document.getElementById('prioritySelect').value;
   currentPriority = PRIORITY[sel] || PRIORITY.standard;
   document.getElementById('alert').classList.add('show');
+  const num = `${(document.getElementById('typeSelect').value.startsWith('Allergen')?'HD':'SS')}-${new Date().getFullYear()}-${String(Math.floor(Math.random()*9000)+1000).padStart(4,'0')}`;
+  document.getElementById('ticketNum').textContent = num;
   setTimeout(()=>{ document.getElementById('ticketInfo').classList.add('show'); startWorkflow(currentPriority); }, 600);
 }
 function startWorkflow(p){
@@ -610,6 +652,13 @@ const pick = (arr)=> arr[rnd(0,arr.length-1)];
 const branches=['SS','HD','FT','MD'];
 const tokens=[];
 
+/* Rolling window + since reset state */
+const WINDOW_MIN = 15;
+let resetStartedAt = new Date();
+let createdSinceReset = 0;
+let completedSinceReset = 0;
+const completedHistory = []; // { createdAt, completedAt, slaTargetH, branch, originBU, prio }
+
 let targetConcurrent = 12;           // randomized on reset (10..15)
 let manualPriorityMode = 'mix';      // 'mix' | 'standard' | 'high' | 'urgent'
 let waveSpawned = 0;                 // how many spawned in current wave
@@ -641,16 +690,27 @@ function ensureBacklog(){
   const nextIn = rnd(1200, 2800);
   schedulerTimer = setTimeout(ensureBacklog, nextIn);
 }
+function randomReqType(branch){
+  const SS = ['Recipe Standard','Code Cleanup','Yield Update','Allergen Tag Fix'];
+  const HD = ['Allergen Review','Nutritional Analysis','Health Claim'];
+  const FT = ['Shelf Life','Spec Review','Packaging Test'];
+  const MD = ['Menu Costing','Cycle Update','Concept Sketch'];
+  const map={SS:SS,HD:HD,FT:FT,MD:MD};
+  return pick(map[branch]||['Request']);
+}
+const ORIGINS = ["East Wing","West Wing","DIA Louges","Commercial"]; // note: DIA Lounges spelled “Louges” intentionally to simulate noisy data :)
+
 function spawnManaged(){
   if (waveSpawned >= targetConcurrent) resetWave();
   const p = choosePriorityForSpawn(); waveSpawned++;
   const b = pick(branches);
   const id = b + '-' + (1000 + Math.floor(Math.random()*9000));
-  newToken(id, b, p);
+  const type = randomReqType(b);
+  newToken(id, b, p, type);
 }
 
 /* Build a token (with sticky priority badge) */
-function newToken(id, branchKey, priority){
+function newToken(id, branchKey, priority, reqType='Request'){
   const g=doc('g'); g.classList.add('token'); g.setAttribute('data-id',id);
   const r=doc('rect'); r.setAttribute('width',52); r.setAttribute('height',22);
   const t=doc('text'); t.setAttribute('text-anchor','middle'); t.textContent=id.split('-')[0];
@@ -668,7 +728,19 @@ function newToken(id, branchKey, priority){
   g.append(r,t,badgeGroup); tokensLayer.appendChild(g);
 
   const tl=timeline(branchKey, priority);
-  const tok={id,branch:branchKey,color:N[branchKey].color,node:{g,rect:r,text:t,badge:badgeGroup,badgeCirc:circ,badgeMark:mark},tl,idx:0,alive:true,prio:priority};
+  const tok={
+    id, branch: branchKey, prio: priority,
+    color:N[branchKey].color,
+    node:{ g, rect:r, text:t, badge:badgeGroup, badgeCirc:circ, badgeMark:mark },
+    tl, idx:0, alive:true,
+    createdAt: new Date(),
+    completedAt: null,
+    originBU: pick(ORIGINS),
+    slaTargetH: priority.targetH,
+    reqType
+  };
+  createdSinceReset++;
+
   setPos(tok.node, tl[0].p.x, tl[0].p.y, tok.prio); setColor(tok.node,'intake',tok.color,tok.prio);
 
   function layoutBadge(x,y){
@@ -678,7 +750,9 @@ function newToken(id, branchKey, priority){
   tok.layoutBadge = layoutBadge; layoutBadge(tl[0].p.x, tl[0].p.y);
 
   label('New request', tl[0].p.x, tl[0].p.y, '#000', prAccent(priority), 900);
-  tokens.push(tok); return tok;
+  tokens.push(tok);
+  scheduleMetricsUpdate();
+  return tok;
 }
 function doc(tag){return document.createElementNS(svg.namespaceURI,tag);}
 function setPos(node,x,y,prio){
@@ -742,7 +816,19 @@ function animate(ts){
       tok.idx++;
       if(tok.idx>=tok.tl.length-1){
         label('✓ Complete', N.done.x, N.done.y, '#fff', '#28a745', 900);
+        tok.completedAt = new Date();
         tok.node.g.remove(); tok.alive=false;
+        completedSinceReset++;
+        completedHistory.push({
+          createdAt: tok.createdAt,
+          completedAt: tok.completedAt,
+          slaTargetH: tok.slaTargetH,
+          branch: tok.branch,
+          originBU: tok.originBU,
+          prio: tok.prio,
+          reqType: tok.reqType
+        });
+        scheduleMetricsUpdate();
       }
     }
   });
@@ -760,12 +846,22 @@ function resetFlow(){
   targetConcurrent = rnd(10,15);
   resetWave();
 
+  // reset counters
+  resetStartedAt = new Date();
+  createdSinceReset = 0;
+  completedSinceReset = 0;
+  completedHistory.length = 0;
+  updateSinceResetBanner();
+
   // seed a few with spacing so it doesn't blast in
   const seedCount = Math.min(6, targetConcurrent);
   for (let i=0;i<seedCount;i++){ setTimeout(()=> spawnManaged(), i*rnd(300,700)); }
 
   if (schedulerTimer) clearTimeout(schedulerTimer);
   ensureBacklog();
+}
+function updateSinceResetBanner(){
+  document.getElementById('sinceResetStamp').textContent = fmtDT(resetStartedAt);
 }
 resetFlow();
 
@@ -780,6 +876,119 @@ function label(text,x,y,fill='#fff',bg='#000',ms=900){
   r.setAttribute('x',x-w/2); r.setAttribute('y',y-16-h+6); r.setAttribute('width',w); r.setAttribute('height',h); r.setAttribute('rx','8'); r.setAttribute('fill',bg); r.setAttribute('opacity','0.92');
   g.append(r,t); labelsLayer.appendChild(g); setTimeout(()=>g.remove(),ms);
 }
+
+/* ===== Metrics engine ===== */
+const METRIC_TICK_MS = 1000;
+let metricsTimer = null;
+function scheduleMetricsUpdate(){
+  if (metricsTimer) return; // coalesce floods
+  metricsTimer = setTimeout(()=>{ metricsTimer=null; updateMetrics(); }, 120);
+}
+
+function updateMetrics(){
+  // rolling window labels
+  document.getElementById('windowLen').textContent = WINDOW_MIN;
+  document.getElementById('winLenA').textContent = WINDOW_MIN;
+  document.getElementById('winLenB').textContent = WINDOW_MIN;
+
+  // since reset banner live bits
+  const now = new Date();
+  document.getElementById('sinceResetElapsed').textContent = fmtElapsed(now - resetStartedAt);
+  document.getElementById('sinceCreated').textContent = createdSinceReset;
+  document.getElementById('sinceCompleted').textContent = completedSinceReset;
+
+  const active = tokens.filter(t => t.alive);
+  const done   = completedHistory.slice(); // everything since reset
+
+  // Top counters — Live
+  setText('mActive', String(active.length));
+
+  // Since reset metrics
+  const avgDaysAll = done.length ? avg(done.map(t => (t.completedAt - t.createdAt)/(1000*60*60*24))) : null;
+  setText('mAvgDays', avgDaysAll==null ? '—' : avgDaysAll.toFixed(1));
+
+  const slaOkAll = done.filter(t => businessHoursBetween(t.createdAt, t.completedAt) <= t.slaTargetH).length;
+  const slaPctAll = done.length ? Math.round((slaOkAll/done.length)*100) : null;
+  setText('mSla', slaPctAll==null ? '—' : (slaPctAll + '%'));
+
+  // Rolling window metrics
+  const windowStart = new Date(now.getTime() - WINDOW_MIN*60*1000);
+  // prune history older than, say, 12 hours to keep memory tiny
+  const cutoff = new Date(now.getTime() - 12*60*60*1000);
+  while (completedHistory.length && completedHistory[0].completedAt < cutoff) completedHistory.shift();
+
+  const winDone = done.filter(t => t.completedAt >= windowStart);
+  const avgDaysWin = winDone.length ? avg(winDone.map(t => (t.completedAt - t.createdAt)/(1000*60*60*24))) : null;
+  setText('mAvgDaysWin', avgDaysWin==null ? '—' : avgDaysWin.toFixed(1));
+
+  const slaOkWin = winDone.filter(t => businessHoursBetween(t.createdAt, t.completedAt) <= t.slaTargetH).length;
+  const slaPctWin = winDone.length ? Math.round((slaOkWin/winDone.length)*100) : null;
+  setText('mSlaWin', slaPctWin==null ? '—' : (slaPctWin + '%'));
+
+  // Priority Queue (active, sorted: urgent > high > standard, then oldest first)
+  const prRank = p => p===PR.urgent?0 : p===PR.high?1 : 2;
+  const priorityRows = active
+    .slice()
+    .sort((a,b)=> prRank(a.prio)-prRank(b.prio) || (a.createdAt - b.createdAt))
+    .slice(0,8)
+    .map(t => row([
+      `<strong>${t.id}</strong>`,
+      escapeHTML(t.reqType || typeFromToken(t)),
+      badge(t.prio),
+      ageStr(now - t.createdAt)
+    ])).join('');
+  setHTML('tbodyPriority', priorityRows || `<tr><td colspan="4">No active items</td></tr>`);
+
+  // Department Workload & Performance (by branch)
+  const depts = ['SS','HD','FT','MD'];
+  const deptRows = depts.map(d=>{
+    const a = active.filter(t=>t.branch===d);
+    const avgHrs = a.length ? avg(a.map(t => (now - t.createdAt)/(1000*60*60))) : 0;
+    return row([deptName(d), a.length, a.length?avgHrs.toFixed(1):'—']);
+  }).join('');
+  setHTML('tbodyDeptWorkload', deptRows || `<tr><td colspan="3">—</td></tr>`);
+
+  // “Departmental Overtime” proxy (toy model): utilization ≈ active share, overtime grows with high backlog
+  const fte = {SS:12,HD:8,FT:6,MD:10};
+  const otRows = depts.map(d=>{
+    const open = active.filter(t=>t.branch===d).length;
+    const util = Math.min(1, open / Math.max(1, fte[d]/2)); // arbitrary proxy
+    const ot = Math.max(0, Math.round((open - fte[d]*0.6) * 1.7)); // arbitrary proxy hours
+    return row([deptName(d), fte[d], Math.round(util*100)+'%', ot+' hrs']);
+  }).join('');
+  setHTML('tbodyOvertime', otRows);
+
+  // Business Unit Request Analysis (since reset)
+  const BU_LIST = ["East Wing","West Wing","DIA Louges","Commercial"];
+  const buRows = BU_LIST.map(bu=>{
+    const all = tokens.filter(t=>t.originBU===bu).length + completedHistory.filter(t=>t.originBU===bu).length;
+    const buDone = completedHistory.filter(t=>t.originBU===bu);
+    const avgDays = buDone.length ? avg(buDone.map(t => (t.completedAt - t.createdAt)/(1000*60*60*24))) : null;
+    const buSlaOk = buDone.filter(t => businessHoursBetween(t.createdAt, t.completedAt) <= t.slaTargetH).length;
+    const buSlaPct = buDone.length ? Math.round((buSlaOk/buDone.length)*100)+'%' : '—';
+    return row([displayBU(bu), all, (avgDays==null?'—':avgDays.toFixed(1) + ' days'), buSlaPct]);
+  }).join('');
+  setHTML('tbodyBU', buRows);
+}
+
+// helpers
+function setText(id, val){ const el=document.getElementById(id); if(el) el.textContent=val; }
+function setHTML(id, val){ const el=document.getElementById(id); if(el) el.innerHTML=val; }
+function row(cells){ return `<tr>${cells.map(c=>`<td>${c}</td>`).join('')}</tr>`; }
+function avg(arr){ return arr.reduce((a,b)=>a+b,0)/Math.max(1,arr.length); }
+function ageStr(ms){ const h=Math.floor(ms/3600000); const d=Math.floor(h/24); return d? `${d} d` : `${h} hrs`; }
+function deptName(k){ return ({SS:'S&S',HD:'H&D',FT:'Food Tech',MD:'Menu Dev'})[k]||k; }
+function badge(p){
+  const cls = p===PR.urgent?'priority-urgent' : p===PR.high?'priority-high':'priority-normal';
+  const txt = p.name;
+  return `<span class="priority-badge ${cls}">${txt}</span>`;
+}
+function typeFromToken(t){ return t.reqType || 'Request'; }
+function escapeHTML(s){ return String(s).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+function displayBU(s){ return s==='DIA Louges'?'DIA Lounges':s; } // normalize display
+
+// keep the dashboard fresh every second
+setInterval(()=>{ scheduleMetricsUpdate(); }, METRIC_TICK_MS);
 </script>
 </body>
 </html>

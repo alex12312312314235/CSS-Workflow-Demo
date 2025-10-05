@@ -9,7 +9,6 @@
     --ekfc-red:#C8102E; --ekfc-red-dark:#A00E24; --gold:#B8975F;
     --text:#111; --muted:#666; --bg:#f5f5f5; --card:#fff; --line:#ddd; --soft:#f8f8f8;
     --SS:#2f7ed8; --HD:#28a745; --FT:#7b61ff; --MD:#ff6b8b; --II:#0c5460;
-    --intake:#ff9a2f; --yellow:#ffd400;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);min-height:100vh;color:var(--text)}
@@ -44,11 +43,7 @@
   .ticket-info.show{display:block}
   .ticket-number{font-weight:bold;color:var(--ekfc-red)}
 
-  .resolution-banner{
-    display:flex;align-items:center;gap:10px;
-    padding:10px 12px;border:1px solid #eee;border-left-width:4px;border-radius:6px;background:#fafafa;margin-bottom:12px;
-    font-size:13px
-  }
+  .resolution-banner{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #eee;border-left-width:4px;border-radius:6px;background:#fafafa;margin-bottom:12px;font-size:13px}
   .res-standard{border-left-color:#28a745;background:#f3fbf4}
   .res-high{border-left-color:#ff9a2f;background:#fff6ec}
   .res-urgent{border-left-color:#dc3545;background:#fff1f3}
@@ -68,32 +63,35 @@
   .step-details{margin-top:8px;padding-top:8px;border-top:1px solid #e0e0e0;font-size:11px;color:var(--muted);display:none}
   .workflow-step.active .step-details,.workflow-step.completed .step-details{display:block}
 
-  /* escalation UI */
-  .esc-pill{
-    display:inline-flex;align-items:center;gap:6px;
-    background:#fff1f3;border:1px solid #dc3545;color:#dc3545;
-    padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer;
-  }
+  .esc-pill{display:inline-flex;align-items:center;gap:6px;background:#fff1f3;border:1px solid #dc3545;color:#dc3545;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer;}
   .esc-dot{width:6px;height:6px;border-radius:50%;background:#dc3545;display:inline-block}
-  .esc-pop{
-    position:absolute;right:16px;top:50px;z-index:5;max-width:380px;
-    background:#fff;border:1px solid #f1b5bd;border-left:4px solid #dc3545;
-    box-shadow:0 10px 24px rgba(0,0,0,.08);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.35;display:none
-  }
-  .esc-pop .h{font-weight:800;margin-bottom:4px}
-  .esc-pop .item{display:flex;gap:8px;margin:4px 0}
-  .esc-pop .k{min-width:98px;color:#444}
-  .esc-pop .v{font-weight:700}
+  .esc-pop{position:absolute;right:16px;top:50px;z-index:5;max-width:380px;background:#fff;border:1px solid #f1b5bd;border-left:4px solid #dc3545;box-shadow:0 10px 24px rgba(0,0,0,.08);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.35;display:none}
+  .esc-pop .h{font-weight:800;margin-bottom:4px}.esc-pop .item{display:flex;gap:8px;margin:4px 0}.esc-pop .k{min-width:98px;color:#444}.esc-pop .v{font-weight:700}
   .esc-close{position:absolute;top:6px;right:8px;border:none;background:transparent;color:#b13a46;cursor:pointer;font-weight:800}
 
-  /* priority decorations (step borders) */
   .priority-ribbon{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
   .step-urgent{border-color:#dc3545 !important;background:#fff}
   .step-high{border-color:#ff9a2f !important;background:#fff}
   .step-standard{border-color:#28a74522;background:#fff}
   .exclaim{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:#dc3545;color:#fff;font-weight:800;margin-left:6px}
 
-  /* live flow styles left as in prior version */
+  /* dashboard */
+  .dashboard-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:20px}
+  .metric-card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:15px;box-shadow:0 2px 4px rgba(0,0,0,.05)}
+  .metric-value{font-size:28px;font-weight:bold;color:var(--ekfc-red);margin-bottom:5px}
+  .metric-label{font-size:12px;color:var(--muted);text-transform:uppercase}
+  .metric-change{font-size:11px;margin-top:5px}
+  .positive{color:#28a745}.negative{color:#dc3545}
+  .dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .table{width:100%;border-collapse:collapse;font-size:12px}
+  .table th{background:var(--soft);padding:8px;text-align:left;font-weight:600;border-bottom:2px solid var(--gold)}
+  .table td{padding:8px;border-bottom:1px solid #e0e0e0;color:#555}
+  .priority-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}
+  .priority-urgent{background:#f8d7da;color:#721c24}
+  .priority-high{background:#fff3cd;color:#856404}
+  .priority-normal{background:#d1ecf1;color:#0c5460}
+
+  /* live flow (unchanged visuals) */
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
   .btn{background:#fff;border:1px solid var(--line);padding:8px 10px;border-radius:6px;cursor:pointer}
   .btn:hover{background:#f9f9f9}
@@ -133,33 +131,26 @@
   </div>
 
   <div class="container">
-    <!-- Simple Workflow -->
+    <!-- ===== Simple Workflow ===== -->
     <div id="workflow-view" class="content-area active">
       <div class="workflow-container">
+        <!-- Form -->
         <div class="panel">
           <h2 class="panel-title">Submit H&amp;D Request</h2>
           <div id="alert" class="alert">Request submitted successfully. Processing ticket...</div>
 
-          <div class="form-group">
-            <label>Requester Name *</label>
-            <input type="text" value="Tobias Taubner"/>
-          </div>
+          <div class="form-group"><label>Requester Name *</label><input type="text" value="Tobias Taubner"/></div>
           <div class="form-group">
             <label>Business Unit *</label>
             <select>
-              <option>DIA Lounges</option>
-              <option>East Wing Production</option>
-              <option>West Wing Production</option>
-              <option>Commercial Kitchen</option>
+              <option>DIA Lounges</option><option>East Wing Production</option><option>West Wing Production</option><option>Commercial Kitchen</option>
             </select>
           </div>
           <div class="form-group">
             <label>Request Type *</label>
             <select>
-              <option>Health Claim Verification</option>
-              <option>Allergen Declaration Review</option>
-              <option>Nutritional Analysis</option>
-              <option>Special Diet Menu Development</option>
+              <option>Health Claim Verification</option><option>Allergen Declaration Review</option>
+              <option>Nutritional Analysis</option><option>Special Diet Menu Development</option>
             </select>
           </div>
           <div class="form-group">
@@ -177,16 +168,14 @@
           <button class="submit-btn" onclick="submitRequest()">Submit Request</button>
 
           <div id="ticketInfo" class="ticket-info">
-            <strong>Ticket Created</strong><br/>
-            <span class="ticket-number">HD-2025-0142</span><br/>
-            Track your request using this number
+            <strong>Ticket Created</strong><br/><span class="ticket-number">HD-2025-0142</span><br/>Track your request using this number
           </div>
         </div>
 
+        <!-- Steps -->
         <div class="panel">
           <h2 class="panel-title">Workflow Journey</h2>
 
-          <!-- Resolution Target banner -->
           <div id="resBanner" class="resolution-banner res-standard" style="display:none">
             <span class="tag">Resolution target:</span>
             <span id="resTarget" class="eta">≤ 120 hours</span>
@@ -198,18 +187,14 @@
             <div class="step-content">
               <div class="step-title">Request Submission</div>
               <div class="step-desc">BU submits request through unified portal</div>
-              <div class="step-details">
-                <strong>Submitted:</strong> <span id="time1">--</span><br/>
-                <strong>System:</strong> <b>CSS Workorder Portal</b>
-              </div>
+              <div class="step-details"><strong>Submitted:</strong> <span id="time1">--</span><br/><strong>System:</strong> <b>CSS Workorder Portal</b></div>
             </div>
           </div>
 
           <div class="workflow-step" id="step2">
             <div class="step-number">2</div>
             <div class="step-content">
-              <div class="step-title">
-                CSS Admin Intake
+              <div class="step-title">CSS Admin Intake
                 <span id="esc2" class="esc-pill" style="display:none"><span class="esc-dot"></span>Escalation</span>
               </div>
               <div class="step-desc">Request routed to CSS Admin for initial processing</div>
@@ -227,8 +212,7 @@
           <div class="workflow-step" id="step3">
             <div class="step-number">3</div>
             <div class="step-content">
-              <div class="step-title">
-                H&amp;D Assignment
+              <div class="step-title">H&amp;D Assignment
                 <span id="esc3" class="esc-pill" style="display:none"><span class="esc-dot"></span>Escalation</span>
               </div>
               <div class="step-desc" id="desc3">Ticket assigned to H&amp;D specialist based on expertise</div>
@@ -246,8 +230,7 @@
           <div class="workflow-step" id="step4">
             <div class="step-number">4</div>
             <div class="step-content">
-              <div class="step-title">
-                Technical Review
+              <div class="step-title">Technical Review
                 <span id="esc4" class="esc-pill" style="display:none"><span class="esc-dot"></span>Escalation</span>
               </div>
               <div class="step-desc">H&amp;D specialist performs allergen assessment</div>
@@ -265,8 +248,7 @@
           <div class="workflow-step" id="step5">
             <div class="step-number">5</div>
             <div class="step-content">
-              <div class="step-title">
-                Manager Approval &amp; Review
+              <div class="step-title">Manager Approval &amp; Review
                 <span id="esc5" class="esc-pill" style="display:none"><span class="esc-dot"></span>Escalation</span>
               </div>
               <div class="step-desc">Manager review and approval</div>
@@ -286,10 +268,7 @@
             <div class="step-content">
               <div class="step-title">Delivery</div>
               <div class="step-desc">Results delivered to requester</div>
-              <div class="step-details">
-                <strong>Format:</strong> <b>Email</b><br/>
-                <strong>Channel:</strong> <b>Outlook 365</b>
-              </div>
+              <div class="step-details"><strong>Format:</strong> <b>Email</b><br/><strong>Channel:</strong> <b>Outlook 365</b></div>
             </div>
           </div>
 
@@ -297,12 +276,75 @@
       </div>
     </div>
 
-    <!-- VP Dashboard unchanged (omitted for brevity) -->
+    <!-- ===== VP Dashboard (RESTORED) ===== -->
     <div id="dashboard-view" class="content-area">
-      <div class="panel"><em>Dashboard content unchanged.</em></div>
+      <div class="dashboard-metrics">
+        <div class="metric-card"><div class="metric-value">37</div><div class="metric-label">Total Active Requests</div><div class="metric-change positive">Stable (target ≤ 40)</div></div>
+        <div class="metric-card"><div class="metric-value">94%</div><div class="metric-label">SLA Compliance</div><div class="metric-change positive">↑ 3% improvement</div></div>
+        <div class="metric-card"><div class="metric-value">3.2</div><div class="metric-label">Avg Days to Complete</div><div class="metric-change positive">↓ 0.5 days faster</div></div>
+        <div class="metric-card"><div class="metric-value">18.5</div><div class="metric-label">Avg Hours per Request</div><div class="metric-change negative">↑ 2.1 hours</div></div>
+        <div class="metric-card"><div class="metric-value">89%</div><div class="metric-label">First-Pass Acceptance</div><div class="metric-change positive">↑ 5% improvement</div></div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="panel">
+          <h3 class="panel-title">Department Workload &amp; Performance</h3>
+          <table class="table">
+            <thead><tr><th>Department</th><th>Open</th><th>Avg hrs/req</th></tr></thead>
+            <tbody>
+              <tr><td>S&amp;S</td><td>26</td><td>21.2</td></tr>
+              <tr><td>H&amp;D</td><td>23</td><td>15.8</td></tr>
+              <tr><td>Food Tech</td><td>17</td><td>24.5</td></tr>
+              <tr><td>Menu Dev</td><td>14</td><td>18.3</td></tr>
+              <tr><td>I&amp;I</td><td>11</td><td>12.7</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <h3 class="panel-title">Priority Queue Status</h3>
+          <table class="table">
+            <thead><tr><th>Ticket</th><th>Type</th><th>Priority</th><th>Age</th></tr></thead>
+            <tbody>
+              <tr><td><strong>HD-2025-0142</strong></td><td>Allergen Review</td><td><span class="priority-badge priority-urgent">Urgent</span></td><td>4 hrs</td></tr>
+              <tr><td><strong>SS-2025-0385</strong></td><td>Recipe Standard</td><td><span class="priority-badge priority-urgent">Urgent</span></td><td>8 hrs</td></tr>
+              <tr><td><strong>FT-2025-0100</strong></td><td>Shelf Life</td><td><span class="priority-badge priority-high">High</span></td><td>2 days</td></tr>
+              <tr><td><strong>MD-2025-0257</strong></td><td>Menu Costing</td><td><span class="priority-badge priority-high">High</span></td><td>3 days</td></tr>
+              <tr><td><strong>II-2025-0089</strong></td><td>Forecast Analysis</td><td><span class="priority-badge priority-normal">Normal</span></td><td>5 days</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <h3 class="panel-title">Departmental Overtime</h3>
+          <table class="table">
+            <thead><tr><th>Department</th><th>FTE</th><th>Utilization</th><th>Overtime</th></tr></thead>
+            <tbody>
+              <tr><td>S&amp;S</td><td>12</td><td>92%</td><td>45 hrs</td></tr>
+              <tr><td>H&amp;D</td><td>8</td><td>88%</td><td>28 hrs</td></tr>
+              <tr><td>Food Tech</td><td>6</td><td>95%</td><td>52 hrs</td></tr>
+              <tr><td>Menu Dev</td><td>10</td><td>78%</td><td>15 hrs</td></tr>
+              <tr><td>I&amp;I</td><td>5</td><td>82%</td><td>22 hrs</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <h3 class="panel-title">Business Unit Request Analysis</h3>
+          <table class="table">
+            <thead><tr><th>Business Unit</th><th>Requests</th><th>Avg Time</th><th>SLA %</th></tr></thead>
+            <tbody>
+              <tr><td>East Wing</td><td>13</td><td>3.1 days</td><td>96%</td></tr>
+              <tr><td>West Wing</td><td>10</td><td>3.5 days</td><td>92%</td></tr>
+              <tr><td>DIA Lounges</td><td>7</td><td>2.8 days</td><td>98%</td></tr>
+              <tr><td>Commercial</td><td>7</td><td>3.9 days</td><td>89%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
-    <!-- Live Workflow (unchanged visuals; priority still affects speed) -->
+    <!-- ===== Live Workflow (same visuals; priority affects speed/colors) ===== -->
     <div id="live-view" class="content-area">
       <div class="panel">
         <h2 class="panel-title">Live Flow • CSS Journey</h2>
@@ -318,26 +360,25 @@
             <option value="urgent">Priority: Urgent</option>
           </select>
         </div>
+
         <div class="live-wrap" id="liveWrap">
           <div id="tip" class="tip"></div>
           <svg id="svg" class="svg-host" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet">
-            <defs><marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
-              <polygon points="0,0 10,4 0,8" fill="#c7c7c7"></polygon></marker></defs>
+            <defs><marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0,0 10,4 0,8" fill="#c7c7c7"></polygon></marker></defs>
             <g id="zoomRoot" transform="translate(0,0) scale(1)">
               <g class="lane">
-                <line x1="80" y1="120" x2="1120" y2="120"/>
-                <line x1="80" y1="240" x2="1120" y2="240"/>
-                <line x1="80" y1="360" x2="1120" y2="360"/>
-                <line x1="80" y1="480" x2="1120" y2="480"/>
-                <line x1="80" y1="600" x2="1120" y2="600"/>
+                <line x1="80" y1="120" x2="1120" y2="120"/><line x1="80" y1="240" x2="1120" y2="240"/>
+                <line x1="80" y1="360" x2="1120" y2="360"/><line x1="80" y1="480" x2="1120" y2="480"/><line x1="80" y1="600" x2="1120" y2="600"/>
               </g>
               <g id="stages" class="stage">
                 <g data-key="INTAKE"><rect x="520" y="80" width="160" height="50" rx="8"/><text x="600" y="110" text-anchor="middle">Unified Intake • CSS Portal</text></g>
                 <g data-key="ROUTER"><rect x="520" y="200" width="160" height="50" rx="8"/><text x="600" y="230" text-anchor="middle">Router</text></g>
+
                 <g data-key="SS_COORD"><rect x="140" y="320" width="180" height="50" rx="8"/><text x="230" y="350" text-anchor="middle">S&amp;S Coordinator</text></g>
                 <g data-key="HD_COORD"><rect x="380" y="320" width="180" height="50" rx="8"/><text x="470" y="350" text-anchor="middle">H&amp;D Coordinator</text></g>
                 <g data-key="FT_COORD"><rect x="620" y="320" width="180" height="50" rx="8"/><text x="710" y="350" text-anchor="middle">FoodTech Coordinator</text></g>
                 <g data-key="MD_COORD"><rect x="860" y="320" width="180" height="50" rx="8"/><text x="950" y="350" text-anchor="middle">MenuDev Coordinator</text></g>
+
                 <g data-key="SS_A"><rect x="140" y="440" width="160" height="46" rx="8"/><text x="220" y="468" text-anchor="middle">S&amp;S • A</text></g>
                 <g data-key="SS_B"><rect x="200" y="520" width="160" height="46" rx="8"/><text x="280" y="548" text-anchor="middle">S&amp;S • B</text></g>
                 <g data-key="HD_A"><rect x="380" y="440" width="160" height="46" rx="8"/><text x="460" y="468" text-anchor="middle">H&amp;D • A</text></g>
@@ -346,8 +387,10 @@
                 <g data-key="FT_B"><rect x="680" y="520" width="160" height="46" rx="8"/><text x="760" y="548" text-anchor="middle">FT • B</text></g>
                 <g data-key="MD_A"><rect x="860" y="440" width="160" height="46" rx="8"/><text x="940" y="468" text-anchor="middle">MD • A</text></g>
                 <g data-key="MD_B"><rect x="920" y="520" width="160" height="46" rx="8"/><text x="1000" y="548" text-anchor="middle">MD • B</text></g>
+
                 <g data-key="DONE"><rect x="520" y="620" width="160" height="50" rx="8"/><text x="600" y="650" text-anchor="middle">Delivery &amp; Done</text></g>
               </g>
+
               <g class="edge">
                 <path d="M600,130 L600,200"/>
                 <path d="M600,250 L230,320"/><path d="M600,250 L470,320"/><path d="M600,250 L710,320"/><path d="M600,250 L950,320"/>
@@ -360,6 +403,7 @@
                 <path d="M700,486 L600,620"/><path d="M760,566 L600,620"/>
                 <path d="M940,486 L600,620"/><path d="M1000,566 L600,620"/>
               </g>
+
               <g id="tokens"></g>
               <g id="labels"></g>
             </g>
@@ -386,20 +430,17 @@ const PRIORITY = {
 };
 let currentPriority = PRIORITY.standard;
 
-/* ===== Per-step base split (sums to 120h baseline) ===== */
+/* Per-step baseline split (sums to 120h) */
 const BASE = { intake:24, assign:48, tech:24, mgr:24 };
 
 /* ===== Business-hours calendar (Mon–Fri, 09:00–18:00) ===== */
 const WORK = { startHour:9, endHour:18, weekdays:[1,2,3,4,5] }; // Mon=1..Sun=7
-
 function isWorkday(d){ const wd = d.getDay()===0?7:d.getDay(); return WORK.weekdays.includes(wd); }
 function clampToStart(d){
   const t = new Date(d);
   if (!isWorkday(t)) return nextWorkdayStart(t);
   if (t.getHours() < WORK.startHour) { t.setHours(WORK.startHour,0,0,0); }
-  if (t.getHours() >= WORK.endHour || (t.getHours()===WORK.endHour && (t.getMinutes()||t.getSeconds()))) {
-    return nextWorkdayStart(t);
-  }
+  if (t.getHours() >= WORK.endHour || (t.getHours()===WORK.endHour && (t.getMinutes()||t.getSeconds()))) { return nextWorkdayStart(t); }
   return t;
 }
 function nextWorkdayStart(d){
@@ -410,18 +451,12 @@ function nextWorkdayStart(d){
 function addBusinessHours(start, hours){
   let remaining = Math.max(0, Math.round(hours*60)); // minutes
   let cur = clampToStart(start);
-
   while (remaining > 0){
     if (!isWorkday(cur)){ cur = nextWorkdayStart(cur); continue; }
     const endOfDay = new Date(cur); endOfDay.setHours(WORK.endHour,0,0,0);
     const minutesAvail = Math.max(0, (endOfDay - cur) / 60000);
-    if (remaining <= minutesAvail){
-      cur = new Date(cur.getTime() + remaining*60000);
-      return cur;
-    } else {
-      remaining -= minutesAvail;
-      cur = nextWorkdayStart(cur);
-    }
+    if (remaining <= minutesAvail){ cur = new Date(cur.getTime() + remaining*60000); return cur; }
+    remaining -= minutesAvail; cur = nextWorkdayStart(cur);
   }
   return cur;
 }
@@ -431,19 +466,13 @@ function fmtDT(d){ return d.toLocaleString([], {hour12:false}); }
 function submitRequest(){
   const sel = document.getElementById('prioritySelect').value;
   currentPriority = PRIORITY[sel] || PRIORITY.standard;
-
   document.getElementById('alert').classList.add('show');
-  setTimeout(()=>{
-    document.getElementById('ticketInfo').classList.add('show');
-    startWorkflow(currentPriority);
-  }, 600);
+  setTimeout(()=>{ document.getElementById('ticketInfo').classList.add('show'); startWorkflow(currentPriority); }, 600);
 }
-
 function startWorkflow(p){
   const steps = [...document.querySelectorAll('#workflow-view .workflow-step')];
   steps.forEach(s => { s.classList.remove('active','completed','step-urgent','step-high','step-standard'); });
 
-  // Resolution target banner (business-hours ETA)
   const totalTarget = p.targetH;
   const eta = fmtDT(addBusinessHours(new Date(), totalTarget));
   const banner = document.getElementById('resBanner');
@@ -453,7 +482,6 @@ function startWorkflow(p){
   document.getElementById('resTarget').textContent = `≤ ${totalTarget} hours`;
   document.getElementById('resETA').textContent = eta;
 
-  // Per-step SLA values scale with target/120
   const factor = totalTarget/120;
   const s2 = Math.max(1, Math.round(BASE.intake*factor));
   const s3 = Math.max(1, Math.round(BASE.assign*factor));
@@ -464,28 +492,21 @@ function startWorkflow(p){
     `<strong>SLA:</strong> <b>${s2} hours</b><br/><strong>Status:</strong> Processing` +
     (p.notifyMgr ? ` <span class="priority-ribbon" style="background:${p.accent};color:${p.color}">Mgr notified</span>`:``);
 
-  // Step 3 text reflects escalation (High + Urgent)
-  const desc3 =
-    p === PRIORITY.urgent ? 'Escalated directly to Senior Manager • FC09 auto-assigned'
-    : p === PRIORITY.high ? 'Escalated via prioritized channel to Senior Manager for assignment'
-    : 'Ticket assigned to H&D specialist based on expertise';
+  const desc3 = p === PRIORITY.urgent ? 'Escalated directly to Senior Manager • FC09 auto-assigned'
+               : p === PRIORITY.high ? 'Escalated via prioritized channel to Senior Manager for assignment'
+               : 'Ticket assigned to H&D specialist based on expertise';
   document.getElementById('desc3').textContent = desc3;
 
   document.getElementById('sd3').innerHTML =
     `<strong>SLA:</strong> <b>Processing within ${s3} hours</b><br/>` +
     `<strong>Assigned to:</strong> ${
-      p.fastTrackFC09
-        ? 'FC09 • Senior Specialist (Auto)'
-        : (p===PRIORITY.high ? 'Senior Manager (delegates to suitable specialist)' : 'Sarah Johnson')
+      p.fastTrackFC09 ? 'FC09 • Senior Specialist (Auto)'
+                      : (p===PRIORITY.high ? 'Senior Manager (delegates to suitable specialist)' : 'Sarah Johnson')
     }`;
 
-  document.getElementById('sd4').innerHTML =
-    `<strong>SLA:</strong> <b>${s4} hours</b><br/><strong>Compliance:</strong> EU & UAE standards`;
+  document.getElementById('sd4').innerHTML = `<strong>SLA:</strong> <b>${s4} hours</b><br/><strong>Compliance:</strong> EU & UAE standards`;
+  document.getElementById('sd5').innerHTML = `<strong>SLA:</strong> <b>${s5} hours</b><br/><strong>Checklist:</strong> Complete`;
 
-  document.getElementById('sd5').innerHTML =
-    `<strong>SLA:</strong> <b>${s5} hours</b><br/><strong>Checklist:</strong> Complete`;
-
-  // Priority skins + badge on step 2
   const skin = p === PRIORITY.urgent ? 'step-urgent' : p === PRIORITY.high ? 'step-high' : 'step-standard';
   steps.forEach(s => s.classList.add(skin));
   const title2 = document.querySelector('#step2 .step-title');
@@ -494,71 +515,43 @@ function startWorkflow(p){
   }${p === PRIORITY.urgent ? ` <span class="exclaim">!</span>`:''}
   <span id="esc2" class="esc-pill" style="display:${(p===PRIORITY.high||p===PRIORITY.urgent)?'inline-flex':'none'}"><span class="esc-dot"></span>Escalation</span>`;
 
-  // Show escalation pills for High & Urgent
-  ['esc3','esc4','esc5'].forEach(id=>{
-    const el = document.getElementById(id);
-    if (el) el.style.display = (p===PRIORITY.high||p===PRIORITY.urgent)?'inline-flex':'none';
-  });
-
-  // Build escalation popup content & bindings
+  ['esc3','esc4','esc5'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=(p===PRIORITY.high||p===PRIORITY.urgent)?'inline-flex':'none'; });
   updateEscalations(p);
 
-  // Simple animation timings (visual only): compress for higher priority
   const t=[0, 2000*factor, 4000*factor, 6000*factor, 8000*factor, 10000*factor];
   if (p.fastTrackFC09){ t[1]=400*factor; t[2]=1200*factor; }
 
-  setTimeout(()=>{activate(0); document.getElementById('time1').textContent=new Date().toLocaleTimeString();}, t[0]);
-  setTimeout(()=>{advance(0,1);}, t[1]);
-  setTimeout(()=>{advance(1,2);}, t[2]);
-  setTimeout(()=>{advance(2,3);}, t[3]);
-  setTimeout(()=>{advance(3,4);}, t[4]);
-  setTimeout(()=>{advance(4,5); setTimeout(()=>complete(5), 800*factor);}, t[5]);
+  setTimeout(()=>{act(0); document.getElementById('time1').textContent=new Date().toLocaleTimeString();}, t[0]);
+  setTimeout(()=>{next(0,1);}, t[1]); setTimeout(()=>{next(1,2);}, t[2]);
+  setTimeout(()=>{next(2,3);}, t[3]); setTimeout(()=>{next(3,4);}, t[4]);
+  setTimeout(()=>{next(4,5); setTimeout(()=>done(5), 800*factor);}, t[5]);
 
-  function activate(i){ steps[i].classList.add('active'); }
-  function advance(i,j){ steps[i].classList.remove('active'); steps[i].classList.add('completed'); steps[j].classList.add('active'); }
-  function complete(i){ steps[i].classList.remove('active'); steps[i].classList.add('completed'); }
+  function act(i){ steps[i].classList.add('active'); }
+  function next(i,j){ steps[i].classList.remove('active'); steps[i].classList.add('completed'); steps[j].classList.add('active'); }
+  function done(i){ steps[i].classList.remove('active'); steps[i].classList.add('completed'); }
 }
 
 /* Escalation popups */
 function updateEscalations(p){
   const isEsc = (p===PRIORITY.high || p===PRIORITY.urgent);
+  document.getElementById('esc2_notif').textContent = p===PRIORITY.urgent ? 'Mgr + Senior Mgr (Email & MS Teams, immediate)' : 'Mgr (Email & MS Teams, immediate)';
+  document.getElementById('esc2_route').textContent = p===PRIORITY.urgent ? 'Fast route with priority flag' : 'Priority flag in queue';
+  document.getElementById('esc2_sla').textContent = `Step window: ${Math.max(1, Math.round(BASE.intake*(p.targetH/120)))}h`;
 
-  // Intake
-  document.getElementById('esc2_notif').textContent =
-    p===PRIORITY.urgent ? 'Mgr + Senior Mgr (Email & MS Teams, immediate)' :
-    'Mgr (Email & MS Teams, immediate)';
-  document.getElementById('esc2_route').textContent =
-    p===PRIORITY.urgent ? 'Fast route with priority flag' : 'Priority flag in queue';
-  document.getElementById('esc2_sla').textContent =
-    `Step window: ${Math.max(1, Math.round(BASE.intake*(p.targetH/120)))}h`;
+  document.getElementById('esc3_assignee').textContent = p.fastTrackFC09 ? 'FC09 • Senior Specialist (auto-assigned)' : 'Senior Manager (delegates to suitable specialist)';
+  document.getElementById('esc3_signals').textContent = p.fastTrackFC09 ? 'Pager/Teams alert to FC09 + coordinator' : 'Teams alert to coordinator & senior pool';
+  document.getElementById('esc3_rem').textContent = p===PRIORITY.urgent ? 'Reminders every 60 min until accepted' : 'Reminders every 2 hours';
 
-  // Assignment
-  document.getElementById('esc3_assignee').textContent =
-    p.fastTrackFC09 ? 'FC09 • Senior Specialist (auto-assigned)' : 'Senior Manager (delegates to suitable specialist)';
-  document.getElementById('esc3_signals').textContent =
-    p.fastTrackFC09 ? 'Pager/Teams alert to FC09 + coordinator' : 'Teams alert to coordinator & senior pool';
-  document.getElementById('esc3_rem').textContent =
-    p===PRIORITY.urgent ? 'Reminders every 60 min until accepted' : 'Reminders every 2 hours';
-
-  // Technical review
-  document.getElementById('esc4_pri').textContent =
-    p===PRIORITY.urgent ? 'Marked URGENT in reviewer’s queue' : 'Marked HIGH in reviewer’s queue';
-  document.getElementById('esc4_rem').textContent =
-    p===PRIORITY.urgent ? 'SLA guard: T-6h, T-3h, T-1h alerts' : 'SLA guard: T-12h, T-6h alerts';
+  document.getElementById('esc4_pri').textContent = p===PRIORITY.urgent ? 'Marked URGENT in reviewer’s queue' : 'Marked HIGH in reviewer’s queue';
+  document.getElementById('esc4_rem').textContent = p===PRIORITY.urgent ? 'SLA guard: T-6h, T-3h, T-1h alerts' : 'SLA guard: T-12h, T-6h alerts';
   document.getElementById('esc4_ch').textContent = 'Email + MS Teams (channel mention)';
 
-  // Manager approval
-  document.getElementById('esc5_appr').textContent =
-    p===PRIORITY.urgent ? 'Senior manager (auto-CC, can approve)' : 'Manager (auto-CC senior for visibility)';
-  document.getElementById('esc5_notif').textContent =
-    p===PRIORITY.urgent ? 'Email + Teams + mobile push (if enabled)' : 'Email + Teams';
-  document.getElementById('esc5_guard').textContent =
-    p===PRIORITY.urgent ? 'Deadline guards: T-4h, T-2h, T-30m' : 'Deadline guards: T-12h, T-4h';
+  document.getElementById('esc5_appr').textContent = p===PRIORITY.urgent ? 'Senior manager (auto-CC, can approve)' : 'Manager (auto-CC senior for visibility)';
+  document.getElementById('esc5_notif').textContent = p===PRIORITY.urgent ? 'Email + Teams + mobile push (if enabled)' : 'Email + Teams';
+  document.getElementById('esc5_guard').textContent = p===PRIORITY.urgent ? 'Deadline guards: T-4h, T-2h, T-30m' : 'Deadline guards: T-12h, T-4h';
 
-  // Toggle pills & wire click
   [['esc2','pop2'],['esc3','pop3'],['esc4','pop4'],['esc5','pop5']].forEach(([pill,pop])=>{
-    const pillEl = document.getElementById(pill);
-    const popEl  = document.getElementById(pop);
+    const pillEl = document.getElementById(pill); const popEl  = document.getElementById(pop);
     if (pillEl) pillEl.onclick = (e)=>{ if(!isEsc) return; e.stopPropagation(); closeAllPops(); popEl.style.display='block'; };
   });
   document.querySelectorAll('.esc-close').forEach(btn=>{
@@ -568,7 +561,7 @@ function updateEscalations(p){
 }
 function closeAllPops(){ document.querySelectorAll('.esc-pop').forEach(p=>p.style.display='none'); }
 
-/* ===== Live Workflow (priority still affects speed/colors) ===== */
+/* ===== Live Workflow (priority affects speed/colors) ===== */
 const svg = document.getElementById('svg');
 const root = document.getElementById('zoomRoot');
 const tokensLayer = document.getElementById('tokens');
@@ -578,22 +571,16 @@ const host = document.getElementById('svg');
 
 let playing=true, scale=1, panX=0, panY=0;
 document.getElementById('btnPlay').onclick=()=>{ playing=!playing; document.getElementById('btnPlay').textContent=playing?'Pause':'Play'; };
-document.getElementById('btnZoomIn').onclick=()=>{ zoomAt(1.1); };
-document.getElementById('btnZoomOut').onclick=()=>{ zoomAt(0.9); };
-document.getElementById('btnReset').onclick=resetFlow;
+document.getElementById('btnZoomIn').onclick=()=>{ scale=Math.min(1.8, scale*1.1); root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); };
+document.getElementById('btnZoomOut').onclick=()=>{ scale=Math.max(0.7, scale*0.9); root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); };
+document.getElementById('btnReset').onclick=()=>{ scale=1; panX=0; panY=0; root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); };
 document.getElementById('btnSubmitDemo').onclick=()=> spawnNewToken();
 document.getElementById('livePriority').onchange = (e)=>{ currentPriority = PRIORITY[e.target.value] || PRIORITY.standard; };
 
-function applyTransform(){ root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); }
-function zoomAt(f){ scale=Math.min(1.8,Math.max(0.7,scale*f)); applyTransform(); }
-
-let dragging=false, lastX=0, lastY=0;
 host.addEventListener('mousedown',e=>{dragging=true; lastX=e.clientX; lastY=e.clientY; host.classList.add('dragging');});
+let dragging=false,lastX=0,lastY=0;
 window.addEventListener('mouseup',()=>{dragging=false; host.classList.remove('dragging');});
-window.addEventListener('mousemove',e=>{
-  if(!dragging) return;
-  const dx=e.clientX-lastX, dy=e.clientY-lastY; panX+=dx; panY+=dy; lastX=e.clientX; lastY=e.clientY; applyTransform();
-});
+window.addEventListener('mousemove',e=>{ if(!dragging) return; const dx=e.clientX-lastX, dy=e.clientY-lastY; panX+=dx; panY+=dy; lastX=e.clientX; lastY=e.clientY; root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); });
 
 const N = {
   intake:{x:600,y:105}, router:{x:600,y:225},
@@ -605,33 +592,29 @@ const N = {
 };
 function getCSS(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
 function label(text,x,y,fill='#fff',bg='#000',ms=900){
+  if (labelsLayer.childElementCount > 16) return;
   const g=document.createElementNS(svg.namespaceURI,'g');
-  if (labelsLayer.childElementCount > 16) { return; }
   const r=document.createElementNS(svg.namespaceURI,'rect'), t=document.createElementNS(svg.namespaceURI,'text');
   t.textContent=text; t.setAttribute('x',x); t.setAttribute('y',y-16); t.setAttribute('text-anchor','middle'); t.setAttribute('fill',fill);
   t.setAttribute('font-size','11'); t.setAttribute('font-weight','700');
   const w=Math.max(60,text.length*7+12), h=20;
-  r.setAttribute('x',x-w/2); r.setAttribute('y',y-16-h+6); r.setAttribute('width',w); r.setAttribute('height',h);
-  r.setAttribute('rx','8'); r.setAttribute('fill',bg); r.setAttribute('opacity','0.92');
+  r.setAttribute('x',x-w/2); r.setAttribute('y',y-16-h+6); r.setAttribute('width',w); r.setAttribute('height',h); r.setAttribute('rx','8'); r.setAttribute('fill',bg); r.setAttribute('opacity','0.92');
   g.append(r,t); labelsLayer.appendChild(g); setTimeout(()=>g.remove(),ms);
 }
 function setPos(node,x,y){ node.rect.setAttribute('x',x-26); node.rect.setAttribute('y',y-11); node.text.setAttribute('x',x); node.text.setAttribute('y',y+3); }
 function setColor(node,phase,branchColor){
-  let fill = getCSS('--yellow');
-  if(phase==='intake') fill = currentPriority.accent || getCSS('--intake');
+  let fill='#ffd400';
+  if(phase==='intake') fill = currentPriority.accent;
   if(phase==='branch') fill = branchColor;
   if(currentPriority === PRIORITY.high && phase!=='branch') fill = '#fff6ec';
   if(currentPriority === PRIORITY.urgent && phase!=='branch') fill = '#fff1f3';
-  node.rect.setAttribute('fill', fill);
-  node.rect.setAttribute('stroke', currentPriority.color);
-  node.rect.setAttribute('stroke-width', 1.2);
+  node.rect.setAttribute('fill', fill); node.rect.setAttribute('stroke', currentPriority.color); node.rect.setAttribute('stroke-width', 1.2);
 }
 function doc(tag){return document.createElementNS(svg.namespaceURI,tag);}
 function timeline(branch){
   const f = (currentPriority?.targetH/120) || 1;
   const badgeEsc = currentPriority.escalate ? 'Escalated' : null;
   const mgrNote  = currentPriority.notifyMgr ? 'Senior mgr CC' : null;
-
   const tl = [
     {p:N.intake, hold:900*f,  travel:0,       phase:'intake', badge: mgrNote},
     {p:N.router, hold:700*f,  travel:3200*f,  phase:'yellow', badge: badgeEsc},
@@ -640,9 +623,7 @@ function timeline(branch){
     {p:N[branch].B,      hold:1200*f, travel:1600*f,  phase:'branch'},
     {p:N.done,           hold:800*f,  travel:2100*f,  phase:'branch', complete:true}
   ];
-  if (currentPriority.fastTrackFC09){
-    tl[0].hold = 300*f; tl[1].travel = 900*f; tl[2].hold = 400*f; tl[3].badge = 'FC09 assigned';
-  }
+  if (currentPriority.fastTrackFC09){ tl[0].hold = 300*f; tl[1].travel = 900*f; tl[2].hold = 400*f; tl[3].badge = 'FC09 assigned'; }
   return tl;
 }
 const tokens=[];
@@ -656,47 +637,24 @@ function newToken(id, branchKey){
   label('New request', tl[0].p.x, tl[0].p.y, '#000', getCSS('--intake'), 900);
   tokens.push(tok); return tok;
 }
-function spawnNewToken(){
-  const branches=['SS','HD','FT','MD'];
-  const b=branches[Math.floor(Math.random()*branches.length)];
-  const id=b+'-'+(1000+Math.floor(Math.random()*9000));
-  newToken(id,b);
-}
+function spawnNewToken(){ const branches=['SS','HD','FT','MD']; const b=branches[Math.floor(Math.random()*branches.length)]; const id=b+'-'+(1000+Math.floor(Math.random()*9000)); newToken(id,b); }
 function animate(ts){
   requestAnimationFrame(animate);
-  if(!playing) return;
-  if(!animate.last) animate.last=ts;
-  const dt=ts-animate.last; animate.last=ts;
-
+  if(!animate.last) animate.last=ts; const dt=ts-animate.last; animate.last=ts; if(!playing) return;
   tokens.forEach(tok=>{
     if(!tok.alive) return;
     const seg=tok.tl[tok.idx], next=tok.tl[tok.idx+1];
     if(seg.hold>0){ seg.hold-=dt; if(seg.hold<=0 && seg.badge){ label(seg.badge, seg.p.x, seg.p.y, '#fff', tok.color, 900); } return; }
     seg.elapsed=(seg.elapsed||0)+dt;
     const u=Math.min(1, seg.travel? seg.elapsed/seg.travel : 1);
-    const x=next ? seg.p.x + (next.p.x - seg.p.x)*u : seg.p.x;
-    const y=next ? seg.p.y + (next.p.y - seg.p.y)*u : seg.p.y;
+    const x=next ? seg.p.x + (next.p.x - seg.p.x)*u : seg.p.x; const y=next ? seg.p.y + (next.p.y - seg.p.y)*u : seg.p.y;
     setColor(tok.node, seg.phase==='branch'?'branch':(seg.phase==='intake'?'intake':'yellow'), tok.color);
     setPos(tok.node,x,y);
-    if(u>=1){
-      tok.idx++;
-      if(tok.idx>=tok.tl.length-1){
-        label('✓ Complete', N.done.x, N.done.y, '#fff', '#28a745', 900);
-        tok.node.g.remove(); tok.alive=false;
-        setTimeout(()=>{ if(tokens.filter(t=>t.alive).length<10) spawnNewToken(); }, 800+Math.random()*1000);
-      }
-    }
+    if(u>=1){ tok.idx++; if(tok.idx>=tok.tl.length-1){ label('✓ Complete', N.done.x, N.done.y, '#fff', '#28a745', 900); tok.node.g.remove(); tok.alive=false; setTimeout(()=>{ if(tokens.filter(t=>t.alive).length<10) spawnNewToken(); }, 800+Math.random()*1000); } }
   });
 }
 requestAnimationFrame(animate);
-function resetFlow(){
-  scale=1; panX=0; panY=0; root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`);
-  animate.last=null;
-  [...tokensLayer.children].forEach(n=>n.remove());
-  [...labelsLayer.children].forEach(n=>n.remove());
-  tokens.length=0;
-  ['HD','SS','MD','FT'].forEach((b,i)=> setTimeout(()=> newToken(b+'-'+(2000+i), b), i*650));
-}
+function resetFlow(){ scale=1; panX=0; panY=0; root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); animate.last=null; [...tokensLayer.children].forEach(n=>n.remove()); [...labelsLayer.children].forEach(n=>n.remove()); tokens.length=0; ['HD','SS','MD','FT'].forEach((b,i)=> setTimeout(()=> newToken(b+'-'+(2000+i), b), i*650)); }
 resetFlow();
 </script>
 </body>

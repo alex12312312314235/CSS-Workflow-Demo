@@ -75,7 +75,6 @@
   .step-standard{border-color:#28a74522;background:#fff}
   .exclaim{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:#dc3545;color:#fff;font-weight:800;margin-left:6px}
 
-  /* dashboard */
   .dashboard-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:20px}
   .metric-card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:15px;box-shadow:0 2px 4px rgba(0,0,0,.05)}
   .metric-value{font-size:28px;font-weight:bold;color:var(--ekfc-red);margin-bottom:5px}
@@ -91,7 +90,6 @@
   .priority-high{background:#fff3cd;color:#856404}
   .priority-normal{background:#d1ecf1;color:#0c5460}
 
-  /* live flow */
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
   .btn{background:#fff;border:1px solid var(--line);padding:8px 10px;border-radius:6px;cursor:pointer}
   .btn:hover{background:#f9f9f9}
@@ -562,7 +560,7 @@ function updateEscalations(p){
 }
 function closeAllPops(){ document.querySelectorAll('.esc-pop').forEach(p=>p.style.display='none'); }
 
-/* ===== Live Workflow (realistic stream with badges) ===== */
+/* ===== Live Workflow ===== */
 const svg = document.getElementById('svg');
 const root = document.getElementById('zoomRoot');
 const tokensLayer = document.getElementById('tokens');
@@ -639,7 +637,8 @@ function ensureBacklog(){
   if (alive < targetConcurrent){
     spawnManaged();
   }
-  const nextIn = rnd(800, 2200);
+  // calmer arrivals
+  const nextIn = rnd(1200, 2800);
   schedulerTimer = setTimeout(ensureBacklog, nextIn);
 }
 function spawnManaged(){
@@ -656,7 +655,7 @@ function newToken(id, branchKey, priority){
   const r=doc('rect'); r.setAttribute('width',52); r.setAttribute('height',22);
   const t=doc('text'); t.setAttribute('text-anchor','middle'); t.textContent=id.split('-')[0];
 
-  // small exclamation badge (yellow for high, red for urgent)
+  // priority badge that travels with the token:
   const badgeGroup = doc('g'); const circ = doc('circle'); const mark = doc('text');
   const isUrgent = priority === PR.urgent; const isHigh = priority === PR.high; const showBadge = isUrgent || isHigh;
   if (showBadge){
@@ -673,7 +672,7 @@ function newToken(id, branchKey, priority){
   setPos(tok.node, tl[0].p.x, tl[0].p.y, tok.prio); setColor(tok.node,'intake',tok.color,tok.prio);
 
   function layoutBadge(x,y){
-    if (!(isUrgent||isHigh)) return;
+    if (!showBadge) return;
     const bx = x + 20; const by = y - 10; tok.node.badge.setAttribute('transform', `translate(${bx},${by})`);
   }
   tok.layoutBadge = layoutBadge; layoutBadge(tl[0].p.x, tl[0].p.y);
@@ -697,18 +696,27 @@ function setColor(node,phase,branchColor,prio){
   node.rect.setAttribute('stroke-width', 1.2);
 }
 function timeline(branch, prio){
-  const f = (prio?.targetH/120) || 1;
+  // ½ speed overall
+  const SPEED = 2;
+  const f = ((prio?.targetH || 120) / 120) * SPEED;
+
   const tl = [
-    {p:N.intake,  hold:900*f,  travel:0,       phase:'intake', badge: prio.notifyMgr ? 'Senior mgr CC' : null},
-    {p:N.router,  hold:700*f,  travel:3200*f,  phase:'yellow', badge: prio.escalate ? 'Escalated' : null},
-    {p:N[branch].coord, hold:800*f,  travel:3800*f,  phase:'branch'},
-    {p:N[branch].A,     hold:2400*f, travel:1800*f,  phase:'branch', badge:'In progress'},
-    {p:N[branch].B,     hold:1200*f, travel:1600*f,  phase:'branch'},
-    {p:N.done,          hold:800*f,  travel:2100*f,  phase:'branch', complete:true}
+    {p:N.intake,  hold: 900*f, travel:   0,     phase:'intake', badge: prio.notifyMgr ? 'Senior mgr CC' : null},
+    {p:N.router,  hold: 700*f, travel:3200*f,   phase:'yellow', badge: prio.escalate ? 'Escalated' : null},
+    {p:N[branch].coord, hold: 800*f, travel:3800*f, phase:'branch'},
+    {p:N[branch].A,     hold:2400*f, travel:1800*f, phase:'branch', badge:'In progress'},
+    {p:N[branch].B,     hold:1200*f, travel:1600*f, phase:'branch'},
+    {p:N.done,          hold: 800*f, travel:2100*f, phase:'branch', complete:true}
   ];
-  if (prio.fastTrackFC09){
-    tl[0].hold = 300*f; tl[1].travel = 900*f; tl[2].hold = 400*f; tl[3].badge = 'FC09 assigned';
+
+  // FC09 fast-track ONLY for Urgent
+  if (prio === PR.urgent) {
+    tl[0].hold = 300*f;    // faster intake wait
+    tl[1].travel = 900*f;  // faster route
+    tl[2].hold = 400*f;    // faster coordinator wait
+    tl[3].badge = 'FC09 assigned';
   }
+
   return tl;
 }
 

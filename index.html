@@ -56,17 +56,35 @@
   .resolution-banner .eta{font-weight:700}
   .resolution-banner .muted{color:#666}
 
-  .workflow-step{display:flex;padding:15px;margin-bottom:15px;background:var(--soft);border:1px solid #e0e0e0;border-radius:3px;opacity:.5;transition:.3s}
+  .workflow-step{position:relative;display:flex;padding:15px;margin-bottom:15px;background:var(--soft);border:1px solid #e0e0e0;border-radius:3px;opacity:.5;transition:.3s}
   .workflow-step.active{opacity:1;background:#fff;border-color:var(--ekfc-red);border-width:2px}
   .workflow-step.completed{opacity:.95;background:#f0f8f0;border-color:#28a745}
   .step-number{width:40px;height:40px;background:#ddd;color:#666;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;margin-right:15px;flex-shrink:0}
   .workflow-step.active .step-number{background:var(--ekfc-red);color:#fff}
   .workflow-step.completed .step-number{background:#28a745;color:#fff}
   .step-content{flex:1}
-  .step-title{font-size:14px;font-weight:600;margin-bottom:4px}
+  .step-title{font-size:14px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .step-desc{font-size:12px;color:var(--muted)}
   .step-details{margin-top:8px;padding-top:8px;border-top:1px solid #e0e0e0;font-size:11px;color:var(--muted);display:none}
   .workflow-step.active .step-details,.workflow-step.completed .step-details{display:block}
+
+  /* escalation UI */
+  .esc-pill{
+    display:inline-flex;align-items:center;gap:6px;
+    background:#fff1f3;border:1px solid #dc3545;color:#dc3545;
+    padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer;
+  }
+  .esc-dot{width:6px;height:6px;border-radius:50%;background:#dc3545;display:inline-block}
+  .esc-pop{
+    position:absolute;right:16px;top:50px;z-index:5;max-width:380px;
+    background:#fff;border:1px solid #f1b5bd;border-left:4px solid #dc3545;
+    box-shadow:0 10px 24px rgba(0,0,0,.08);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.35;display:none
+  }
+  .esc-pop .h{font-weight:800;margin-bottom:4px}
+  .esc-pop .item{display:flex;gap:8px;margin:4px 0}
+  .esc-pop .k{min-width:98px;color:#444}
+  .esc-pop .v{font-weight:700}
+  .esc-close{position:absolute;top:6px;right:8px;border:none;background:transparent;color:#b13a46;cursor:pointer;font-weight:800}
 
   .dashboard-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:20px}
   .metric-card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:15px;box-shadow:0 2px 4px rgba(0,0,0,.05)}
@@ -98,7 +116,7 @@
   .tip .k{color:#777;text-transform:uppercase;font-size:11px}
   .tip .v{font-weight:700}
 
-  /* priority decorations */
+  /* priority decorations (step borders) */
   .priority-ribbon{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
   .step-urgent{border-color:#dc3545 !important;background:#fff}
   .step-high{border-color:#ff9a2f !important;background:#fff}
@@ -188,7 +206,9 @@
           <div class="workflow-step" id="step1">
             <div class="step-number">1</div>
             <div class="step-content">
-              <div class="step-title">Request Submission</div>
+              <div class="step-title">
+                Request Submission
+              </div>
               <div class="step-desc">BU submits request through unified portal</div>
               <div class="step-details">
                 <strong>Submitted:</strong> <span id="time1">--</span><br/>
@@ -200,36 +220,76 @@
           <div class="workflow-step" id="step2">
             <div class="step-number">2</div>
             <div class="step-content">
-              <div class="step-title">CSS Admin Intake</div>
+              <div class="step-title">
+                CSS Admin Intake
+                <span id="esc2" class="esc-pill" style="display:none"><span class="esc-dot"></span>Escalation</span>
+              </div>
               <div class="step-desc">Request routed to CSS Admin for initial processing</div>
-              <div class="step-details"></div>
+              <div class="step-details" id="sd2"></div>
+              <div id="pop2" class="esc-pop">
+                <button class="esc-close" data-close="#pop2">×</button>
+                <div class="h">Intake escalation</div>
+                <div class="item"><div class="k">Notifications</div><div class="v" id="esc2_notif">—</div></div>
+                <div class="item"><div class="k">Routing</div><div class="v" id="esc2_route">—</div></div>
+                <div class="item"><div class="k">SLA impact</div><div class="v" id="esc2_sla">—</div></div>
+              </div>
             </div>
           </div>
 
           <div class="workflow-step" id="step3">
             <div class="step-number">3</div>
             <div class="step-content">
-              <div class="step-title">H&amp;D Assignment</div>
+              <div class="step-title">
+                H&amp;D Assignment
+                <span id="esc3" class="esc-pill" style="display:none"><span class="esc-dot"></span>Escalation</span>
+              </div>
               <div class="step-desc">Ticket assigned to H&amp;D specialist based on expertise</div>
-              <div class="step-details"></div>
+              <div class="step-details" id="sd3"></div>
+              <div id="pop3" class="esc-pop">
+                <button class="esc-close" data-close="#pop3">×</button>
+                <div class="h">Assignment escalation</div>
+                <div class="item"><div class="k">Assignee</div><div class="v" id="esc3_assignee">—</div></div>
+                <div class="item"><div class="k">Signals</div><div class="v" id="esc3_signals">—</div></div>
+                <div class="item"><div class="k">Reminders</div><div class="v" id="esc3_rem">—</div></div>
+              </div>
             </div>
           </div>
 
           <div class="workflow-step" id="step4">
             <div class="step-number">4</div>
             <div class="step-content">
-              <div class="step-title">Technical Review</div>
+              <div class="step-title">
+                Technical Review
+                <span id="esc4" class="esc-pill" style="display:none"><span class="esc-dot"></span>Escalation</span>
+              </div>
               <div class="step-desc">H&amp;D specialist performs allergen assessment</div>
-              <div class="step-details"></div>
+              <div class="step-details" id="sd4"></div>
+              <div id="pop4" class="esc-pop">
+                <button class="esc-close" data-close="#pop4">×</button>
+                <div class="h">Technical review escalation</div>
+                <div class="item"><div class="k">Priority</div><div class="v" id="esc4_pri">—</div></div>
+                <div class="item"><div class="k">Reminders</div><div class="v" id="esc4_rem">—</div></div>
+                <div class="item"><div class="k">Channels</div><div class="v" id="esc4_ch">—</div></div>
+              </div>
             </div>
           </div>
 
           <div class="workflow-step" id="step5">
             <div class="step-number">5</div>
             <div class="step-content">
-              <div class="step-title">Manager Approval &amp; Review</div>
+              <div class="step-title">
+                Manager Approval &amp; Review
+                <span id="esc5" class="esc-pill" style="display:none"><span class="esc-dot"></span>Escalation</span>
+              </div>
               <div class="step-desc">Manager review and approval</div>
-              <div class="step-details"></div>
+              <div class="step-details" id="sd5"></div>
+              <div id="pop5" class="esc-pop">
+                <button class="esc-close" data-close="#pop5">×</button>
+                <div class="h">Approval escalation</div>
+                <div class="item"><div class="k">Approver</div><div class="v" id="esc5_appr">—</div></div>
+                <div class="item"><div class="k">Notifications</div><div class="v" id="esc5_notif">—</div></div>
+                <div class="item"><div class="k">Deadline guards</div><div class="v" id="esc5_guard">—</div></div>
+              </div>
             </div>
           </div>
 
@@ -258,7 +318,6 @@
         <div class="metric-card"><div class="metric-value">18.5</div><div class="metric-label">Avg Hours per Request</div><div class="metric-change negative">↑ 2.1 hours</div></div>
         <div class="metric-card"><div class="metric-value">89%</div><div class="metric-label">First-Pass Acceptance</div><div class="metric-change positive">↑ 5% improvement</div></div>
       </div>
-      <!-- tables omitted for brevity; unchanged from prior version -->
     </div>
 
     <!-- Live Workflow -->
@@ -349,9 +408,9 @@ function switchView(view, event){
 /* ===== Priority model =====
    Baseline total SLA = 120h (≈5 days). High=72h, Urgent=24h. */
 const PRIORITY = {
-  standard: { name:'Standard', color:'#28a745', accent:'#f3fbf4', factor:1.0,  targetH:120, escalate:false, notifyMgr:false },
-  high:     { name:'High',     color:'#ff9a2f', accent:'#fff6ec', factor:0.6,  targetH:72,  escalate:true,  notifyMgr:true },
-  urgent:   { name:'Urgent',   color:'#dc3545', accent:'#fff1f3', factor:0.2,  targetH:24,  escalate:true,  notifyMgr:true, fastTrackFC09:true }
+  standard: { name:'Standard', color:'#28a745', accent:'#f3fbf4', factor:1.0, targetH:120, escalate:false, notifyMgr:false },
+  high:     { name:'High',     color:'#ff9a2f', accent:'#fff6ec', factor:0.6, targetH:72,  escalate:true,  notifyMgr:true },
+  urgent:   { name:'Urgent',   color:'#dc3545', accent:'#fff1f3', factor:0.2, targetH:24,  escalate:true,  notifyMgr:true, fastTrackFC09:true }
 };
 let currentPriority = PRIORITY.standard;
 
@@ -369,21 +428,69 @@ function submitRequest(){
   }, 600);
 }
 
-function addHours(d, hrs){
-  const dt = new Date(d.getTime());
-  dt.setHours(dt.getHours() + hrs);
-  return dt;
+function addHours(d, hrs){ const dt = new Date(d.getTime()); dt.setHours(dt.getHours() + hrs); return dt; }
+function fmtDT(d){ return d.toLocaleString([], {hour12:false}); }
+
+/* Build and wire escalation popups for the four steps */
+function updateEscalations(p){
+  const isEsc = (p===PRIORITY.high || p===PRIORITY.urgent);
+
+  // show/hide pills
+  ['esc2','esc3','esc4','esc5'].forEach(id=>{
+    document.getElementById(id).style.display = isEsc ? 'inline-flex' : 'none';
+  });
+
+  // Intake details
+  document.getElementById('esc2_notif').textContent =
+    p===PRIORITY.urgent ? 'Mgr + Senior Mgr (Email & MS Teams, immediate)' :
+    'Mgr (Email & MS Teams, immediate)';
+  document.getElementById('esc2_route').textContent =
+    p===PRIORITY.urgent ? 'Fast route with priority flag' : 'Priority flag in queue';
+  document.getElementById('esc2_sla').textContent =
+    `Step window: ${Math.max(1, Math.round(baseSLA.intake*p.factor))}h`;
+
+  // Assignment details
+  document.getElementById('esc3_assignee').textContent =
+    p.fastTrackFC09 ? 'FC09 • Senior Specialist (auto-assigned)' : 'Senior pool highlighted to coordinator';
+  document.getElementById('esc3_signals').textContent =
+    p.fastTrackFC09 ? 'Pager/Teams alert to FC09 + coordinator' : 'Teams alert to coordinator & senior pool';
+  document.getElementById('esc3_rem').textContent =
+    p===PRIORITY.urgent ? 'Reminders every 60 min until accepted' : 'Reminders every 2 hours';
+  
+  // Technical review details
+  document.getElementById('esc4_pri').textContent =
+    p===PRIORITY.urgent ? 'Marked URGENT in reviewer’s queue' : 'Marked HIGH in reviewer’s queue';
+  document.getElementById('esc4_rem').textContent =
+    p===PRIORITY.urgent ? 'SLA guard: T-6h, T-3h, T-1h alerts' : 'SLA guard: T-12h, T-6h alerts';
+  document.getElementById('esc4_ch').textContent = 'Email + MS Teams (channel mention)';
+
+  // Manager approval details
+  document.getElementById('esc5_appr').textContent =
+    p===PRIORITY.urgent ? 'Senior manager (auto-CC, can approve)' : 'Manager (auto-CC senior for visibility)';
+  document.getElementById('esc5_notif').textContent =
+    p===PRIORITY.urgent ? 'Email + Teams + mobile push (if enabled)' : 'Email + Teams';
+  document.getElementById('esc5_guard').textContent =
+    p===PRIORITY.urgent ? 'Deadline guards: T-4h, T-2h, T-30m' : 'Deadline guards: T-12h, T-4h';
+
+  // click handlers to toggle popups
+  [['esc2','pop2'],['esc3','pop3'],['esc4','pop4'],['esc5','pop5']].forEach(([pill,pop])=>{
+    const pillEl = document.getElementById(pill);
+    const popEl  = document.getElementById(pop);
+    pillEl.onclick = (e)=>{ e.stopPropagation(); closeAllPops(); popEl.style.display='block'; };
+  });
+  document.querySelectorAll('.esc-close').forEach(btn=>{
+    btn.onclick = (e)=>{ const id=e.target.getAttribute('data-close'); document.querySelector(id).style.display='none'; e.stopPropagation(); };
+  });
+  document.addEventListener('click', closeAllPops);
 }
-function fmtDT(d){
-  return d.toLocaleString([], {hour12:false});
-}
+function closeAllPops(){ document.querySelectorAll('.esc-pop').forEach(p=>p.style.display='none'); }
 
 function startWorkflow(p){
   const steps = [...document.querySelectorAll('#workflow-view .workflow-step')];
   steps.forEach(s => { s.classList.remove('active','completed','step-urgent','step-high','step-standard'); });
 
   // Resolution target banner
-  const totalTarget = p.targetH; // explicit targets by priority
+  const totalTarget = p.targetH;
   const eta = fmtDT(addHours(new Date(), totalTarget));
   const banner = document.getElementById('resBanner');
   banner.style.display = 'flex';
@@ -399,27 +506,36 @@ function startWorkflow(p){
   const s4 = Math.max(1, Math.round(baseSLA.tech*f));
   const s5 = Math.max(1, Math.round(baseSLA.mgr*f));
 
-  document.querySelector('#step2 .step-details').innerHTML =
+  document.getElementById('sd2').innerHTML =
     `<strong>SLA:</strong> <b>${s2} hours</b><br/><strong>Status:</strong> Processing` +
     (p.notifyMgr ? ` <span class="priority-ribbon" style="background:${p.accent};color:${p.color}">Mgr notified</span>`:``);
 
-  document.querySelector('#step3 .step-details').innerHTML =
+  document.getElementById('sd3').innerHTML =
     `<strong>SLA:</strong> <b>Processing within ${s3} hours</b><br/>` +
     `<strong>Assigned to:</strong> ${p.fastTrackFC09 ? 'FC09 • Senior Specialist (Auto)' : 'Sarah Johnson'}`;
 
-  document.querySelector('#step4 .step-details').innerHTML =
+  document.getElementById('sd4').innerHTML =
     `<strong>SLA:</strong> <b>${s4} hours</b><br/><strong>Compliance:</strong> EU & UAE standards`;
 
-  document.querySelector('#step5 .step-details').innerHTML =
+  document.getElementById('sd5').innerHTML =
     `<strong>SLA:</strong> <b>${s5} hours</b><br/><strong>Checklist:</strong> Complete`;
 
-  // Priority skin + labels
+  // Priority step skins + labels
   const skin = p === PRIORITY.urgent ? 'step-urgent' : p === PRIORITY.high ? 'step-high' : 'step-standard';
   steps.forEach(s => s.classList.add(skin));
   const title2 = document.querySelector('#step2 .step-title');
   title2.innerHTML = `CSS Admin Intake${
     p.escalate ? ` <span class="priority-ribbon" style="background:${p.accent};color:${p.color}">${p.name}</span>` : ''
-  }${p === PRIORITY.urgent ? ` <span class="exclaim">!</span>`:''}`;
+  }${p === PRIORITY.urgent ? ` <span class="exclaim">!</span>`:''}
+  <span id="esc2" class="esc-pill" style="display:${(p===PRIORITY.high||p===PRIORITY.urgent)?'inline-flex':'none'}"><span class="esc-dot"></span>Escalation</span>`;
+
+  // ensure other pills persist after title rewrite
+  document.getElementById('esc3').style.display = (p===PRIORITY.high||p===PRIORITY.urgent)?'inline-flex':'none';
+  document.getElementById('esc4').style.display = (p===PRIORITY.high||p===PRIORITY.urgent)?'inline-flex':'none';
+  document.getElementById('esc5').style.display = (p===PRIORITY.high||p===PRIORITY.urgent)?'inline-flex':'none';
+
+  // Build escalation copy + handlers
+  updateEscalations(p);
 
   // Animation timings (ms) scaled by factor
   const t=[0, 2000*f, 4000*f, 6000*f, 8000*f, 10000*f];
@@ -437,7 +553,7 @@ function startWorkflow(p){
   function finishStep(steps,i){ steps[i].classList.remove('active'); steps[i].classList.add('completed'); }
 }
 
-/* ===== Live Workflow (unchanged visuals; priority still affects speed) ===== */
+/* ===== Live Workflow (priority still affects speed/colors) ===== */
 const svg = document.getElementById('svg');
 const root = document.getElementById('zoomRoot');
 const tokensLayer = document.getElementById('tokens');

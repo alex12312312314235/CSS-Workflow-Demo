@@ -87,7 +87,7 @@
   .positive{color:#28a745}.negative{color:#dc3545}
   .dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
   .table{width:100%;border-collapse:collapse;font-size:12px}
-  .table th{background:var(--soft);padding:8px;text-align:left;font-weight:600;border-bottom:2px solid var(--gold)}
+  .table th{background:var(--soft);padding:8px;text-align:left;font-weight:600;border-bottom:2px solid --gold}
   .table td{padding:8px;border-bottom:1px solid #e0e0e0;color:#555}
   .priority-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}
   .priority-urgent{background:#f8d7da;color:#721c24}
@@ -443,7 +443,7 @@ function switchView(view, event){
   document.getElementById(view+'-view').classList.add('active');
 }
 
-/* ===== Priority model (business hours targets) ===== */
+/* ===== Priority model ===== */
 const PRIORITY = {
   standard: { name:'Standard', color:'#28a745', accent:'#f3fbf4', targetH:120, escalate:false, notifyMgr:false },
   high:     { name:'High',     color:'#ff9a2f', accent:'#fff6ec', targetH:96,  escalate:true,  notifyMgr:true },
@@ -451,11 +451,11 @@ const PRIORITY = {
 };
 let currentPriority = PRIORITY.standard;
 
-/* Per-step baseline split (sums to 120h) */
+/* Baseline split (sums to 120h) */
 const BASE = { intake:24, assign:48, tech:24, mgr:24 };
 
-/* ===== Business-hours calendar (Mon–Fri, 09:00–18:00) ===== */
-const WORK = { startHour:9, endHour:18, weekdays:[1,2,3,4,5] }; // Mon=1..Sun=7
+/* ===== Business-hours calendar ===== */
+const WORK = { startHour:9, endHour:18, weekdays:[1,2,3,4,5] };
 function isWorkday(d){ const wd = d.getDay()===0?7:d.getDay(); return WORK.weekdays.includes(wd); }
 function clampToStart(d){
   const t = new Date(d);
@@ -491,7 +491,7 @@ function businessHoursBetween(start, end){
     mins += Math.max(0, (stepEnd - cur)/60000);
     cur = (stepEnd < eod) ? stepEnd : nextWorkdayStart(stepEnd);
   }
-  return Math.round(mins/60); // hours
+  return Math.round(mins/60);
 }
 function fmtDT(d){ return d.toLocaleString([], {hour12:false}); }
 function fmtElapsed(ms){
@@ -635,7 +635,7 @@ function enablePanZoom(){
   });
 }
 
-/* Node map for the live flow */
+/* Node map */
 const N = {
   intake:{x:600,y:105}, router:{x:600,y:225},
   SS:{coord:{x:230,y:345}, A:{x:220,y:463}, B:{x:280,y:543}, color:getCSS('--SS')},
@@ -665,12 +665,13 @@ const WINDOW_MIN = 15;
 let resetStartedAt = new Date();
 let createdSinceReset = 0;
 let completedSinceReset = 0;
-const completedHistory = []; // { createdAt, completedAt, slaTargetH, branch, originBU, prio, reqType }
+/* completedHistory keeps real and simulated summaries */
+const completedHistory = []; // { createdAt, completedAt, slaTargetH, branch, originBU, prio, reqType, simAgeH }
 
-let targetConcurrent = 12;           // randomized on reset (10..15)
-let manualPriorityMode = 'mix';      // 'mix' | 'standard' | 'high' | 'urgent'
-let waveSpawned = 0;                 // how many spawned in current wave
-let quotaUrgent = 1, usedUrgent = 0; // per-wave quotas
+let targetConcurrent = 12;
+let manualPriorityMode = 'mix';
+let waveSpawned = 0;
+let quotaUrgent = 1, usedUrgent = 0;
 let quotaHigh   = 2, usedHigh   = 0;
 let schedulerTimer = null;
 
@@ -691,10 +692,7 @@ function choosePriorityForSpawn(){
 }
 function ensureBacklog(){
   const alive = tokens.filter(t=>t.alive).length;
-  if (alive < targetConcurrent){
-    spawnManaged();
-  }
-  // calmer arrivals
+  if (alive < targetConcurrent){ spawnManaged(); }
   const nextIn = rnd(1200, 2800);
   schedulerTimer = setTimeout(ensureBacklog, nextIn);
 }
@@ -706,8 +704,41 @@ function randomReqType(branch){
   const map={SS:SS,HD:HD,FT:FT,MD:MD};
   return pick(map[branch]||['Request']);
 }
-const ORIGINS = ["East Wing","West Wing","DIA Louges","Commercial"]; // noisy label by design
+const ORIGINS = ["East Wing","West Wing","DIA Louges","Commercial"];
 
+/* ===== Simulated time engine ===== */
+/* 1 real second = 10 simulated minutes (≈1 sim hour / 6 sec) */
+const AGE_RATE = 1/10; // sim minutes per real second
+function simHoursSince(startMs){ return ((Date.now() - startMs) * AGE_RATE) / (1000*60); } // minutes -> convert below
+
+function initialSimAgeHoursFor(prio){
+  if (prio === PRIORITY.urgent)   return rfloat(4,10); // 4–10 h
+  if (prio === PRIORITY.high)     return rfloat(2,6);  // 2–6 h
+  return rfloat(0,4);                                 // 0–4 h
+}
+function bumpHoursForStage(prio, nextIdx){
+  const bump = (a,b)=> rfloat(a,b);
+  if (prio === PRIORITY.urgent){
+    if (nextIdx===2) return bump(3,5);
+    if (nextIdx===3) return bump(4,7);
+    if (nextIdx===4) return bump(5,10);
+  } else if (prio === PRIORITY.high){
+    if (nextIdx===2) return bump(1,3);
+    if (nextIdx===3) return bump(2,4);
+    if (nextIdx===4) return bump(3,6);
+  } else {
+    if (nextIdx===2) return bump(0.5,1.5);
+    if (nextIdx===3) return bump(1,2);
+    if (nextIdx===4) return bump(1,3);
+  }
+  return 0;
+}
+/* compute current simulated age for a token */
+function tokenSimAgeH(tok){
+  return tok.simSeedH + (simHoursSince(tok.simStartMs)/60) + tok.simBumpH;
+}
+
+/* ===== Spawning ===== */
 function spawnManaged(){
   if (waveSpawned >= targetConcurrent) resetWave();
   const p = choosePriorityForSpawn(); waveSpawned++;
@@ -717,13 +748,12 @@ function spawnManaged(){
   newToken(id, b, p, type);
 }
 
-/* Build a token (with sticky priority badge) */
+/* Build a token */
 function newToken(id, branchKey, priority, reqType='Request'){
   const g=doc('g'); g.classList.add('token'); g.setAttribute('data-id',id);
   const r=doc('rect'); r.setAttribute('width',52); r.setAttribute('height',22);
   const t=doc('text'); t.setAttribute('text-anchor','middle'); t.textContent=id.split('-')[0];
 
-  // priority badge that travels with the token:
   const badgeGroup = doc('g'); const circ = doc('circle'); const mark = doc('text');
   const isUrgent = priority === PR.urgent; const isHigh = priority === PR.high; const showBadge = isUrgent || isHigh;
   if (showBadge){
@@ -735,22 +765,23 @@ function newToken(id, branchKey, priority, reqType='Request'){
   }
   g.append(r,t,badgeGroup); tokensLayer.appendChild(g);
 
-  // ---- Age seeding so new tokens start with non-zero ages
-  const seedH = initialSimAgeHoursFor(priority);
-  const simNow = AGE_SIM_START + (Date.now() - AGE_SIM_START) * AGE_RATE;
-  const seededCreatedAt = new Date(simNow - seedH * 3600000);
-
   const tl=timeline(branchKey, priority);
+
   const tok={
     id, branch: branchKey, prio: priority,
     color:N[branchKey].color,
     node:{ g, rect:r, text:t, badge:badgeGroup, badgeCirc:circ, badgeMark:mark },
     tl, idx:0, alive:true,
-    createdAt: seededCreatedAt,
+    createdAt: new Date(),          // REAL creation (kept for SLA & real metrics)
     completedAt: null,
     originBU: pick(ORIGINS),
     slaTargetH: priority.targetH,
-    reqType
+    reqType,
+
+    // --- simulated time state ---
+    simSeedH: initialSimAgeHoursFor(priority), // initial visible age
+    simStartMs: Date.now(),                    // when we started counting forward
+    simBumpH: 0                                // added at stage boundaries
   };
   createdSinceReset++;
 
@@ -783,9 +814,8 @@ function setColor(node,phase,branchColor,prio){
   node.rect.setAttribute('stroke-width', 1.2);
 }
 
-/* Timeline & per-stage age bumps */
+/* Timeline */
 function timeline(branch, prio){
-  // ½ speed overall
   const SPEED = 2;
   const f = ((prio?.targetH || 120) / 120) * SPEED;
 
@@ -798,51 +828,17 @@ function timeline(branch, prio){
     {p:N.done,          hold: 800*f, travel:2100*f, phase:'branch', complete:true}
   ];
 
-  // FC09 fast-track ONLY for Urgent
   if (prio === PR.urgent) {
-    tl[0].hold = 300*f;    // faster intake wait
-    tl[1].travel = 900*f;  // faster route
-    tl[2].hold = 400*f;    // faster coordinator wait
+    tl[0].hold = 300*f;
+    tl[1].travel = 900*f;
+    tl[2].hold = 400*f;
     tl[3].badge = 'FC09 assigned';
   }
 
   return tl;
 }
 
-/* --- Synthetic aging clock for realism --- */
-const AGE_SIM_START = Date.now();
-const AGE_RATE = 1 / 10; // 1 real second = 10 simulated minutes (6 real sec ≈ 1 simulated hour)
-function simulatedAgeHours(createdAt) {
-  const simNow = AGE_SIM_START + (Date.now() - AGE_SIM_START) * AGE_RATE;
-  return Math.max(0, (simNow - createdAt) / 3600000); // hours
-}
-/* Initial simulated age seeding per priority */
-function initialSimAgeHoursFor(prio){
-  if (prio === PRIORITY.urgent)   return rfloat(4,10); // 4–10 h
-  if (prio === PRIORITY.high)     return rfloat(2,6);  // 2–6 h
-  return rfloat(0,4);                                 // 0–4 h
-}
-/* Per-stage bump schedule (adds to age by moving createdAt back in time) */
-function bumpHoursForStage(prio, nextIdx){
-  // nextIdx: 2=enter coord, 3=enter A, 4=enter B
-  const bump = (a,b)=> rfloat(a,b);
-  if (prio === PRIORITY.urgent){
-    if (nextIdx===2) return bump(3,5);
-    if (nextIdx===3) return bump(4,7);
-    if (nextIdx===4) return bump(5,10);
-  } else if (prio === PRIORITY.high){
-    if (nextIdx===2) return bump(1,3);
-    if (nextIdx===3) return bump(2,4);
-    if (nextIdx===4) return bump(3,6);
-  } else { // standard
-    if (nextIdx===2) return bump(0.5,1.5);
-    if (nextIdx===3) return bump(1,2);
-    if (nextIdx===4) return bump(1,3);
-  }
-  return 0;
-}
-
-/* Animation loop (applies per-stage bumps when crossing segments) */
+/* Animation loop — applies per-stage simulated bumps */
 function animate(ts){
   requestAnimationFrame(animate);
   if(!playing) return;
@@ -861,16 +857,15 @@ function animate(ts){
     setPos(tok.node,x,y,tok.prio);
     if (tok.layoutBadge) tok.layoutBadge(x,y);
     if(u>=1){
-      // about to enter next segment — apply age bump if defined
       const nextIdx = tok.idx+1;
       if (nextIdx===2 || nextIdx===3 || nextIdx===4){
-        const bumpH = bumpHoursForStage(tok.prio, nextIdx);
-        if (bumpH>0){ tok.createdAt = new Date(tok.createdAt.getTime() - bumpH*3600000); }
+        tok.simBumpH += bumpHoursForStage(tok.prio, nextIdx);
       }
       tok.idx++;
       if(tok.idx>=tok.tl.length-1){
         label('✓ Complete', N.done.x, N.done.y, '#fff', '#28a745', 900);
         tok.completedAt = new Date();
+        const simAgeAtComplete = tokenSimAgeH(tok);
         tok.node.g.remove(); tok.alive=false;
         completedSinceReset++;
         completedHistory.push({
@@ -880,7 +875,8 @@ function animate(ts){
           branch: tok.branch,
           originBU: tok.originBU,
           prio: tok.prio,
-          reqType: tok.reqType
+          reqType: tok.reqType,
+          simAgeH: simAgeAtComplete
         });
         scheduleMetricsUpdate();
       }
@@ -904,16 +900,14 @@ function resetFlow(){
   targetConcurrent = rnd(10,15);
   resetWave();
 
-  // reset counters
   resetStartedAt = new Date();
   createdSinceReset = 0;
   completedSinceReset = 0;
   completedHistory.length = 0;
   updateSinceResetBanner();
 
-  // seed: half immediate + half staggered so numbers move at once
   const seedCount = Math.min(8, targetConcurrent);
-  for (let i=0;i<Math.ceil(seedCount/2);i++) spawnManaged(); // immediate
+  for (let i=0;i<Math.ceil(seedCount/2);i++) spawnManaged();
   for (let i=0;i<Math.floor(seedCount/2);i++) setTimeout(spawnManaged, 400 + i*rnd(250,600));
 
   if (schedulerTimer) clearTimeout(schedulerTimer);
@@ -936,54 +930,51 @@ function label(text,x,y,fill='#fff',bg='#000',ms=900){
 }
 
 /* ===== Metrics engine ===== */
-const METRIC_TICK_MS = 1000;
 let metricsTimer = null;
 function scheduleMetricsUpdate(){
-  if (metricsTimer) return; // coalesce floods
+  if (metricsTimer) return;
   metricsTimer = setTimeout(()=>{ metricsTimer=null; updateMetrics(); }, 120);
 }
 
 function updateMetrics(){
-  // rolling window labels
+  // window labels
+  const WINDOW_MIN = 15;
   document.getElementById('windowLen').textContent = WINDOW_MIN;
   document.getElementById('winLenA').textContent = WINDOW_MIN;
   document.getElementById('winLenB').textContent = WINDOW_MIN;
 
-  // since reset banner live bits
+  // since reset banner
   const now = new Date();
   document.getElementById('sinceResetElapsed').textContent = fmtElapsed(now - resetStartedAt);
   document.getElementById('sinceCreated').textContent = createdSinceReset;
   document.getElementById('sinceCompleted').textContent = completedSinceReset;
 
   const active = tokens.filter(t => t.alive);
-  const done   = completedHistory.slice(); // everything since reset
+  const done   = completedHistory.slice();
 
-  // Top counters — Live
+  // Live counters
   setText('mActive', String(active.length));
 
-  // Since reset metrics (true completion math; not simulated)
+  // Since reset (REAL completion math)
   const avgDaysAll = done.length ? avg(done.map(t => (t.completedAt - t.createdAt)/(1000*60*60*24))) : null;
   setText('mAvgDays', avgDaysAll==null ? '—' : avgDaysAll.toFixed(1));
-
   const slaOkAll = done.filter(t => businessHoursBetween(t.createdAt, t.completedAt) <= t.slaTargetH).length;
   const slaPctAll = done.length ? Math.round((slaOkAll/done.length)*100) : null;
   setText('mSla', slaPctAll==null ? '—' : (slaPctAll + '%'));
 
-  // Rolling window metrics
+  // Rolling window (REAL)
   const windowStart = new Date(now.getTime() - WINDOW_MIN*60*1000);
-  // prune history older than 12h to keep memory tiny
   const cutoff = new Date(now.getTime() - 12*60*60*1000);
   while (completedHistory.length && completedHistory[0].completedAt < cutoff) completedHistory.shift();
 
   const winDone = done.filter(t => t.completedAt >= windowStart);
   const avgDaysWin = winDone.length ? avg(winDone.map(t => (t.completedAt - t.createdAt)/(1000*60*60*24))) : null;
   setText('mAvgDaysWin', avgDaysWin==null ? '—' : avgDaysWin.toFixed(1));
-
   const slaOkWin = winDone.filter(t => businessHoursBetween(t.createdAt, t.completedAt) <= t.slaTargetH).length;
   const slaPctWin = winDone.length ? Math.round((slaOkWin/winDone.length)*100) : null;
   setText('mSlaWin', slaPctWin==null ? '—' : (slaPctWin + '%'));
 
-  // Priority Queue (active, sorted) —— AGE uses SIMULATED HOURS
+  // Priority Queue (SIMULATED AGE)
   const prRank = p => p===PR.urgent?0 : p===PR.high?1 : 2;
   const priorityRows = active
     .slice()
@@ -991,22 +982,22 @@ function updateMetrics(){
     .slice(0,8)
     .map(t => row([
       `<strong>${t.id}</strong>`,
-      escapeHTML(t.reqType || typeFromToken(t)),
+      escapeHTML(t.reqType || 'Request'),
       badge(t.prio),
-      ageStr(simulatedAgeHours(t.createdAt) * 3600000)
+      ageStr(tokenSimAgeH(t) * 3600000)
     ])).join('');
   setHTML('tbodyPriority', priorityRows || `<tr><td colspan="4">No active items</td></tr>`);
 
-  // Department Workload & Performance —— AVG HOURS use SIMULATED HOURS
+  // Dept Workload (SIMULATED AVG HOURS)
   const depts = ['SS','HD','FT','MD'];
   const deptRows = depts.map(d=>{
     const a = active.filter(t=>t.branch===d);
-    const avgHrs = a.length ? avg(a.map(t => simulatedAgeHours(t.createdAt))) : 0;
+    const avgHrs = a.length ? avg(a.map(tokenSimAgeH)) : 0;
     return row([deptName(d), a.length, a.length?avgHrs.toFixed(1):'—']);
   }).join('');
   setHTML('tbodyDeptWorkload', deptRows || `<tr><td colspan="3">—</td></tr>`);
 
-  // Departmental Overtime proxy
+  // Departmental Overtime proxy (unchanged)
   const fte = {SS:12,HD:8,FT:6,MD:10};
   const otRows = depts.map(d=>{
     const open = active.filter(t=>t.branch===d).length;
@@ -1016,20 +1007,20 @@ function updateMetrics(){
   }).join('');
   setHTML('tbodyOvertime', otRows);
 
-  // Business Unit Request Analysis (since reset) —— AVG DAYS use SIM HOURS (visual drift)
+  // BU Analysis (SIMULATED AVG DAYS for completed items)
   const BU_LIST = ["East Wing","West Wing","DIA Louges","Commercial"];
   const buRows = BU_LIST.map(bu=>{
     const all = tokens.filter(t=>t.originBU===bu).length + completedHistory.filter(t=>t.originBU===bu).length;
     const buDone = completedHistory.filter(t=>t.originBU===bu);
-    const avgDays = buDone.length ? avg(buDone.map(t => simulatedAgeHours(t.createdAt)/24)) : null;
+    const avgDaysSim = buDone.length ? avg(buDone.map(t => t.simAgeH/24)) : null;
     const buSlaOk = buDone.filter(t => businessHoursBetween(t.createdAt, t.completedAt) <= t.slaTargetH).length;
     const buSlaPct = buDone.length ? Math.round((buSlaOk/buDone.length)*100)+'%' : '—';
-    return row([displayBU(bu), all, (avgDays==null?'—':avgDays.toFixed(1) + ' days'), buSlaPct]);
+    return row([displayBU(bu), all, (avgDaysSim==null?'—':avgDaysSim.toFixed(1)+' days'), buSlaPct]);
   }).join('');
   setHTML('tbodyBU', buRows);
 }
 
-// helpers
+/* helpers */
 function setText(id, val){ const el=document.getElementById(id); if(el) el.textContent=val; }
 function setHTML(id, val){ const el=document.getElementById(id); if(el) el.innerHTML=val; }
 function row(cells){ return `<tr>${cells.map(c=>`<td>${c}</td>`).join('')}</tr>`; }
@@ -1041,14 +1032,13 @@ function badge(p){
   const txt = p.name;
   return `<span class="priority-badge ${cls}">${txt}</span>`;
 }
-function typeFromToken(t){ return t.reqType || 'Request'; }
 function escapeHTML(s){ return String(s).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
 function displayBU(s){ return s==='DIA Louges'?'DIA Lounges':s; }
 
-// keep the dashboard fresh every second
-setInterval(()=>{ scheduleMetricsUpdate(); }, 1000);
+/* tick metrics */
+setInterval(scheduleMetricsUpdate, 1000);
 
-/* ---- Robust boot: wait for DOM so SVG exists, then reset ---- */
+/* boot */
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
   setTimeout(()=> resetFlow(), 0);
 } else {

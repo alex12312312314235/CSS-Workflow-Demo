@@ -87,7 +87,7 @@
   .positive{color:#28a745}.negative{color:#dc3545}
   .dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
   .table{width:100%;border-collapse:collapse;font-size:12px}
-  .table th{background:var(--soft);padding:8px;text-align:left;font-weight:600;border-bottom:2px solid --gold}
+  .table th{background:var(--soft);padding:8px;text-align:left;font-weight:600;border-bottom:2px solid var(--gold)}
   .table td{padding:8px;border-bottom:1px solid #e0e0e0;color:#555}
   .priority-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}
   .priority-urgent{background:#f8d7da;color:#721c24}
@@ -470,7 +470,7 @@ function nextWorkdayStart(d){
   return t;
 }
 function addBusinessHours(start, hours){
-  let remaining = Math.max(0, Math.round(hours*60)); // minutes
+  let remaining = Math.max(0, Math.round(hours*60));
   let cur = clampToStart(start);
   while (remaining > 0){
     if (!isWorkday(cur)){ cur = nextWorkdayStart(cur); continue; }
@@ -665,7 +665,6 @@ const WINDOW_MIN = 15;
 let resetStartedAt = new Date();
 let createdSinceReset = 0;
 let completedSinceReset = 0;
-/* completedHistory keeps real and simulated summaries */
 const completedHistory = []; // { createdAt, completedAt, slaTargetH, branch, originBU, prio, reqType, simAgeH }
 
 let targetConcurrent = 12;
@@ -707,8 +706,7 @@ function randomReqType(branch){
 const ORIGINS = ["East Wing","West Wing","DIA Louges","Commercial"];
 
 /* ===== Simulated time engine ===== */
-/* 1 real second = 10 simulated minutes (≈1 sim hour / 6 sec) */
-const AGE_RATE = 1/10;
+const AGE_RATE = 1/10; // 1s = 10m
 function simHoursSince(startMs){ return ((Date.now() - startMs) * AGE_RATE) / (1000*60); }
 
 function initialSimAgeHoursFor(prio){
@@ -889,7 +887,7 @@ function resetFlow(){
   cacheSVGRefs();
   wireLiveControls();
   enablePanZoom();
-  wireStageTips(); // <— restore hover info boxes
+  wireStageTips(); // hover info boxes
 
   scale=1; panX=0; panY=0; applyTransform();
   animate.last=null;
@@ -1038,6 +1036,7 @@ function displayBU(s){ return s==='DIA Louges'?'DIA Lounges':s; }
 function wireStageTips(){
   const stageGs = document.querySelectorAll('#stages g[data-key]');
   const tip = document.getElementById('tip');
+  const wrap = document.getElementById('liveWrap');
 
   const BR_FROM_STAGE = (key)=>{
     if (key.startsWith('SS')) return 'SS';
@@ -1061,23 +1060,17 @@ function wireStageTips(){
     const now = new Date();
     const sinceWin = new Date(now.getTime() - WINDOW_MIN*60*1000);
 
-    // live open items
     const open = branch ? tokens.filter(t=>t.alive && t.branch===branch) : tokens.filter(t=>t.alive);
-
-    // 15-min completions (REAL)
     const doneWin = branch
       ? completedHistory.filter(t=>t.branch===branch && t.completedAt >= sinceWin)
       : completedHistory.filter(t=>t.completedAt >= sinceWin);
 
-    // SLA% (REAL) and avg days complete (REAL)
     const slaOk = doneWin.filter(t => businessHoursBetween(t.createdAt, t.completedAt) <= t.slaTargetH).length;
     const slaPct = doneWin.length ? Math.round((slaOk/doneWin.length)*100)+'%' : '—';
     const avgDaysReal = doneWin.length ? avg(doneWin.map(t => (t.completedAt - t.createdAt)/(1000*60*60*24))) : null;
 
-    // Avg age (SIM) for live open
     const avgAgeH = open.length ? avg(open.map(tokenSimAgeH)) : null;
 
-    // Priority mix (live)
     const mix = {urgent:0, high:0, standard:0};
     open.forEach(t=>{
       if (t.prio===PR.urgent) mix.urgent++;
@@ -1092,10 +1085,36 @@ function wireStageTips(){
       <div class="row"><div class="k">15-min completes</div><div class="v">${doneWin.length}</div></div>
       <div class="row"><div class="k">SLA (15-min)</div><div class="v">${slaPct}</div></div>
       <div class="row"><div class="k">Avg complete</div><div class="v">${avgDaysReal==null?'—':avgDaysReal.toFixed(1)+' days'}</div></div>
-      <div class="row"><div class="k">Priority mix</div><div class="v">
-        U:${mix.urgent} • H:${mix.high} • S:${mix.standard}
-      </div></div>
+      <div class="row"><div class="k">Priority mix</div><div class="v">U:${mix.urgent} • H:${mix.high} • S:${mix.standard}</div></div>
     `;
+  }
+
+  function placeTipNextToStage(g){
+    const wrapRect = wrap.getBoundingClientRect();
+    const stageRect = g.getBoundingClientRect();
+
+    // Default: to the right of the stage, vertically aligned to its top
+    let left = stageRect.right - wrapRect.left + 8;
+    let top  = stageRect.top   - wrapRect.top;
+
+    // measure tip
+    const tipW = tip.offsetWidth;
+    const tipH = tip.offsetHeight;
+
+    // If overflowing right, flip to left side
+    if (left + tipW > wrapRect.width - 8) {
+      left = stageRect.left - wrapRect.left - tipW - 8;
+    }
+    // If overflowing bottom, nudge up to fit
+    if (top + tipH > wrapRect.height - 8) {
+      top = stageRect.bottom - wrapRect.top - tipH;
+    }
+    // Keep within top/left bounds
+    left = Math.max(8, left);
+    top  = Math.max(8, top);
+
+    tip.style.left = left + 'px';
+    tip.style.top  = top + 'px';
   }
 
   stageGs.forEach(g=>{
@@ -1103,10 +1122,8 @@ function wireStageTips(){
     g.addEventListener('mouseenter', ()=>{
       tip.innerHTML = buildTipHTML(key);
       tip.style.display = 'block';
-    });
-    g.addEventListener('mousemove', (e)=>{
-      tip.style.left = (e.pageX + 12) + 'px';
-      tip.style.top  = (e.pageY - 12) + 'px';
+      // wait a tick so the browser can size the tip, then place it
+      requestAnimationFrame(()=> placeTipNextToStage(g));
     });
     g.addEventListener('mouseleave', ()=>{
       tip.style.display = 'none';

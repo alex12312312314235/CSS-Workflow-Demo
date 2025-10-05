@@ -8,7 +8,7 @@
   :root{
     --ekfc-red:#C8102E; --ekfc-red-dark:#A00E24; --gold:#B8975F;
     --text:#111; --muted:#666; --bg:#f5f5f5; --card:#fff; --line:#ddd; --soft:#f8f8f8;
-    --SS:#2f7ed8; --HD:#28a745; --FT:#7b61ff; --MD:#ff6b8b; --II:#0c5460;
+    --SS:#2f7ed8; --HD:#28a745; --FT:#7b61ff; --MD:#ff6b8b; --II:#0c5460; --intake:#ff9a2f;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);min-height:100vh;color:var(--text)}
@@ -63,7 +63,7 @@
   .step-details{margin-top:8px;padding-top:8px;border-top:1px solid #e0e0e0;font-size:11px;color:var(--muted);display:none}
   .workflow-step.active .step-details,.workflow-step.completed .step-details{display:block}
 
-  .esc-pill{display:inline-flex;align-items:center;gap:6px;background:#fff1f3;border:1px solid #dc3545;color:#dc3545;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer;}
+  .esc-pill{display:inline-flex;align-items:center;gap:6px;background:#fff1f3;border:1px solid #dc3545;color:#dc3545;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer}
   .esc-dot{width:6px;height:6px;border-radius:50%;background:#dc3545;display:inline-block}
   .esc-pop{position:absolute;right:16px;top:50px;z-index:5;max-width:380px;background:#fff;border:1px solid #f1b5bd;border-left:4px solid #dc3545;box-shadow:0 10px 24px rgba(0,0,0,.08);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.35;display:none}
   .esc-pop .h{font-weight:800;margin-bottom:4px}.esc-pop .item{display:flex;gap:8px;margin:4px 0}.esc-pop .k{min-width:98px;color:#444}.esc-pop .v{font-weight:700}
@@ -91,7 +91,7 @@
   .priority-high{background:#fff3cd;color:#856404}
   .priority-normal{background:#d1ecf1;color:#0c5460}
 
-  /* live flow (unchanged visuals) */
+  /* live flow */
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
   .btn{background:#fff;border:1px solid var(--line);padding:8px 10px;border-radius:6px;cursor:pointer}
   .btn:hover{background:#f9f9f9}
@@ -276,7 +276,7 @@
       </div>
     </div>
 
-    <!-- ===== VP Dashboard (RESTORED) ===== -->
+    <!-- ===== VP Dashboard ===== -->
     <div id="dashboard-view" class="content-area">
       <div class="dashboard-metrics">
         <div class="metric-card"><div class="metric-value">37</div><div class="metric-label">Total Active Requests</div><div class="metric-change positive">Stable (target ≤ 40)</div></div>
@@ -344,7 +344,7 @@
       </div>
     </div>
 
-    <!-- ===== Live Workflow (same visuals; priority affects speed/colors) ===== -->
+    <!-- ===== Live Workflow ===== -->
     <div id="live-view" class="content-area">
       <div class="panel">
         <h2 class="panel-title">Live Flow • CSS Journey</h2>
@@ -355,6 +355,7 @@
           <button class="btn" id="btnReset">Reset</button>
           <button class="btn" id="btnSubmitDemo">New Request (Demo)</button>
           <select id="livePriority" class="btn" style="min-width:170px">
+            <option value="mix">Priority: Mix (auto)</option>
             <option value="standard">Priority: Standard</option>
             <option value="high">Priority: High</option>
             <option value="urgent">Priority: Urgent</option>
@@ -561,27 +562,33 @@ function updateEscalations(p){
 }
 function closeAllPops(){ document.querySelectorAll('.esc-pop').forEach(p=>p.style.display='none'); }
 
-/* ===== Live Workflow (priority affects speed/colors) ===== */
+/* ===== Live Workflow (realistic stream with badges) ===== */
 const svg = document.getElementById('svg');
 const root = document.getElementById('zoomRoot');
 const tokensLayer = document.getElementById('tokens');
 const labelsLayer = document.getElementById('labels');
-const tip = document.getElementById('tip');
 const host = document.getElementById('svg');
 
-let playing=true, scale=1, panX=0, panY=0;
-document.getElementById('btnPlay').onclick=()=>{ playing=!playing; document.getElementById('btnPlay').textContent=playing?'Pause':'Play'; };
-document.getElementById('btnZoomIn').onclick=()=>{ scale=Math.min(1.8, scale*1.1); root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); };
-document.getElementById('btnZoomOut').onclick=()=>{ scale=Math.max(0.7, scale*0.9); root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); };
-document.getElementById('btnReset').onclick=()=>{ scale=1; panX=0; panY=0; root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); };
-document.getElementById('btnSubmitDemo').onclick=()=> spawnNewToken();
-document.getElementById('livePriority').onchange = (e)=>{ currentPriority = PRIORITY[e.target.value] || PRIORITY.standard; };
+let playing = true, scale = 1, panX = 0, panY = 0;
+document.getElementById('btnPlay').onclick = () => { playing = !playing; document.getElementById('btnPlay').textContent = playing ? 'Pause' : 'Play'; };
+document.getElementById('btnZoomIn').onclick = () => { zoomAt(1.1); };
+document.getElementById('btnZoomOut').onclick = () => { zoomAt(0.9); };
+document.getElementById('btnReset').onclick = resetFlow;
+document.getElementById('btnSubmitDemo').onclick = () => spawnManaged();
+document.getElementById('livePriority').onchange = (e) => { manualPriorityMode = e.target.value; };
 
+function applyTransform(){ root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); }
+function zoomAt(f){ scale=Math.min(1.8,Math.max(0.7,scale*f)); applyTransform(); }
+
+let dragging=false, lastX=0, lastY=0;
 host.addEventListener('mousedown',e=>{dragging=true; lastX=e.clientX; lastY=e.clientY; host.classList.add('dragging');});
-let dragging=false,lastX=0,lastY=0;
 window.addEventListener('mouseup',()=>{dragging=false; host.classList.remove('dragging');});
-window.addEventListener('mousemove',e=>{ if(!dragging) return; const dx=e.clientX-lastX, dy=e.clientY-lastY; panX+=dx; panY+=dy; lastX=e.clientX; lastY=e.clientY; root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); });
+window.addEventListener('mousemove',e=>{
+  if(!dragging) return;
+  const dx=e.clientX-lastX, dy=e.clientY-lastY; panX+=dx; panY+=dy; lastX=e.clientX; lastY=e.clientY; applyTransform();
+});
 
+/* Node map for the live flow */
 const N = {
   intake:{x:600,y:105}, router:{x:600,y:225},
   SS:{coord:{x:230,y:345}, A:{x:220,y:463}, B:{x:280,y:543}, color:getCSS('--SS')},
@@ -591,6 +598,170 @@ const N = {
   done:{x:600,y:645}
 };
 function getCSS(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+
+/* Priority helpers */
+const PR = PRIORITY;
+function prColor(p){ return p.color; }
+function prAccent(p){ return p.accent; }
+
+/* Random helpers */
+const rnd = (a,b)=> Math.floor(Math.random()*(b-a+1))+a;
+const pick = (arr)=> arr[rnd(0,arr.length-1)];
+
+/* Token management & scheduling */
+const branches=['SS','HD','FT','MD'];
+const tokens=[];
+
+let targetConcurrent = 12;           // randomized on reset (10..15)
+let manualPriorityMode = 'mix';      // 'mix' | 'standard' | 'high' | 'urgent'
+let waveSpawned = 0;                 // how many spawned in current wave
+let quotaUrgent = 1, usedUrgent = 0; // per-wave quotas
+let quotaHigh   = 2, usedHigh   = 0;
+let schedulerTimer = null;
+
+function resetWave(){
+  waveSpawned = 0;
+  quotaUrgent = rnd(1,2);
+  quotaHigh   = rnd(2,3);
+  usedUrgent = 0;
+  usedHigh   = 0;
+}
+function choosePriorityForSpawn(){
+  if (manualPriorityMode !== 'mix'){
+    return PR[manualPriorityMode] || PR.standard;
+  }
+  if (usedUrgent < quotaUrgent) { usedUrgent++; return PR.urgent; }
+  if (usedHigh   < quotaHigh  ) { usedHigh++  ; return PR.high;   }
+  return PR.standard;
+}
+function ensureBacklog(){
+  const alive = tokens.filter(t=>t.alive).length;
+  if (alive < targetConcurrent){
+    spawnManaged();
+  }
+  const nextIn = rnd(800, 2200);
+  schedulerTimer = setTimeout(ensureBacklog, nextIn);
+}
+function spawnManaged(){
+  if (waveSpawned >= targetConcurrent) resetWave();
+  const p = choosePriorityForSpawn(); waveSpawned++;
+  const b = pick(branches);
+  const id = b + '-' + (1000 + Math.floor(Math.random()*9000));
+  newToken(id, b, p);
+}
+
+/* Build a token (with sticky priority badge) */
+function newToken(id, branchKey, priority){
+  const g=doc('g'); g.classList.add('token'); g.setAttribute('data-id',id);
+  const r=doc('rect'); r.setAttribute('width',52); r.setAttribute('height',22);
+  const t=doc('text'); t.setAttribute('text-anchor','middle'); t.textContent=id.split('-')[0];
+
+  // small exclamation badge (yellow for high, red for urgent)
+  const badgeGroup = doc('g'); const circ = doc('circle'); const mark = doc('text');
+  const isUrgent = priority === PR.urgent; const isHigh = priority === PR.high; const showBadge = isUrgent || isHigh;
+  if (showBadge){
+    circ.setAttribute('r','6'); circ.setAttribute('fill', isUrgent ? '#dc3545' : '#ffd400');
+    circ.setAttribute('stroke', '#333'); circ.setAttribute('stroke-width','0.5');
+    mark.textContent = '!'; mark.setAttribute('font-size','9'); mark.setAttribute('font-weight','800');
+    mark.setAttribute('text-anchor','middle'); mark.setAttribute('fill', isUrgent ? '#fff' : '#333');
+    badgeGroup.append(circ, mark);
+  }
+  g.append(r,t,badgeGroup); tokensLayer.appendChild(g);
+
+  const tl=timeline(branchKey, priority);
+  const tok={id,branch:branchKey,color:N[branchKey].color,node:{g,rect:r,text:t,badge:badgeGroup,badgeCirc:circ,badgeMark:mark},tl,idx:0,alive:true,prio:priority};
+  setPos(tok.node, tl[0].p.x, tl[0].p.y, tok.prio); setColor(tok.node,'intake',tok.color,tok.prio);
+
+  function layoutBadge(x,y){
+    if (!(isUrgent||isHigh)) return;
+    const bx = x + 20; const by = y - 10; tok.node.badge.setAttribute('transform', `translate(${bx},${by})`);
+  }
+  tok.layoutBadge = layoutBadge; layoutBadge(tl[0].p.x, tl[0].p.y);
+
+  label('New request', tl[0].p.x, tl[0].p.y, '#000', prAccent(priority), 900);
+  tokens.push(tok); return tok;
+}
+function doc(tag){return document.createElementNS(svg.namespaceURI,tag);}
+function setPos(node,x,y,prio){
+  node.rect.setAttribute('x',x-26); node.rect.setAttribute('y',y-11);
+  node.text.setAttribute('x',x);    node.text.setAttribute('y',y+3);
+}
+function setColor(node,phase,branchColor,prio){
+  let fill = '#ffd400';
+  if(phase==='intake') fill = prAccent(prio);
+  if(phase==='branch') fill = branchColor;
+  if(prio === PR.high && phase!=='branch') fill = '#fff6ec';
+  if(prio === PR.urgent && phase!=='branch') fill = '#fff1f3';
+  node.rect.setAttribute('fill', fill);
+  node.rect.setAttribute('stroke', prColor(prio));
+  node.rect.setAttribute('stroke-width', 1.2);
+}
+function timeline(branch, prio){
+  const f = (prio?.targetH/120) || 1;
+  const tl = [
+    {p:N.intake,  hold:900*f,  travel:0,       phase:'intake', badge: prio.notifyMgr ? 'Senior mgr CC' : null},
+    {p:N.router,  hold:700*f,  travel:3200*f,  phase:'yellow', badge: prio.escalate ? 'Escalated' : null},
+    {p:N[branch].coord, hold:800*f,  travel:3800*f,  phase:'branch'},
+    {p:N[branch].A,     hold:2400*f, travel:1800*f,  phase:'branch', badge:'In progress'},
+    {p:N[branch].B,     hold:1200*f, travel:1600*f,  phase:'branch'},
+    {p:N.done,          hold:800*f,  travel:2100*f,  phase:'branch', complete:true}
+  ];
+  if (prio.fastTrackFC09){
+    tl[0].hold = 300*f; tl[1].travel = 900*f; tl[2].hold = 400*f; tl[3].badge = 'FC09 assigned';
+  }
+  return tl;
+}
+
+/* Animation loop */
+function animate(ts){
+  requestAnimationFrame(animate);
+  if(!playing) return;
+  if(!animate.last) animate.last=ts;
+  const dt=ts-animate.last; animate.last=ts;
+
+  tokens.forEach(tok=>{
+    if(!tok.alive) return;
+    const seg=tok.tl[tok.idx], next=tok.tl[tok.idx+1];
+    if(seg.hold>0){ seg.hold-=dt; if(seg.hold<=0 && seg.badge){ label(seg.badge, seg.p.x, seg.p.y, '#fff', tok.color, 900); } return; }
+    seg.elapsed=(seg.elapsed||0)+dt;
+    const u=Math.min(1, seg.travel? seg.elapsed/seg.travel : 1);
+    const x=next ? seg.p.x + (next.p.x - seg.p.x)*u : seg.p.x;
+    const y=next ? seg.p.y + (next.p.y - seg.p.y)*u : seg.p.y;
+    setColor(tok.node, seg.phase==='branch'?'branch':(seg.phase==='intake'?'intake':'yellow'), tok.color, tok.prio);
+    setPos(tok.node,x,y,tok.prio);
+    if (tok.layoutBadge) tok.layoutBadge(x,y);
+    if(u>=1){
+      tok.idx++;
+      if(tok.idx>=tok.tl.length-1){
+        label('✓ Complete', N.done.x, N.done.y, '#fff', '#28a745', 900);
+        tok.node.g.remove(); tok.alive=false;
+      }
+    }
+  });
+}
+requestAnimationFrame(animate);
+
+/* Reset + scheduler bootstrap */
+function resetFlow(){
+  scale=1; panX=0; panY=0; applyTransform();
+  animate.last=null;
+  [...tokensLayer.children].forEach(n=>n.remove());
+  [...labelsLayer.children].forEach(n=>n.remove());
+  tokens.length=0;
+
+  targetConcurrent = rnd(10,15);
+  resetWave();
+
+  // seed a few with spacing so it doesn't blast in
+  const seedCount = Math.min(6, targetConcurrent);
+  for (let i=0;i<seedCount;i++){ setTimeout(()=> spawnManaged(), i*rnd(300,700)); }
+
+  if (schedulerTimer) clearTimeout(schedulerTimer);
+  ensureBacklog();
+}
+resetFlow();
+
+/* Small label helper */
 function label(text,x,y,fill='#fff',bg='#000',ms=900){
   if (labelsLayer.childElementCount > 16) return;
   const g=document.createElementNS(svg.namespaceURI,'g');
@@ -601,61 +772,6 @@ function label(text,x,y,fill='#fff',bg='#000',ms=900){
   r.setAttribute('x',x-w/2); r.setAttribute('y',y-16-h+6); r.setAttribute('width',w); r.setAttribute('height',h); r.setAttribute('rx','8'); r.setAttribute('fill',bg); r.setAttribute('opacity','0.92');
   g.append(r,t); labelsLayer.appendChild(g); setTimeout(()=>g.remove(),ms);
 }
-function setPos(node,x,y){ node.rect.setAttribute('x',x-26); node.rect.setAttribute('y',y-11); node.text.setAttribute('x',x); node.text.setAttribute('y',y+3); }
-function setColor(node,phase,branchColor){
-  let fill='#ffd400';
-  if(phase==='intake') fill = currentPriority.accent;
-  if(phase==='branch') fill = branchColor;
-  if(currentPriority === PRIORITY.high && phase!=='branch') fill = '#fff6ec';
-  if(currentPriority === PRIORITY.urgent && phase!=='branch') fill = '#fff1f3';
-  node.rect.setAttribute('fill', fill); node.rect.setAttribute('stroke', currentPriority.color); node.rect.setAttribute('stroke-width', 1.2);
-}
-function doc(tag){return document.createElementNS(svg.namespaceURI,tag);}
-function timeline(branch){
-  const f = (currentPriority?.targetH/120) || 1;
-  const badgeEsc = currentPriority.escalate ? 'Escalated' : null;
-  const mgrNote  = currentPriority.notifyMgr ? 'Senior mgr CC' : null;
-  const tl = [
-    {p:N.intake, hold:900*f,  travel:0,       phase:'intake', badge: mgrNote},
-    {p:N.router, hold:700*f,  travel:3200*f,  phase:'yellow', badge: badgeEsc},
-    {p:N[branch].coord,  hold:800*f,  travel:3800*f,  phase:'branch'},
-    {p:N[branch].A,      hold:2400*f, travel:1800*f,  phase:'branch', badge:'In progress'},
-    {p:N[branch].B,      hold:1200*f, travel:1600*f,  phase:'branch'},
-    {p:N.done,           hold:800*f,  travel:2100*f,  phase:'branch', complete:true}
-  ];
-  if (currentPriority.fastTrackFC09){ tl[0].hold = 300*f; tl[1].travel = 900*f; tl[2].hold = 400*f; tl[3].badge = 'FC09 assigned'; }
-  return tl;
-}
-const tokens=[];
-function newToken(id, branchKey){
-  const g=doc('g'); g.classList.add('token'); g.setAttribute('data-id',id);
-  const r=doc('rect'); r.setAttribute('width',52); r.setAttribute('height',22);
-  const t=doc('text'); t.setAttribute('text-anchor','middle'); t.textContent=id.split('-')[0];
-  g.append(r,t); tokensLayer.appendChild(g);
-  const tl=timeline(branchKey); const tok={id,branch:branchKey,color:N[branchKey].color,node:{g,rect:r,text:t},tl,idx:0,alive:true};
-  setPos(tok.node, tl[0].p.x, tl[0].p.y); setColor(tok.node,'intake',tok.color);
-  label('New request', tl[0].p.x, tl[0].p.y, '#000', getCSS('--intake'), 900);
-  tokens.push(tok); return tok;
-}
-function spawnNewToken(){ const branches=['SS','HD','FT','MD']; const b=branches[Math.floor(Math.random()*branches.length)]; const id=b+'-'+(1000+Math.floor(Math.random()*9000)); newToken(id,b); }
-function animate(ts){
-  requestAnimationFrame(animate);
-  if(!animate.last) animate.last=ts; const dt=ts-animate.last; animate.last=ts; if(!playing) return;
-  tokens.forEach(tok=>{
-    if(!tok.alive) return;
-    const seg=tok.tl[tok.idx], next=tok.tl[tok.idx+1];
-    if(seg.hold>0){ seg.hold-=dt; if(seg.hold<=0 && seg.badge){ label(seg.badge, seg.p.x, seg.p.y, '#fff', tok.color, 900); } return; }
-    seg.elapsed=(seg.elapsed||0)+dt;
-    const u=Math.min(1, seg.travel? seg.elapsed/seg.travel : 1);
-    const x=next ? seg.p.x + (next.p.x - seg.p.x)*u : seg.p.x; const y=next ? seg.p.y + (next.p.y - seg.p.y)*u : seg.p.y;
-    setColor(tok.node, seg.phase==='branch'?'branch':(seg.phase==='intake'?'intake':'yellow'), tok.color);
-    setPos(tok.node,x,y);
-    if(u>=1){ tok.idx++; if(tok.idx>=tok.tl.length-1){ label('✓ Complete', N.done.x, N.done.y, '#fff', '#28a745', 900); tok.node.g.remove(); tok.alive=false; setTimeout(()=>{ if(tokens.filter(t=>t.alive).length<10) spawnNewToken(); }, 800+Math.random()*1000); } }
-  });
-}
-requestAnimationFrame(animate);
-function resetFlow(){ scale=1; panX=0; panY=0; root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); animate.last=null; [...tokensLayer.children].forEach(n=>n.remove()); [...labelsLayer.children].forEach(n=>n.remove()); tokens.length=0; ['HD','SS','MD','FT'].forEach((b,i)=> setTimeout(()=> newToken(b+'-'+(2000+i), b), i*650)); }
-resetFlow();
 </script>
 </body>
 </html>

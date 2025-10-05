@@ -708,13 +708,13 @@ const ORIGINS = ["East Wing","West Wing","DIA Louges","Commercial"];
 
 /* ===== Simulated time engine ===== */
 /* 1 real second = 10 simulated minutes (≈1 sim hour / 6 sec) */
-const AGE_RATE = 1/10; // sim minutes per real second
-function simHoursSince(startMs){ return ((Date.now() - startMs) * AGE_RATE) / (1000*60); } // minutes -> convert below
+const AGE_RATE = 1/10;
+function simHoursSince(startMs){ return ((Date.now() - startMs) * AGE_RATE) / (1000*60); }
 
 function initialSimAgeHoursFor(prio){
-  if (prio === PRIORITY.urgent)   return rfloat(4,10); // 4–10 h
-  if (prio === PRIORITY.high)     return rfloat(2,6);  // 2–6 h
-  return rfloat(0,4);                                 // 0–4 h
+  if (prio === PRIORITY.urgent)   return rfloat(4,10);
+  if (prio === PRIORITY.high)     return rfloat(2,6);
+  return rfloat(0,4);
 }
 function bumpHoursForStage(prio, nextIdx){
   const bump = (a,b)=> rfloat(a,b);
@@ -733,7 +733,6 @@ function bumpHoursForStage(prio, nextIdx){
   }
   return 0;
 }
-/* compute current simulated age for a token */
 function tokenSimAgeH(tok){
   return tok.simSeedH + (simHoursSince(tok.simStartMs)/60) + tok.simBumpH;
 }
@@ -772,16 +771,16 @@ function newToken(id, branchKey, priority, reqType='Request'){
     color:N[branchKey].color,
     node:{ g, rect:r, text:t, badge:badgeGroup, badgeCirc:circ, badgeMark:mark },
     tl, idx:0, alive:true,
-    createdAt: new Date(),          // REAL creation (kept for SLA & real metrics)
+    createdAt: new Date(),
     completedAt: null,
     originBU: pick(ORIGINS),
     slaTargetH: priority.targetH,
     reqType,
 
-    // --- simulated time state ---
-    simSeedH: initialSimAgeHoursFor(priority), // initial visible age
-    simStartMs: Date.now(),                    // when we started counting forward
-    simBumpH: 0                                // added at stage boundaries
+    // simulated time state
+    simSeedH: initialSimAgeHoursFor(priority),
+    simStartMs: Date.now(),
+    simBumpH: 0
   };
   createdSinceReset++;
 
@@ -890,6 +889,7 @@ function resetFlow(){
   cacheSVGRefs();
   wireLiveControls();
   enablePanZoom();
+  wireStageTips(); // <— restore hover info boxes
 
   scale=1; panX=0; panY=0; applyTransform();
   animate.last=null;
@@ -938,7 +938,6 @@ function scheduleMetricsUpdate(){
 
 function updateMetrics(){
   // window labels
-  const WINDOW_MIN = 15;
   document.getElementById('windowLen').textContent = WINDOW_MIN;
   document.getElementById('winLenA').textContent = WINDOW_MIN;
   document.getElementById('winLenB').textContent = WINDOW_MIN;
@@ -955,7 +954,7 @@ function updateMetrics(){
   // Live counters
   setText('mActive', String(active.length));
 
-  // Since reset (REAL completion math)
+  // Since reset (REAL)
   const avgDaysAll = done.length ? avg(done.map(t => (t.completedAt - t.createdAt)/(1000*60*60*24))) : null;
   setText('mAvgDays', avgDaysAll==null ? '—' : avgDaysAll.toFixed(1));
   const slaOkAll = done.filter(t => businessHoursBetween(t.createdAt, t.completedAt) <= t.slaTargetH).length;
@@ -997,7 +996,7 @@ function updateMetrics(){
   }).join('');
   setHTML('tbodyDeptWorkload', deptRows || `<tr><td colspan="3">—</td></tr>`);
 
-  // Departmental Overtime proxy (unchanged)
+  // Departmental Overtime proxy
   const fte = {SS:12,HD:8,FT:6,MD:10};
   const otRows = depts.map(d=>{
     const open = active.filter(t=>t.branch===d).length;
@@ -1034,6 +1033,86 @@ function badge(p){
 }
 function escapeHTML(s){ return String(s).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
 function displayBU(s){ return s==='DIA Louges'?'DIA Lounges':s; }
+
+/* ===== Stage tooltips (live stats) ===== */
+function wireStageTips(){
+  const stageGs = document.querySelectorAll('#stages g[data-key]');
+  const tip = document.getElementById('tip');
+
+  const BR_FROM_STAGE = (key)=>{
+    if (key.startsWith('SS')) return 'SS';
+    if (key.startsWith('HD')) return 'HD';
+    if (key.startsWith('FT')) return 'FT';
+    if (key.startsWith('MD')) return 'MD';
+    return null; // intake/router/done
+  };
+  const titleFor = (g)=>{
+    const txt = g.querySelector('text');
+    return txt ? txt.textContent.trim() : g.getAttribute('data-key');
+  };
+
+  function buildTipHTML(key){
+    const title = key==='INTAKE' ? 'Unified Intake'
+                : key==='ROUTER' ? 'Router'
+                : key==='DONE'   ? 'Delivery & Done'
+                : titleFor(document.querySelector(`#stages g[data-key="${key}"]`));
+
+    const branch = BR_FROM_STAGE(key);
+    const now = new Date();
+    const sinceWin = new Date(now.getTime() - WINDOW_MIN*60*1000);
+
+    // live open items
+    const open = branch ? tokens.filter(t=>t.alive && t.branch===branch) : tokens.filter(t=>t.alive);
+
+    // 15-min completions (REAL)
+    const doneWin = branch
+      ? completedHistory.filter(t=>t.branch===branch && t.completedAt >= sinceWin)
+      : completedHistory.filter(t=>t.completedAt >= sinceWin);
+
+    // SLA% (REAL) and avg days complete (REAL)
+    const slaOk = doneWin.filter(t => businessHoursBetween(t.createdAt, t.completedAt) <= t.slaTargetH).length;
+    const slaPct = doneWin.length ? Math.round((slaOk/doneWin.length)*100)+'%' : '—';
+    const avgDaysReal = doneWin.length ? avg(doneWin.map(t => (t.completedAt - t.createdAt)/(1000*60*60*24))) : null;
+
+    // Avg age (SIM) for live open
+    const avgAgeH = open.length ? avg(open.map(tokenSimAgeH)) : null;
+
+    // Priority mix (live)
+    const mix = {urgent:0, high:0, standard:0};
+    open.forEach(t=>{
+      if (t.prio===PR.urgent) mix.urgent++;
+      else if (t.prio===PR.high) mix.high++;
+      else mix.standard++;
+    });
+
+    return `
+      <div class="t">${escapeHTML(title)}</div>
+      <div class="row"><div class="k">Open (live)</div><div class="v">${open.length}</div></div>
+      <div class="row"><div class="k">Avg age</div><div class="v">${avgAgeH==null?'—':avgAgeH.toFixed(1)+' h'}</div></div>
+      <div class="row"><div class="k">15-min completes</div><div class="v">${doneWin.length}</div></div>
+      <div class="row"><div class="k">SLA (15-min)</div><div class="v">${slaPct}</div></div>
+      <div class="row"><div class="k">Avg complete</div><div class="v">${avgDaysReal==null?'—':avgDaysReal.toFixed(1)+' days'}</div></div>
+      <div class="row"><div class="k">Priority mix</div><div class="v">
+        U:${mix.urgent} • H:${mix.high} • S:${mix.standard}
+      </div></div>
+    `;
+  }
+
+  stageGs.forEach(g=>{
+    const key = g.getAttribute('data-key');
+    g.addEventListener('mouseenter', ()=>{
+      tip.innerHTML = buildTipHTML(key);
+      tip.style.display = 'block';
+    });
+    g.addEventListener('mousemove', (e)=>{
+      tip.style.left = (e.pageX + 12) + 'px';
+      tip.style.top  = (e.pageY - 12) + 'px';
+    });
+    g.addEventListener('mouseleave', ()=>{
+      tip.style.display = 'none';
+    });
+  });
+}
 
 /* tick metrics */
 setInterval(scheduleMetricsUpdate, 1000);

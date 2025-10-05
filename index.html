@@ -5,19 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>CSS Workflow Integration Portal - EKFC</title>
 <style>
-  /* ====== Theme ====== */
   :root{
     --ekfc-red:#C8102E; --ekfc-red-dark:#A00E24; --gold:#B8975F;
     --text:#111; --muted:#666; --bg:#f5f5f5; --card:#fff; --line:#ddd; --soft:#f8f8f8;
-
-    /* Branch colors */
-    --SS:#2f7ed8;  /* S&S blue */
-    --HD:#28a745;  /* H&D green */
-    --FT:#7b61ff;  /* Food Tech violet */
-    --MD:#ff6b8b;  /* Menu Dev pink */
-    --II:#0c5460;  /* I&I teal */
-    --intake:#ff9a2f; /* orange */
-    --yellow:#ffd400; /* pre-routing highlight */
+    --SS:#2f7ed8; --HD:#28a745; --FT:#7b61ff; --MD:#ff6b8b; --II:#0c5460;
+    --intake:#ff9a2f; --yellow:#ffd400;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);min-height:100vh;color:var(--text)}
@@ -36,11 +28,9 @@
   .content-area{display:none}
   .content-area.active{display:block}
 
-  /* ====== Panels ====== */
   .panel{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:20px;box-shadow:0 2px 4px rgba(0,0,0,.05)}
   .panel-title{font-size:16px;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--gold);font-weight:600}
 
-  /* ====== Function 1: Simple Workflow ====== */
   .workflow-container{display:grid;grid-template-columns:380px 1fr;gap:20px}
   .form-group{margin-bottom:15px}
   label{display:block;font-size:13px;font-weight:600;margin-bottom:5px}
@@ -65,7 +55,6 @@
   .step-details{margin-top:8px;padding-top:8px;border-top:1px solid #e0e0e0;font-size:11px;color:var(--muted);display:none}
   .workflow-step.active .step-details,.workflow-step.completed .step-details{display:block}
 
-  /* ====== Function 2: VP Dashboard ====== */
   .dashboard-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:20px}
   .metric-card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:15px;box-shadow:0 2px 4px rgba(0,0,0,.05)}
   .metric-value{font-size:28px;font-weight:bold;color:var(--ekfc-red);margin-bottom:5px}
@@ -86,19 +75,15 @@
   .dept-name{font-weight:600}
   .dept-stats{text-align:right;color:#444}
 
-  /* ====== Function 3: Live Workflow ====== */
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
   .btn{background:#fff;border:1px solid var(--line);padding:8px 10px;border-radius:6px;cursor:pointer}
   .btn:hover{background:#f9f9f9}
   .live-wrap{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px;position:relative}
   .svg-host{width:100%;height:620px;background:#fff;border:1px solid #eee;border-radius:4px;cursor:grab}
   .svg-host.dragging{cursor:grabbing}
-
-  /* Lanes & stages (improved visibility) */
   .lane{stroke:#e6e6e6;stroke-width:1}
   .stage rect{fill:#ffffff;stroke:var(--ekfc-red);stroke-width:1.5}
   .stage text{fill:#000;font-size:12px}
-
   .edge{stroke:#c7c7c7;stroke-width:2;fill:none;marker-end:url(#arrow)}
   .token{filter:drop-shadow(0 1px 4px rgba(0,0,0,.15))}
   .token rect{stroke:#000;stroke-opacity:.15;rx:7;ry:7}
@@ -108,6 +93,13 @@
   .tip .row{display:flex;justify-content:space-between;gap:16px}
   .tip .k{color:#777;text-transform:uppercase;font-size:11px}
   .tip .v{font-weight:700}
+
+  /* priority decorations */
+  .priority-ribbon{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
+  .step-urgent{border-color:#dc3545 !important;background:#fff}
+  .step-high{border-color:#ff9a2f !important;background:#fff}
+  .step-standard{border-color:#28a74522;background:#fff}
+  .exclaim{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:#dc3545;color:#fff;font-weight:800;margin-left:6px}
 </style>
 </head>
 <body>
@@ -129,42 +121,41 @@
   </div>
 
   <div class="container">
-    <!-- ========== Function 1: Simple Workflow ========== -->
+    <!-- Simple Workflow -->
     <div id="workflow-view" class="content-area active">
       <div class="workflow-container">
-        <!-- Form -->
         <div class="panel">
           <h2 class="panel-title">Submit H&amp;D Request</h2>
           <div id="alert" class="alert">Request submitted successfully. Processing ticket...</div>
 
           <div class="form-group">
             <label>Requester Name *</label>
-            <input type="text" value="John Smith"/>
+            <input type="text" value="Tobias Taubner"/>
           </div>
           <div class="form-group">
             <label>Business Unit *</label>
             <select>
+              <option>DIA Lounges</option>
               <option>East Wing Production</option>
               <option>West Wing Production</option>
-              <option>DIA Lounges</option>
               <option>Commercial Kitchen</option>
             </select>
           </div>
           <div class="form-group">
             <label>Request Type *</label>
             <select>
+              <option>Health Claim Verification</option>
               <option>Allergen Declaration Review</option>
               <option>Nutritional Analysis</option>
               <option>Special Diet Menu Development</option>
-              <option>Health Claim Verification</option>
             </select>
           </div>
           <div class="form-group">
             <label>Priority *</label>
-            <select>
-              <option>Standard (5 days)</option>
-              <option>High (3 days)</option>
-              <option>Urgent (24 hours)</option>
+            <select id="prioritySelect">
+              <option value="standard">Standard (≈5 days)</option>
+              <option value="high">High (≈3 days)</option>
+              <option value="urgent">Urgent (24 hours)</option>
             </select>
           </div>
           <div class="form-group">
@@ -180,10 +171,8 @@
           </div>
         </div>
 
-        <!-- Steps -->
         <div class="panel">
           <h2 class="panel-title">Workflow Journey</h2>
-
           <div class="workflow-step" id="step1">
             <div class="step-number">1</div>
             <div class="step-content">
@@ -201,10 +190,7 @@
             <div class="step-content">
               <div class="step-title">CSS Admin Intake</div>
               <div class="step-desc">Request routed to CSS Admin for initial processing</div>
-              <div class="step-details">
-                <strong>SLA:</strong> <b>48 hours</b><br/>
-                <strong>Status:</strong> Processing
-              </div>
+              <div class="step-details"></div>
             </div>
           </div>
 
@@ -213,10 +199,7 @@
             <div class="step-content">
               <div class="step-title">H&amp;D Assignment</div>
               <div class="step-desc">Ticket assigned to H&amp;D specialist based on expertise</div>
-              <div class="step-details">
-                <strong>SLA:</strong> <b>Processing within 96 hours</b><br/>
-                <strong>Assigned to:</strong> Sarah Johnson
-              </div>
+              <div class="step-details"></div>
             </div>
           </div>
 
@@ -225,10 +208,7 @@
             <div class="step-content">
               <div class="step-title">Technical Review</div>
               <div class="step-desc">H&amp;D specialist performs allergen assessment</div>
-              <div class="step-details">
-                <strong>SLA:</strong> <b>48 hours</b><br/>
-                <strong>Compliance:</strong> EU &amp; UAE standards
-              </div>
+              <div class="step-details"></div>
             </div>
           </div>
 
@@ -237,10 +217,7 @@
             <div class="step-content">
               <div class="step-title">Manager Approval &amp; Review</div>
               <div class="step-desc">Manager review and approval</div>
-              <div class="step-details">
-                <strong>SLA:</strong> <b>48 hours</b><br/>
-                <strong>Checklist:</strong> Complete
-              </div>
+              <div class="step-details"></div>
             </div>
           </div>
 
@@ -260,70 +237,26 @@
       </div>
     </div>
 
-    <!-- ========== Function 2: VP Dashboard ========== -->
+    <!-- VP Dashboard (unchanged visuals, sample numbers) -->
     <div id="dashboard-view" class="content-area">
       <div class="dashboard-metrics">
-        <div class="metric-card">
-          <div class="metric-value">37</div>
-          <div class="metric-label">Total Active Requests</div>
-          <div class="metric-change positive">Stable (target ≤ 40)</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-value">94%</div>
-          <div class="metric-label">SLA Compliance</div>
-          <div class="metric-change positive">↑ 3% improvement</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-value">3.2</div>
-          <div class="metric-label">Avg Days to Complete</div>
-          <div class="metric-change positive">↓ 0.5 days faster</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-value">18.5</div>
-          <div class="metric-label">Avg Hours per Request</div>
-          <div class="metric-change negative">↑ 2.1 hours</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-value">89%</div>
-          <div class="metric-label">First-Pass Acceptance</div>
-          <div class="metric-change positive">↑ 5% improvement</div>
-        </div>
-        <!-- Removed: Cost per Request -->
+        <div class="metric-card"><div class="metric-value">37</div><div class="metric-label">Total Active Requests</div><div class="metric-change positive">Stable (target ≤ 40)</div></div>
+        <div class="metric-card"><div class="metric-value">94%</div><div class="metric-label">SLA Compliance</div><div class="metric-change positive">↑ 3% improvement</div></div>
+        <div class="metric-card"><div class="metric-value">3.2</div><div class="metric-label">Avg Days to Complete</div><div class="metric-change positive">↓ 0.5 days faster</div></div>
+        <div class="metric-card"><div class="metric-value">18.5</div><div class="metric-label">Avg Hours per Request</div><div class="metric-change negative">↑ 2.1 hours</div></div>
+        <div class="metric-card"><div class="metric-value">89%</div><div class="metric-label">First-Pass Acceptance</div><div class="metric-change positive">↑ 5% improvement</div></div>
       </div>
 
       <div class="dashboard-grid">
-        <!-- Department Workload -->
         <div class="panel">
           <h3 class="panel-title">Department Workload &amp; Performance</h3>
-
-          <div class="dept-row">
-            <div class="dept-name">S&amp;S</div>
-            <div class="progress-bar"><div class="progress-fill" style="width:72%;background:linear-gradient(90deg,var(--SS),#5aa9ff)">26 requests</div></div>
-            <div class="dept-stats">21.2 hrs/req</div>
-          </div>
-          <div class="dept-row">
-            <div class="dept-name">H&amp;D</div>
-            <div class="progress-bar"><div class="progress-fill" style="width:62%;background:linear-gradient(90deg,var(--HD),#5bd06d)">23 requests</div></div>
-            <div class="dept-stats">15.8 hrs/req</div>
-          </div>
-          <div class="dept-row">
-            <div class="dept-name">Food Tech</div>
-            <div class="progress-bar"><div class="progress-fill" style="width:46%;background:linear-gradient(90deg,var(--FT),#9a8cff)">17 requests</div></div>
-            <div class="dept-stats">24.5 hrs/req</div>
-          </div>
-          <div class="dept-row">
-            <div class="dept-name">Menu Dev</div>
-            <div class="progress-bar"><div class="progress-fill" style="width:38%;background:linear-gradient(90deg,var(--MD),#ffa0b6)">14 requests</div></div>
-            <div class="dept-stats">18.3 hrs/req</div>
-          </div>
-          <div class="dept-row">
-            <div class="dept-name">I&amp;I</div>
-            <div class="progress-bar"><div class="progress-fill" style="width:30%;background:linear-gradient(90deg,var(--II),#39b9c8)">11 requests</div></div>
-            <div class="dept-stats">12.7 hrs/req</div>
-          </div>
+          <div class="dept-row"><div class="dept-name">S&amp;S</div><div class="progress-bar"><div class="progress-fill" style="width:72%;background:linear-gradient(90deg,var(--SS),#5aa9ff)">26 requests</div></div><div class="dept-stats">21.2 hrs/req</div></div>
+          <div class="dept-row"><div class="dept-name">H&amp;D</div><div class="progress-bar"><div class="progress-fill" style="width:62%;background:linear-gradient(90deg,var(--HD),#5bd06d)">23 requests</div></div><div class="dept-stats">15.8 hrs/req</div></div>
+          <div class="dept-row"><div class="dept-name">Food Tech</div><div class="progress-bar"><div class="progress-fill" style="width:46%;background:linear-gradient(90deg,var(--FT),#9a8cff)">17 requests</div></div><div class="dept-stats">24.5 hrs/req</div></div>
+          <div class="dept-row"><div class="dept-name">Menu Dev</div><div class="progress-bar"><div class="progress-fill" style="width:38%;background:linear-gradient(90deg,var(--MD),#ffa0b6)">14 requests</div></div><div class="dept-stats">18.3 hrs/req</div></div>
+          <div class="dept-row"><div class="dept-name">I&amp;I</div><div class="progress-bar"><div class="progress-fill" style="width:30%;background:linear-gradient(90deg,var(--II),#39b9c8)">11 requests</div></div><div class="dept-stats">12.7 hrs/req</div></div>
         </div>
 
-        <!-- Priority Queue -->
         <div class="panel">
           <h3 class="panel-title">Priority Queue Status</h3>
           <table class="table">
@@ -338,7 +271,6 @@
           </table>
         </div>
 
-        <!-- Departmental Overtime -->
         <div class="panel">
           <h3 class="panel-title">Departmental Overtime</h3>
           <table class="table">
@@ -353,7 +285,6 @@
           </table>
         </div>
 
-        <!-- BU Performance -->
         <div class="panel">
           <h3 class="panel-title">Business Unit Request Analysis</h3>
           <table class="table">
@@ -369,7 +300,7 @@
       </div>
     </div>
 
-    <!-- ========== Function 3: Live Workflow ========== -->
+    <!-- Live Workflow -->
     <div id="live-view" class="content-area">
       <div class="panel">
         <h2 class="panel-title">Live Flow • CSS Journey</h2>
@@ -379,6 +310,11 @@
           <button class="btn" id="btnZoomOut">Zoom −</button>
           <button class="btn" id="btnReset">Reset</button>
           <button class="btn" id="btnSubmitDemo">New Request (Demo)</button>
+          <select id="livePriority" class="btn" style="min-width:170px">
+            <option value="standard">Priority: Standard</option>
+            <option value="high">Priority: High</option>
+            <option value="urgent">Priority: Urgent</option>
+          </select>
         </div>
         <div class="live-wrap" id="liveWrap">
           <div id="tip" class="tip"></div>
@@ -389,7 +325,6 @@
               </marker>
             </defs>
             <g id="zoomRoot" transform="translate(0,0) scale(1)">
-              <!-- Lanes -->
               <g class="lane">
                 <line x1="80" y1="120" x2="1120" y2="120"/>
                 <line x1="80" y1="240" x2="1120" y2="240"/>
@@ -398,7 +333,6 @@
                 <line x1="80" y1="600" x2="1120" y2="600"/>
               </g>
 
-              <!-- Stages -->
               <g id="stages" class="stage">
                 <g data-key="INTAKE"><rect x="520" y="80" width="160" height="50" rx="8"/><text x="600" y="110" text-anchor="middle">Unified Intake • CSS Portal</text></g>
                 <g data-key="ROUTER"><rect x="520" y="200" width="160" height="50" rx="8"/><text x="600" y="230" text-anchor="middle">Router</text></g>
@@ -420,7 +354,6 @@
                 <g data-key="DONE"><rect x="520" y="620" width="160" height="50" rx="8"/><text x="600" y="650" text-anchor="middle">Delivery &amp; Done</text></g>
               </g>
 
-              <!-- Edges -->
               <g class="edge">
                 <path d="M600,130 L600,200"/>
                 <path d="M600,250 L230,320"/><path d="M600,250 L470,320"/><path d="M600,250 L710,320"/><path d="M600,250 L950,320"/>
@@ -444,7 +377,7 @@
   </div>
 
 <script>
-/* ===== Navigation ===== */
+/* ===== Tabs ===== */
 function switchView(view, event){
   document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
   event.target.classList.add('active');
@@ -452,24 +385,70 @@ function switchView(view, event){
   document.getElementById(view+'-view').classList.add('active');
 }
 
-/* ===== Function 1: Simple Workflow ===== */
+/* ===== Priority model ===== */
+const PRIORITY = {
+  standard: { name:'Standard', color:'#28a745', accent:'#e8f6ea', factor:1.0, escalate:false, notifyMgr:false },
+  high:     { name:'High',     color:'#ff9a2f', accent:'#fff2e6', factor:0.6, escalate:true,  notifyMgr:true },
+  urgent:   { name:'Urgent',   color:'#dc3545', accent:'#fde8ea', factor:0.24, escalate:true, notifyMgr:true, fastTrackFC09:true }
+};
+let currentPriority = PRIORITY.standard;
+
+/* ===== Simple Workflow ===== */
 function submitRequest(){
+  const sel = document.getElementById('prioritySelect').value;
+  currentPriority = PRIORITY[sel] || PRIORITY.standard;
+
   document.getElementById('alert').classList.add('show');
-  setTimeout(()=>{ document.getElementById('ticketInfo').classList.add('show'); startWorkflow(); }, 1000);
-}
-function startWorkflow(){
-  const steps = document.querySelectorAll('#workflow-view .workflow-step');
-  const t=[0,2000,4000,6000,8000,10000];
-  setTimeout(()=>{steps[0].classList.add('active'); document.getElementById('time1').textContent=new Date().toLocaleTimeString();},t[0]);
-  setTimeout(()=>{steps[0].classList.remove('active');steps[0].classList.add('completed');steps[1].classList.add('active');},t[1]);
-  setTimeout(()=>{steps[1].classList.remove('active');steps[1].classList.add('completed');steps[2].classList.add('active');},t[2]);
-  setTimeout(()=>{steps[2].classList.remove('active');steps[2].classList.add('completed');steps[3].classList.add('active');},t[3]);
-  setTimeout(()=>{steps[3].classList.remove('active');steps[3].classList.add('completed');steps[4].classList.add('active');},t[4]);
-  setTimeout(()=>{steps[4].classList.remove('active');steps[4].classList.add('completed');steps[5].classList.add('active');
-    setTimeout(()=>{steps[5].classList.remove('active');steps[5].classList.add('completed');},2000);},t[5]);
+  setTimeout(()=>{
+    document.getElementById('ticketInfo').classList.add('show');
+    startWorkflow(currentPriority);
+  }, 600);
 }
 
-/* ===== Function 3: Live Workflow ===== */
+function startWorkflow(p){
+  const steps = [...document.querySelectorAll('#workflow-view .workflow-step')];
+  steps.forEach(s => { s.classList.remove('active','completed','step-urgent','step-high','step-standard'); });
+
+  const baseSLA = { intake:48, assign:96, tech:48, mgr:48 }; // hours
+  const f = p.factor;
+
+  document.querySelector('#step2 .step-details').innerHTML =
+    `<strong>SLA:</strong> <b>${Math.round(baseSLA.intake*f)} hours</b><br/><strong>Status:</strong> Processing` +
+    (p.notifyMgr ? ` <span class="priority-ribbon" style="background:${p.accent};color:${p.color}">Mgr notified</span>`:``);
+
+  document.querySelector('#step3 .step-details').innerHTML =
+    `<strong>SLA:</strong> <b>Processing within ${Math.round(baseSLA.assign*f)} hours</b><br/>` +
+    `<strong>Assigned to:</strong> ${p.fastTrackFC09 ? 'FC09 • Senior Specialist (Auto)' : 'Sarah Johnson'}`;
+
+  document.querySelector('#step4 .step-details').innerHTML =
+    `<strong>SLA:</strong> <b>${Math.round(baseSLA.tech*f)} hours</b><br/><strong>Compliance:</strong> EU & UAE standards`;
+
+  document.querySelector('#step5 .step-details').innerHTML =
+    `<strong>SLA:</strong> <b>${Math.round(baseSLA.mgr*f)} hours</b><br/><strong>Checklist:</strong> Complete`;
+
+  const skin = p === PRIORITY.urgent ? 'step-urgent' : p === PRIORITY.high ? 'step-high' : 'step-standard';
+  steps.forEach(s => s.classList.add(skin));
+  const title2 = document.querySelector('#step2 .step-title');
+  title2.innerHTML = `CSS Admin Intake${
+    p.escalate ? ` <span class="priority-ribbon" style="background:${p.accent};color:${p.color}">${p.name}</span>` : ''
+  }${p === PRIORITY.urgent ? ` <span class="exclaim">!</span>`:''}`;
+
+  const t=[0, 2000*f, 4000*f, 6000*f, 8000*f, 10000*f];
+  if (p.fastTrackFC09){ t[1]=400*f; t[2]=1200*f; }
+
+  setTimeout(()=>{activateStep(steps,0); document.getElementById('time1').textContent=new Date().toLocaleTimeString();}, t[0]);
+  setTimeout(()=>{nextStep(steps,0,1);}, t[1]);
+  setTimeout(()=>{nextStep(steps,1,2);}, t[2]);
+  setTimeout(()=>{nextStep(steps,2,3);}, t[3]);
+  setTimeout(()=>{nextStep(steps,3,4);}, t[4]);
+  setTimeout(()=>{nextStep(steps,4,5); setTimeout(()=>finishStep(steps,5), 800*f);}, t[5]);
+
+  function activateStep(steps,i){ steps[i].classList.add('active'); }
+  function nextStep(steps,i,j){ steps[i].classList.remove('active'); steps[i].classList.add('completed'); steps[j].classList.add('active'); }
+  function finishStep(steps,i){ steps[i].classList.remove('active'); steps[i].classList.add('completed'); }
+}
+
+/* ===== Live Workflow ===== */
 const svg = document.getElementById('svg');
 const root = document.getElementById('zoomRoot');
 const tokensLayer = document.getElementById('tokens');
@@ -483,26 +462,19 @@ document.getElementById('btnZoomIn').onclick=()=>{ zoomAt(1.1); };
 document.getElementById('btnZoomOut').onclick=()=>{ zoomAt(0.9); };
 document.getElementById('btnReset').onclick=resetFlow;
 document.getElementById('btnSubmitDemo').onclick=()=> spawnNewToken();
+document.getElementById('livePriority').onchange = (e)=>{ currentPriority = PRIORITY[e.target.value] || PRIORITY.standard; };
 
-function applyTransform(){
-  root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`);
-}
-function zoomAt(f){
-  scale=Math.min(1.8,Math.max(0.7,scale*f));
-  applyTransform();
-}
+function applyTransform(){ root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); }
+function zoomAt(f){ scale=Math.min(1.8,Math.max(0.7,scale*f)); applyTransform(); }
 
-/* Panning (scrollable/drag) */
 let dragging=false, lastX=0, lastY=0;
 host.addEventListener('mousedown',e=>{dragging=true; lastX=e.clientX; lastY=e.clientY; host.classList.add('dragging');});
 window.addEventListener('mouseup',()=>{dragging=false; host.classList.remove('dragging');});
 window.addEventListener('mousemove',e=>{
   if(!dragging) return;
-  const dx=e.clientX-lastX, dy=e.clientY-lastY;
-  panX+=dx; panY+=dy; lastX=e.clientX; lastY=e.clientY; applyTransform();
+  const dx=e.clientX-lastX, dy=e.clientY-lastY; panX+=dx; panY+=dy; lastX=e.clientX; lastY=e.clientY; applyTransform();
 });
 
-/* Node coordinates */
 const N = {
   intake:{x:600,y:105}, router:{x:600,y:225},
   SS:{coord:{x:230,y:345}, A:{x:220,y:463}, B:{x:280,y:543}, color:getCSS('--SS')},
@@ -512,8 +484,10 @@ const N = {
   done:{x:600,y:645}
 };
 function getCSS(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
-function label(text,x,y,fill='#fff',bg='#000',ms=1200){
-  const g=doc('g'), r=doc('rect'), t=doc('text');
+function label(text,x,y,fill='#fff',bg='#000',ms=900){
+  const g=doc('g');
+  if (labelsLayer.childElementCount > 16) { return; }
+  const r=doc('rect'), t=doc('text');
   t.textContent=text; t.setAttribute('x',x); t.setAttribute('y',y-16); t.setAttribute('text-anchor','middle'); t.setAttribute('fill',fill);
   t.setAttribute('font-size','11'); t.setAttribute('font-weight','700');
   const w=Math.max(60,text.length*7+12), h=20;
@@ -524,24 +498,39 @@ function label(text,x,y,fill='#fff',bg='#000',ms=1200){
 function doc(tag){return document.createElementNS(svg.namespaceURI,tag);}
 function setPos(node,x,y){ node.rect.setAttribute('x',x-26); node.rect.setAttribute('y',y-11); node.text.setAttribute('x',x); node.text.setAttribute('y',y+3); }
 function setColor(node,phase,branchColor){
-  let fill=getCSS('--yellow'); /* default */
-  if(phase==='intake') fill=getCSS('--intake');
-  if(phase==='branch') fill=branchColor;
-  node.rect.setAttribute('fill',fill);
+  let fill = getCSS('--yellow');
+  if(phase==='intake') fill = currentPriority.accent || getCSS('--intake');
+  if(phase==='branch') fill = branchColor;
+  if(currentPriority === PRIORITY.high && phase!=='branch') fill = '#fff2e6';
+  if(currentPriority === PRIORITY.urgent && phase!=='branch') fill = '#fde8ea';
+  node.rect.setAttribute('fill', fill);
+  node.rect.setAttribute('stroke', currentPriority.color);
+  node.rect.setAttribute('stroke-width', 1.2);
 }
 
-/* Timeline (~20s) */
 function timeline(branch){
-  const b=N[branch];
-  return [
-    {p:N.intake, hold:900,  travel:0,    phase:'intake'},
-    {p:N.router, hold:700,  travel:3200, phase:'yellow'},
-    {p:b.coord,  hold:800,  travel:3800, phase:'branch'},
-    {p:b.A,      hold:2400, travel:1800, phase:'branch', badge:'In progress'},
-    {p:b.B,      hold:1200, travel:1600, phase:'branch'},
-    {p:N.done,   hold:800,  travel:2100, phase:'branch', complete:true}
+  const f = (currentPriority?.factor) || 1;
+  const badgeEsc = currentPriority.escalate ? 'Escalated' : null;
+  const mgrNote  = currentPriority.notifyMgr ? 'Senior mgr CC' : null;
+
+  const tl = [
+    {p:N.intake, hold:900*f,  travel:0,       phase:'intake', badge: mgrNote},
+    {p:N.router, hold:700*f,  travel:3200*f,  phase:'yellow', badge: badgeEsc},
+    {p:N[branch].coord,  hold:800*f,  travel:3800*f,  phase:'branch'},
+    {p:N[branch].A,      hold:2400*f, travel:1800*f,  phase:'branch', badge:'In progress'},
+    {p:N[branch].B,      hold:1200*f, travel:1600*f,  phase:'branch'},
+    {p:N.done,           hold:800*f,  travel:2100*f,  phase:'branch', complete:true}
   ];
+
+  if (currentPriority.fastTrackFC09){
+    tl[0].hold = 300*f;
+    tl[1].travel = 900*f;
+    tl[2].hold = 400*f;
+    tl[3].badge = 'FC09 assigned';
+  }
+  return tl;
 }
+
 const tokens=[];
 function newToken(id, branchKey){
   const g=doc('g'); g.classList.add('token'); g.setAttribute('data-id',id);
@@ -550,7 +539,7 @@ function newToken(id, branchKey){
   g.append(r,t); tokensLayer.appendChild(g);
   const tl=timeline(branchKey); const tok={id,branch:branchKey,color:N[branchKey].color,node:{g,rect:r,text:t},tl,idx:0,alive:true};
   setPos(tok.node, tl[0].p.x, tl[0].p.y); setColor(tok.node,'intake',tok.color);
-  label('New request', tl[0].p.x, tl[0].p.y, '#000', getCSS('--intake'), 1200);
+  label('New request', tl[0].p.x, tl[0].p.y, '#000', getCSS('--intake'), 900);
   tokens.push(tok); return tok;
 }
 function spawnNewToken(){
@@ -560,7 +549,6 @@ function spawnNewToken(){
   newToken(id,b);
 }
 
-/* Tooltips with Avg time/req */
 const STATS={
   INTAKE:{t:'Unified Intake',r:[['Avg triage','12m'],['Today','9'],['Rejections','0']]},
   ROUTER:{t:'Router',r:[['Auto-route','88%'],['Manual','12%'],['Queue','6']]},
@@ -588,7 +576,6 @@ document.querySelectorAll('#stages g[data-key]').forEach(el=>{
   el.addEventListener('mouseleave',()=> tip.style.display='none');
 });
 
-/* Animation */
 function animate(ts){
   requestAnimationFrame(animate);
   if(!playing) return;
@@ -598,7 +585,7 @@ function animate(ts){
   tokens.forEach(tok=>{
     if(!tok.alive) return;
     const seg=tok.tl[tok.idx], next=tok.tl[tok.idx+1];
-    if(seg.hold>0){ seg.hold-=dt; if(seg.hold<=0 && seg.badge){ label(seg.badge, seg.p.x, seg.p.y, '#fff', tok.color, 1400); } return; }
+    if(seg.hold>0){ seg.hold-=dt; if(seg.hold<=0 && seg.badge){ label(seg.badge, seg.p.x, seg.p.y, '#fff', tok.color, 900); } return; }
     seg.elapsed=(seg.elapsed||0)+dt;
     const u=Math.min(1, seg.travel? seg.elapsed/seg.travel : 1);
     const x=next ? seg.p.x + (next.p.x - seg.p.x)*u : seg.p.x;
@@ -608,7 +595,7 @@ function animate(ts){
     if(u>=1){
       tok.idx++;
       if(tok.idx>=tok.tl.length-1){
-        label('✓ Complete', N.done.x, N.done.y, '#fff', '#28a745', 1200);
+        label('✓ Complete', N.done.x, N.done.y, '#fff', '#28a745', 900);
         tok.node.g.remove(); tok.alive=false;
         setTimeout(()=>{ if(tokens.filter(t=>t.alive).length<10) spawnNewToken(); }, 800+Math.random()*1000);
       }
@@ -623,10 +610,8 @@ function resetFlow(){
   [...tokensLayer.children].forEach(n=>n.remove());
   [...labelsLayer.children].forEach(n=>n.remove());
   tokens.length=0;
-  ['HD','SS','FT','MD','SS','MD'].forEach((b,i)=> setTimeout(()=> newToken(b+'-'+(2000+i), b), i*600));
+  ['HD','SS','MD','FT'].forEach((b,i)=> setTimeout(()=> newToken(b+'-'+(2000+i), b), i*650));
 }
-function applyTransform(){ root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); }
-/* init */
 resetFlow();
 </script>
 </body>

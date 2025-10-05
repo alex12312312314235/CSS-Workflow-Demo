@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CSS Workflow Integration Portal - EKFC</title>
+<style>
+  /* ====== Theme ====== */
+  :root{
+    --ekfc-red:#C8102E; --ekfc-red-dark:#A00E24; --gold:#B8975F;
+    --text:#111; --muted:#666; --bg:#f5f5f5; --card:#fff; --line:#ddd; --soft:#f8f8f8;
+
+    /* Branch colors */
+    --SS:#2f7ed8;  /* S&S blue */
+    --HD:#28a745;  /* H&D green */
+    --FT:#7b61ff;  /* Food Tech violet */
+    --MD:#ff6b8b;  /* Menu Dev pink */
+    --II:#0c5460;  /* I&I teal */
+    --intake:#ff9a2f; /* orange */
+    --yellow:#ffd400; /* pre-routing highlight */
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);min-height:100vh;color:var(--text)}
+  .header{background:var(--card);border-bottom:3px solid var(--ekfc-red);padding:15px 30px;box-shadow:0 2px 4px rgba(0,0,0,.08)}
+  .header-content{max-width:1400px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
+  .header-left{display:flex;align-items:center;gap:20px}
+  .logo-text{color:var(--ekfc-red);font-size:24px;font-weight:bold}
+  .header h1{font-size:20px;font-weight:normal}
+  .header-subtitle{color:var(--muted);font-size:14px}
+  .nav-tabs{display:flex;background:var(--card);border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+  .nav-tab{background:var(--card);border:none;color:#666;padding:8px 18px;cursor:pointer;font-size:14px;transition:.2s;border-right:1px solid var(--line)}
+  .nav-tab:last-child{border-right:none}
+  .nav-tab:hover{background:var(--soft)}
+  .nav-tab.active{background:var(--ekfc-red);color:#fff}
+  .container{max-width:1400px;margin:20px auto;padding:0 20px}
+  .content-area{display:none}
+  .content-area.active{display:block}
+
+  /* ====== Panels ====== */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:20px;box-shadow:0 2px 4px rgba(0,0,0,.05)}
+  .panel-title{font-size:16px;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--gold);font-weight:600}
+
+  /* ====== Function 1: Simple Workflow ====== */
+  .workflow-container{display:grid;grid-template-columns:380px 1fr;gap:20px}
+  .form-group{margin-bottom:15px}
+  label{display:block;font-size:13px;font-weight:600;margin-bottom:5px}
+  input,select,textarea{width:100%;padding:8px;border:1px solid #ccc;border-radius:3px;font-size:13px}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ekfc-red)}
+  .submit-btn{background:var(--ekfc-red);color:#fff;border:none;padding:10px 20px;border-radius:3px;font-size:14px;font-weight:600;cursor:pointer;width:100%;transition:.2s}
+  .submit-btn:hover{background:var(--ekfc-red-dark)}
+  .alert{background:#d4edda;border:1px solid #c3e6cb;color:#155724;padding:10px;margin-bottom:15px;border-radius:3px;font-size:13px;display:none}
+  .alert.show{display:block}
+  .ticket-info{background:#fff3cd;border:1px solid #ffeeba;color:#856404;padding:10px;margin-top:15px;border-radius:3px;font-size:13px;display:none}
+  .ticket-info.show{display:block}
+  .ticket-number{font-weight:bold;color:var(--ekfc-red)}
+  .workflow-step{display:flex;padding:15px;margin-bottom:15px;background:var(--soft);border:1px solid #e0e0e0;border-radius:3px;opacity:.5;transition:.3s}
+  .workflow-step.active{opacity:1;background:#fff;border-color:var(--ekfc-red);border-width:2px}
+  .workflow-step.completed{opacity:.9;background:#f0f8f0;border-color:#28a745}
+  .step-number{width:40px;height:40px;background:#ddd;color:#666;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;margin-right:15px;flex-shrink:0}
+  .workflow-step.active .step-number{background:var(--ekfc-red);color:#fff}
+  .workflow-step.completed .step-number{background:#28a745;color:#fff}
+  .step-content{flex:1}
+  .step-title{font-size:14px;font-weight:600;margin-bottom:4px}
+  .step-desc{font-size:12px;color:var(--muted)}
+  .step-details{margin-top:8px;padding-top:8px;border-top:1px solid #e0e0e0;font-size:11px;color:var(--muted);display:none}
+  .workflow-step.active .step-details,.workflow-step.completed .step-details{display:block}
+
+  /* ====== Function 2: VP Dashboard ====== */
+  .dashboard-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:20px}
+  .metric-card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:15px;box-shadow:0 2px 4px rgba(0,0,0,.05)}
+  .metric-value{font-size:28px;font-weight:bold;color:var(--ekfc-red);margin-bottom:5px}
+  .metric-label{font-size:12px;color:var(--muted);text-transform:uppercase}
+  .metric-change{font-size:11px;margin-top:5px}
+  .positive{color:#28a745}.negative{color:#dc3545}
+  .dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .table{width:100%;border-collapse:collapse;font-size:12px}
+  .table th{background:var(--soft);padding:8px;text-align:left;font-weight:600;border-bottom:2px solid var(--gold)}
+  .table td{padding:8px;border-bottom:1px solid #e0e0e0;color:#555}
+  .priority-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}
+  .priority-urgent{background:#f8d7da;color:#721c24}
+  .priority-high{background:#fff3cd;color:#856404}
+  .priority-normal{background:#d1ecf1;color:#0c5460}
+  .progress-bar{width:100%;height:20px;background:#f0f0f0;border-radius:3px;overflow:hidden;margin:5px 0}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--ekfc-red),#DC143C);transition:width .3s;display:flex;align-items:center;padding:0 8px;color:#fff;font-size:11px;font-weight:600}
+  .dept-row{display:grid;grid-template-columns:100px 1fr 110px;align-items:center;margin-bottom:10px;font-size:12px}
+  .dept-name{font-weight:600}
+  .dept-stats{text-align:right;color:#444}
+
+  /* ====== Function 3: Live Workflow ====== */
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .btn{background:#fff;border:1px solid var(--line);padding:8px 10px;border-radius:6px;cursor:pointer}
+  .btn:hover{background:#f9f9f9}
+  .live-wrap{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px;position:relative}
+  .svg-host{width:100%;height:620px;background:#fff;border:1px solid #eee;border-radius:4px;cursor:grab}
+  .svg-host.dragging{cursor:grabbing}
+
+  /* Lanes & stages (improved visibility) */
+  .lane{stroke:#e6e6e6;stroke-width:1}
+  .stage rect{fill:#ffffff;stroke:var(--ekfc-red);stroke-width:1.5}
+  .stage text{fill:#000;font-size:12px}
+
+  .edge{stroke:#c7c7c7;stroke-width:2;fill:none;marker-end:url(#arrow)}
+  .token{filter:drop-shadow(0 1px 4px rgba(0,0,0,.15))}
+  .token rect{stroke:#000;stroke-opacity:.15;rx:7;ry:7}
+  .token text{fill:#000;font-weight:800;font-size:10px}
+  .tip{position:absolute;pointer-events:none;background:#fff;border:1px solid #ddd;border-radius:6px;padding:8px 10px;font-size:12px;box-shadow:0 8px 18px rgba(0,0,0,.08);display:none}
+  .tip .t{font-weight:700;margin-bottom:6px}
+  .tip .row{display:flex;justify-content:space-between;gap:16px}
+  .tip .k{color:#777;text-transform:uppercase;font-size:11px}
+  .tip .v{font-weight:700}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <div class="header-left">
+        <span class="logo-text">Emirates|Flight Catering</span>
+        <div>
+          <h1>CSS Workflow Integration Portal</h1>
+          <div class="header-subtitle">Culinary Shared Services</div>
+        </div>
+      </div>
+      <div class="nav-tabs">
+        <button class="nav-tab active" onclick="switchView('workflow',event)">Workflow (Simple)</button>
+        <button class="nav-tab" onclick="switchView('dashboard',event)">VP Dashboard</button>
+        <button class="nav-tab" onclick="switchView('live',event)">Workflow (Live)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- ========== Function 1: Simple Workflow ========== -->
+    <div id="workflow-view" class="content-area active">
+      <div class="workflow-container">
+        <!-- Form -->
+        <div class="panel">
+          <h2 class="panel-title">Submit H&amp;D Request</h2>
+          <div id="alert" class="alert">Request submitted successfully. Processing ticket...</div>
+
+          <div class="form-group">
+            <label>Requester Name *</label>
+            <input type="text" value="John Smith"/>
+          </div>
+          <div class="form-group">
+            <label>Business Unit *</label>
+            <select>
+              <option>East Wing Production</option>
+              <option>West Wing Production</option>
+              <option>DIA Lounges</option>
+              <option>Commercial Kitchen</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Request Type *</label>
+            <select>
+              <option>Allergen Declaration Review</option>
+              <option>Nutritional Analysis</option>
+              <option>Special Diet Menu Development</option>
+              <option>Health Claim Verification</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Priority *</label>
+            <select>
+              <option>Standard (5 days)</option>
+              <option>High (3 days)</option>
+              <option>Urgent (24 hours)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Description *</label>
+            <textarea rows="3">Need allergen review for new pasta dish containing nuts and dairy. Menu item planned for Q1 2025 launch.</textarea>
+          </div>
+          <button class="submit-btn" onclick="submitRequest()">Submit Request</button>
+
+          <div id="ticketInfo" class="ticket-info">
+            <strong>Ticket Created</strong><br/>
+            <span class="ticket-number">HD-2025-0142</span><br/>
+            Track your request using this number
+          </div>
+        </div>
+
+        <!-- Steps -->
+        <div class="panel">
+          <h2 class="panel-title">Workflow Journey</h2>
+
+          <div class="workflow-step" id="step1">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <div class="step-title">Request Submission</div>
+              <div class="step-desc">BU submits request through unified portal</div>
+              <div class="step-details">
+                <strong>Submitted:</strong> <span id="time1">--</span><br/>
+                <strong>System:</strong> <b>CSS Workorder Portal</b>
+              </div>
+            </div>
+          </div>
+
+          <div class="workflow-step" id="step2">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <div class="step-title">CSS Admin Intake</div>
+              <div class="step-desc">Request routed to CSS Admin for initial processing</div>
+              <div class="step-details">
+                <strong>SLA:</strong> <b>48 hours</b><br/>
+                <strong>Status:</strong> Processing
+              </div>
+            </div>
+          </div>
+
+          <div class="workflow-step" id="step3">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <div class="step-title">H&amp;D Assignment</div>
+              <div class="step-desc">Ticket assigned to H&amp;D specialist based on expertise</div>
+              <div class="step-details">
+                <strong>SLA:</strong> <b>Processing within 96 hours</b><br/>
+                <strong>Assigned to:</strong> Sarah Johnson
+              </div>
+            </div>
+          </div>
+
+          <div class="workflow-step" id="step4">
+            <div class="step-number">4</div>
+            <div class="step-content">
+              <div class="step-title">Technical Review</div>
+              <div class="step-desc">H&amp;D specialist performs allergen assessment</div>
+              <div class="step-details">
+                <strong>SLA:</strong> <b>48 hours</b><br/>
+                <strong>Compliance:</strong> EU &amp; UAE standards
+              </div>
+            </div>
+          </div>
+
+          <div class="workflow-step" id="step5">
+            <div class="step-number">5</div>
+            <div class="step-content">
+              <div class="step-title">Manager Approval &amp; Review</div>
+              <div class="step-desc">Manager review and approval</div>
+              <div class="step-details">
+                <strong>SLA:</strong> <b>48 hours</b><br/>
+                <strong>Checklist:</strong> Complete
+              </div>
+            </div>
+          </div>
+
+          <div class="workflow-step" id="step6">
+            <div class="step-number">6</div>
+            <div class="step-content">
+              <div class="step-title">Delivery</div>
+              <div class="step-desc">Results delivered to requester</div>
+              <div class="step-details">
+                <strong>Format:</strong> <b>Email</b><br/>
+                <strong>Channel:</strong> <b>Outlook 365</b>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== Function 2: VP Dashboard ========== -->
+    <div id="dashboard-view" class="content-area">
+      <div class="dashboard-metrics">
+        <div class="metric-card">
+          <div class="metric-value">37</div>
+          <div class="metric-label">Total Active Requests</div>
+          <div class="metric-change positive">Stable (target ≤ 40)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">94%</div>
+          <div class="metric-label">SLA Compliance</div>
+          <div class="metric-change positive">↑ 3% improvement</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">3.2</div>
+          <div class="metric-label">Avg Days to Complete</div>
+          <div class="metric-change positive">↓ 0.5 days faster</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">18.5</div>
+          <div class="metric-label">Avg Hours per Request</div>
+          <div class="metric-change negative">↑ 2.1 hours</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">89%</div>
+          <div class="metric-label">First-Pass Acceptance</div>
+          <div class="metric-change positive">↑ 5% improvement</div>
+        </div>
+        <!-- Removed: Cost per Request -->
+      </div>
+
+      <div class="dashboard-grid">
+        <!-- Department Workload -->
+        <div class="panel">
+          <h3 class="panel-title">Department Workload &amp; Performance</h3>
+
+          <div class="dept-row">
+            <div class="dept-name">S&amp;S</div>
+            <div class="progress-bar"><div class="progress-fill" style="width:72%;background:linear-gradient(90deg,var(--SS),#5aa9ff)">26 requests</div></div>
+            <div class="dept-stats">21.2 hrs/req</div>
+          </div>
+          <div class="dept-row">
+            <div class="dept-name">H&amp;D</div>
+            <div class="progress-bar"><div class="progress-fill" style="width:62%;background:linear-gradient(90deg,var(--HD),#5bd06d)">23 requests</div></div>
+            <div class="dept-stats">15.8 hrs/req</div>
+          </div>
+          <div class="dept-row">
+            <div class="dept-name">Food Tech</div>
+            <div class="progress-bar"><div class="progress-fill" style="width:46%;background:linear-gradient(90deg,var(--FT),#9a8cff)">17 requests</div></div>
+            <div class="dept-stats">24.5 hrs/req</div>
+          </div>
+          <div class="dept-row">
+            <div class="dept-name">Menu Dev</div>
+            <div class="progress-bar"><div class="progress-fill" style="width:38%;background:linear-gradient(90deg,var(--MD),#ffa0b6)">14 requests</div></div>
+            <div class="dept-stats">18.3 hrs/req</div>
+          </div>
+          <div class="dept-row">
+            <div class="dept-name">I&amp;I</div>
+            <div class="progress-bar"><div class="progress-fill" style="width:30%;background:linear-gradient(90deg,var(--II),#39b9c8)">11 requests</div></div>
+            <div class="dept-stats">12.7 hrs/req</div>
+          </div>
+        </div>
+
+        <!-- Priority Queue -->
+        <div class="panel">
+          <h3 class="panel-title">Priority Queue Status</h3>
+          <table class="table">
+            <thead><tr><th>Ticket</th><th>Type</th><th>Priority</th><th>Time</th></tr></thead>
+            <tbody>
+              <tr><td><strong>HD-2025-0142</strong></td><td>Allergen Review</td><td><span class="priority-badge priority-urgent">Urgent</span></td><td>4 hrs</td></tr>
+              <tr><td><strong>SS-2025-0385</strong></td><td>Recipe Standard</td><td><span class="priority-badge priority-urgent">Urgent</span></td><td>8 hrs</td></tr>
+              <tr><td><strong>FT-2025-0100</strong></td><td>Shelf Life</td><td><span class="priority-badge priority-high">High</span></td><td>2 days</td></tr>
+              <tr><td><strong>MD-2025-0257</strong></td><td>Menu Costing</td><td><span class="priority-badge priority-high">High</span></td><td>3 days</td></tr>
+              <tr><td><strong>II-2025-0089</strong></td><td>Forecast Analysis</td><td><span class="priority-badge priority-normal">Normal</span></td><td>5 days</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Departmental Overtime -->
+        <div class="panel">
+          <h3 class="panel-title">Departmental Overtime</h3>
+          <table class="table">
+            <thead><tr><th>Department</th><th>FTE</th><th>Utilization</th><th>Overtime</th></tr></thead>
+            <tbody>
+              <tr><td>S&amp;S</td><td>12</td><td>92%</td><td>45 hrs</td></tr>
+              <tr><td>H&amp;D</td><td>8</td><td>88%</td><td>28 hrs</td></tr>
+              <tr><td>Food Tech</td><td>6</td><td>95%</td><td>52 hrs</td></tr>
+              <tr><td>Menu Dev</td><td>10</td><td>78%</td><td>15 hrs</td></tr>
+              <tr><td>I&amp;I</td><td>5</td><td>82%</td><td>22 hrs</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- BU Performance -->
+        <div class="panel">
+          <h3 class="panel-title">Business Unit Request Analysis</h3>
+          <table class="table">
+            <thead><tr><th>Business Unit</th><th>Requests</th><th>Avg Time</th><th>SLA %</th></tr></thead>
+            <tbody>
+              <tr><td>East Wing</td><td>13</td><td>3.1 days</td><td>96%</td></tr>
+              <tr><td>West Wing</td><td>10</td><td>3.5 days</td><td>92%</td></tr>
+              <tr><td>DIA Lounges</td><td>7</td><td>2.8 days</td><td>98%</td></tr>
+              <tr><td>Commercial</td><td>7</td><td>3.9 days</td><td>89%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== Function 3: Live Workflow ========== -->
+    <div id="live-view" class="content-area">
+      <div class="panel">
+        <h2 class="panel-title">Live Flow • CSS Journey</h2>
+        <div class="toolbar">
+          <button class="btn" id="btnPlay">Pause</button>
+          <button class="btn" id="btnZoomIn">Zoom +</button>
+          <button class="btn" id="btnZoomOut">Zoom −</button>
+          <button class="btn" id="btnReset">Reset</button>
+          <button class="btn" id="btnSubmitDemo">New Request (Demo)</button>
+        </div>
+        <div class="live-wrap" id="liveWrap">
+          <div id="tip" class="tip"></div>
+          <svg id="svg" class="svg-host" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                <polygon points="0,0 10,4 0,8" fill="#c7c7c7"></polygon>
+              </marker>
+            </defs>
+            <g id="zoomRoot" transform="translate(0,0) scale(1)">
+              <!-- Lanes -->
+              <g class="lane">
+                <line x1="80" y1="120" x2="1120" y2="120"/>
+                <line x1="80" y1="240" x2="1120" y2="240"/>
+                <line x1="80" y1="360" x2="1120" y2="360"/>
+                <line x1="80" y1="480" x2="1120" y2="480"/>
+                <line x1="80" y1="600" x2="1120" y2="600"/>
+              </g>
+
+              <!-- Stages -->
+              <g id="stages" class="stage">
+                <g data-key="INTAKE"><rect x="520" y="80" width="160" height="50" rx="8"/><text x="600" y="110" text-anchor="middle">Unified Intake • CSS Portal</text></g>
+                <g data-key="ROUTER"><rect x="520" y="200" width="160" height="50" rx="8"/><text x="600" y="230" text-anchor="middle">Router</text></g>
+
+                <g data-key="SS_COORD"><rect x="140" y="320" width="180" height="50" rx="8"/><text x="230" y="350" text-anchor="middle">S&amp;S Coordinator</text></g>
+                <g data-key="HD_COORD"><rect x="380" y="320" width="180" height="50" rx="8"/><text x="470" y="350" text-anchor="middle">H&amp;D Coordinator</text></g>
+                <g data-key="FT_COORD"><rect x="620" y="320" width="180" height="50" rx="8"/><text x="710" y="350" text-anchor="middle">FoodTech Coordinator</text></g>
+                <g data-key="MD_COORD"><rect x="860" y="320" width="180" height="50" rx="8"/><text x="950" y="350" text-anchor="middle">MenuDev Coordinator</text></g>
+
+                <g data-key="SS_A"><rect x="140" y="440" width="160" height="46" rx="8"/><text x="220" y="468" text-anchor="middle">S&amp;S • A</text></g>
+                <g data-key="SS_B"><rect x="200" y="520" width="160" height="46" rx="8"/><text x="280" y="548" text-anchor="middle">S&amp;S • B</text></g>
+                <g data-key="HD_A"><rect x="380" y="440" width="160" height="46" rx="8"/><text x="460" y="468" text-anchor="middle">H&amp;D • A</text></g>
+                <g data-key="HD_B"><rect x="440" y="520" width="160" height="46" rx="8"/><text x="520" y="548" text-anchor="middle">H&amp;D • B</text></g>
+                <g data-key="FT_A"><rect x="620" y="440" width="160" height="46" rx="8"/><text x="700" y="468" text-anchor="middle">FT • A</text></g>
+                <g data-key="FT_B"><rect x="680" y="520" width="160" height="46" rx="8"/><text x="760" y="548" text-anchor="middle">FT • B</text></g>
+                <g data-key="MD_A"><rect x="860" y="440" width="160" height="46" rx="8"/><text x="940" y="468" text-anchor="middle">MD • A</text></g>
+                <g data-key="MD_B"><rect x="920" y="520" width="160" height="46" rx="8"/><text x="1000" y="548" text-anchor="middle">MD • B</text></g>
+
+                <g data-key="DONE"><rect x="520" y="620" width="160" height="50" rx="8"/><text x="600" y="650" text-anchor="middle">Delivery &amp; Done</text></g>
+              </g>
+
+              <!-- Edges -->
+              <g class="edge">
+                <path d="M600,130 L600,200"/>
+                <path d="M600,250 L230,320"/><path d="M600,250 L470,320"/><path d="M600,250 L710,320"/><path d="M600,250 L950,320"/>
+                <path d="M230,370 L220,440"/><path d="M230,370 L280,520"/>
+                <path d="M470,370 L460,440"/><path d="M470,370 L520,520"/>
+                <path d="M710,370 L700,440"/><path d="M710,370 L760,520"/>
+                <path d="M950,370 L940,440"/><path d="M950,370 L1000,520"/>
+                <path d="M220,486 L600,620"/><path d="M280,566 L600,620"/>
+                <path d="M460,486 L600,620"/><path d="M520,566 L600,620"/>
+                <path d="M700,486 L600,620"/><path d="M760,566 L600,620"/>
+                <path d="M940,486 L600,620"/><path d="M1000,566 L600,620"/>
+              </g>
+
+              <g id="tokens"></g>
+              <g id="labels"></g>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ===== Navigation ===== */
+function switchView(view, event){
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  document.querySelectorAll('.content-area').forEach(a=>a.classList.remove('active'));
+  document.getElementById(view+'-view').classList.add('active');
+}
+
+/* ===== Function 1: Simple Workflow ===== */
+function submitRequest(){
+  document.getElementById('alert').classList.add('show');
+  setTimeout(()=>{ document.getElementById('ticketInfo').classList.add('show'); startWorkflow(); }, 1000);
+}
+function startWorkflow(){
+  const steps = document.querySelectorAll('#workflow-view .workflow-step');
+  const t=[0,2000,4000,6000,8000,10000];
+  setTimeout(()=>{steps[0].classList.add('active'); document.getElementById('time1').textContent=new Date().toLocaleTimeString();},t[0]);
+  setTimeout(()=>{steps[0].classList.remove('active');steps[0].classList.add('completed');steps[1].classList.add('active');},t[1]);
+  setTimeout(()=>{steps[1].classList.remove('active');steps[1].classList.add('completed');steps[2].classList.add('active');},t[2]);
+  setTimeout(()=>{steps[2].classList.remove('active');steps[2].classList.add('completed');steps[3].classList.add('active');},t[3]);
+  setTimeout(()=>{steps[3].classList.remove('active');steps[3].classList.add('completed');steps[4].classList.add('active');},t[4]);
+  setTimeout(()=>{steps[4].classList.remove('active');steps[4].classList.add('completed');steps[5].classList.add('active');
+    setTimeout(()=>{steps[5].classList.remove('active');steps[5].classList.add('completed');},2000);},t[5]);
+}
+
+/* ===== Function 3: Live Workflow ===== */
+const svg = document.getElementById('svg');
+const root = document.getElementById('zoomRoot');
+const tokensLayer = document.getElementById('tokens');
+const labelsLayer = document.getElementById('labels');
+const tip = document.getElementById('tip');
+const host = document.getElementById('svg');
+
+let playing=true, scale=1, panX=0, panY=0;
+document.getElementById('btnPlay').onclick=()=>{ playing=!playing; document.getElementById('btnPlay').textContent=playing?'Pause':'Play'; };
+document.getElementById('btnZoomIn').onclick=()=>{ zoomAt(1.1); };
+document.getElementById('btnZoomOut').onclick=()=>{ zoomAt(0.9); };
+document.getElementById('btnReset').onclick=resetFlow;
+document.getElementById('btnSubmitDemo').onclick=()=> spawnNewToken();
+
+function applyTransform(){
+  root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`);
+}
+function zoomAt(f){
+  scale=Math.min(1.8,Math.max(0.7,scale*f));
+  applyTransform();
+}
+
+/* Panning (scrollable/drag) */
+let dragging=false, lastX=0, lastY=0;
+host.addEventListener('mousedown',e=>{dragging=true; lastX=e.clientX; lastY=e.clientY; host.classList.add('dragging');});
+window.addEventListener('mouseup',()=>{dragging=false; host.classList.remove('dragging');});
+window.addEventListener('mousemove',e=>{
+  if(!dragging) return;
+  const dx=e.clientX-lastX, dy=e.clientY-lastY;
+  panX+=dx; panY+=dy; lastX=e.clientX; lastY=e.clientY; applyTransform();
+});
+
+/* Node coordinates */
+const N = {
+  intake:{x:600,y:105}, router:{x:600,y:225},
+  SS:{coord:{x:230,y:345}, A:{x:220,y:463}, B:{x:280,y:543}, color:getCSS('--SS')},
+  HD:{coord:{x:470,y:345}, A:{x:460,y:463}, B:{x:520,y:543}, color:getCSS('--HD')},
+  FT:{coord:{x:710,y:345}, A:{x:700,y:463}, B:{x:760,y:543}, color:getCSS('--FT')},
+  MD:{coord:{x:950,y:345}, A:{x:940,y:463}, B:{x:1000,y:543}, color:getCSS('--MD')},
+  done:{x:600,y:645}
+};
+function getCSS(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function label(text,x,y,fill='#fff',bg='#000',ms=1200){
+  const g=doc('g'), r=doc('rect'), t=doc('text');
+  t.textContent=text; t.setAttribute('x',x); t.setAttribute('y',y-16); t.setAttribute('text-anchor','middle'); t.setAttribute('fill',fill);
+  t.setAttribute('font-size','11'); t.setAttribute('font-weight','700');
+  const w=Math.max(60,text.length*7+12), h=20;
+  r.setAttribute('x',x-w/2); r.setAttribute('y',y-16-h+6); r.setAttribute('width',w); r.setAttribute('height',h);
+  r.setAttribute('rx','8'); r.setAttribute('fill',bg); r.setAttribute('opacity','0.92');
+  g.append(r,t); labelsLayer.appendChild(g); setTimeout(()=>g.remove(),ms);
+}
+function doc(tag){return document.createElementNS(svg.namespaceURI,tag);}
+function setPos(node,x,y){ node.rect.setAttribute('x',x-26); node.rect.setAttribute('y',y-11); node.text.setAttribute('x',x); node.text.setAttribute('y',y+3); }
+function setColor(node,phase,branchColor){
+  let fill=getCSS('--yellow'); /* default */
+  if(phase==='intake') fill=getCSS('--intake');
+  if(phase==='branch') fill=branchColor;
+  node.rect.setAttribute('fill',fill);
+}
+
+/* Timeline (~20s) */
+function timeline(branch){
+  const b=N[branch];
+  return [
+    {p:N.intake, hold:900,  travel:0,    phase:'intake'},
+    {p:N.router, hold:700,  travel:3200, phase:'yellow'},
+    {p:b.coord,  hold:800,  travel:3800, phase:'branch'},
+    {p:b.A,      hold:2400, travel:1800, phase:'branch', badge:'In progress'},
+    {p:b.B,      hold:1200, travel:1600, phase:'branch'},
+    {p:N.done,   hold:800,  travel:2100, phase:'branch', complete:true}
+  ];
+}
+const tokens=[];
+function newToken(id, branchKey){
+  const g=doc('g'); g.classList.add('token'); g.setAttribute('data-id',id);
+  const r=doc('rect'); r.setAttribute('width',52); r.setAttribute('height',22);
+  const t=doc('text'); t.setAttribute('text-anchor','middle'); t.textContent=id.split('-')[0];
+  g.append(r,t); tokensLayer.appendChild(g);
+  const tl=timeline(branchKey); const tok={id,branch:branchKey,color:N[branchKey].color,node:{g,rect:r,text:t},tl,idx:0,alive:true};
+  setPos(tok.node, tl[0].p.x, tl[0].p.y); setColor(tok.node,'intake',tok.color);
+  label('New request', tl[0].p.x, tl[0].p.y, '#000', getCSS('--intake'), 1200);
+  tokens.push(tok); return tok;
+}
+function spawnNewToken(){
+  const branches=['SS','HD','FT','MD'];
+  const b=branches[Math.floor(Math.random()*branches.length)];
+  const id=b+'-'+(1000+Math.floor(Math.random()*9000));
+  newToken(id,b);
+}
+
+/* Tooltips with Avg time/req */
+const STATS={
+  INTAKE:{t:'Unified Intake',r:[['Avg triage','12m'],['Today','9'],['Rejections','0']]},
+  ROUTER:{t:'Router',r:[['Auto-route','88%'],['Manual','12%'],['Queue','6']]},
+  SS_COORD:{t:'S&S Coord',r:[['SLA','96%'],['Backlog','2'],['Avg time/req','18.2h']]},
+  HD_COORD:{t:'H&D Coord',r:[['SLA','93%'],['Backlog','3'],['Avg time/req','15.1h']]},
+  FT_COORD:{t:'FoodTech Coord',r:[['SLA','91%'],['Backlog','1'],['Avg time/req','22.3h']]},
+  MD_COORD:{t:'MenuDev Coord',r:[['SLA','89%'],['Backlog','4'],['Avg time/req','17.6h']]},
+  SS_A:{t:'S&S • A',r:[['WIP','2'],['Throughput/wk','11'],['Avg time/req','19.4h']]},
+  SS_B:{t:'S&S • B',r:[['WIP','1'],['Throughput/wk','9'],['Avg time/req','20.1h']]},
+  HD_A:{t:'H&D • A',r:[['WIP','2'],['Throughput/wk','7'],['Avg time/req','15.0h']]},
+  HD_B:{t:'H&D • B',r:[['WIP','1'],['Throughput/wk','8'],['Avg time/req','16.3h']]},
+  FT_A:{t:'FT • A',r:[['WIP','2'],['Tests/wk','6'],['Avg time/req','24.8h']]},
+  FT_B:{t:'FT • B',r:[['WIP','1'],['Tests/wk','5'],['Avg time/req','23.1h']]},
+  MD_A:{t:'MD • A',r:[['WIP','2'],['Menus/wk','4'],['Avg time/req','18.0h']]},
+  MD_B:{t:'MD • B',r:[['WIP','1'],['Menus/wk','3'],['Avg time/req','18.7h']]},
+  DONE:{t:'Delivery & Done',r:[['On-time','96%'],['Rollbacks','0'],['Handovers','9']]}
+};
+document.querySelectorAll('#stages g[data-key]').forEach(el=>{
+  const k=el.getAttribute('data-key');
+  el.addEventListener('mousemove',e=>{
+    const s=STATS[k]; if(!s) return;
+    tip.innerHTML=`<div class="t">${s.t}</div>` + s.r.map(([a,b])=>`<div class="row"><div class="k">${a}</div><div class="v">${b}</div></div>`).join('');
+    tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px'; tip.style.display='block';
+  });
+  el.addEventListener('mouseleave',()=> tip.style.display='none');
+});
+
+/* Animation */
+function animate(ts){
+  requestAnimationFrame(animate);
+  if(!playing) return;
+  if(!animate.last) animate.last=ts;
+  const dt=ts-animate.last; animate.last=ts;
+
+  tokens.forEach(tok=>{
+    if(!tok.alive) return;
+    const seg=tok.tl[tok.idx], next=tok.tl[tok.idx+1];
+    if(seg.hold>0){ seg.hold-=dt; if(seg.hold<=0 && seg.badge){ label(seg.badge, seg.p.x, seg.p.y, '#fff', tok.color, 1400); } return; }
+    seg.elapsed=(seg.elapsed||0)+dt;
+    const u=Math.min(1, seg.travel? seg.elapsed/seg.travel : 1);
+    const x=next ? seg.p.x + (next.p.x - seg.p.x)*u : seg.p.x;
+    const y=next ? seg.p.y + (next.p.y - seg.p.y)*u : seg.p.y;
+    setColor(tok.node, seg.phase==='branch'?'branch':(seg.phase==='intake'?'intake':'yellow'), tok.color);
+    setPos(tok.node,x,y);
+    if(u>=1){
+      tok.idx++;
+      if(tok.idx>=tok.tl.length-1){
+        label('✓ Complete', N.done.x, N.done.y, '#fff', '#28a745', 1200);
+        tok.node.g.remove(); tok.alive=false;
+        setTimeout(()=>{ if(tokens.filter(t=>t.alive).length<10) spawnNewToken(); }, 800+Math.random()*1000);
+      }
+    }
+  });
+}
+requestAnimationFrame(animate);
+
+function resetFlow(){
+  scale=1; panX=0; panY=0; applyTransform();
+  animate.last=null;
+  [...tokensLayer.children].forEach(n=>n.remove());
+  [...labelsLayer.children].forEach(n=>n.remove());
+  tokens.length=0;
+  ['HD','SS','FT','MD','SS','MD'].forEach((b,i)=> setTimeout(()=> newToken(b+'-'+(2000+i), b), i*600));
+}
+function applyTransform(){ root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); }
+/* init */
+resetFlow();
+</script>
+</body>
+</html>

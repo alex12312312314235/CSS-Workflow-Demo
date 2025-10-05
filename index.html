@@ -26,7 +26,6 @@
   .container{max-width:1400px;margin:20px auto;padding:0 20px}
   .content-area{display:none}
   .content-area.active{display:block}
-
   .panel{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:20px;box-shadow:0 2px 4px rgba(0,0,0,.05)}
   .panel-title{font-size:16px;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--gold);font-weight:600}
 
@@ -293,31 +292,31 @@
       <div class="dashboard-metrics">
         <div class="metric-card">
           <div id="mActive" class="metric-value">—</div>
-          <div class="metric-label">Total Active Requests</div>
+          <div class="metric-label">TOTAL ACTIVE REQUESTS</div>
           <div class="metric-sub">Live</div>
         </div>
 
         <div class="metric-card">
           <div id="mSla" class="metric-value">—</div>
-          <div class="metric-label">SLA Compliance</div>
+          <div class="metric-label">SLA COMPLIANCE</div>
           <div class="metric-sub">Since reset</div>
         </div>
 
         <div class="metric-card">
           <div id="mAvgDays" class="metric-value">—</div>
-          <div class="metric-label">Avg Days to Complete</div>
+          <div class="metric-label">AVG DAYS TO COMPLETE</div>
           <div class="metric-sub">Since reset</div>
         </div>
 
         <div class="metric-card">
           <div id="mSlaWin" class="metric-value">—</div>
-          <div class="metric-label">SLA Compliance</div>
+          <div class="metric-label">SLA COMPLIANCE</div>
           <div class="metric-sub">Rolling window (<span id="winLenA">15</span> min)</div>
         </div>
 
         <div class="metric-card">
           <div id="mAvgDaysWin" class="metric-value">—</div>
-          <div class="metric-label">Avg Days to Complete</div>
+          <div class="metric-label">AVG DAYS TO COMPLETE</div>
           <div class="metric-sub">Rolling window (<span id="winLenB">15</span> min)</div>
         </div>
       </div>
@@ -603,30 +602,38 @@ function updateEscalations(p){
 function closeAllPops(){ document.querySelectorAll('.esc-pop').forEach(p=>p.style.display='none'); }
 
 /* ===== Live Workflow ===== */
-const svg = document.getElementById('svg');
-const root = document.getElementById('zoomRoot');
-const tokensLayer = document.getElementById('tokens');
-const labelsLayer = document.getElementById('labels');
-const host = document.getElementById('svg');
-
 let playing = true, scale = 1, panX = 0, panY = 0;
-document.getElementById('btnPlay').onclick = () => { playing = !playing; document.getElementById('btnPlay').textContent = playing ? 'Pause' : 'Play'; };
-document.getElementById('btnZoomIn').onclick = () => { zoomAt(1.1); };
-document.getElementById('btnZoomOut').onclick = () => { zoomAt(0.9); };
-document.getElementById('btnReset').onclick = resetFlow;
-document.getElementById('btnSubmitDemo').onclick = () => spawnManaged();
-document.getElementById('livePriority').onchange = (e) => { manualPriorityMode = e.target.value; };
+let svg, root, tokensLayer, labelsLayer, host;
+
+function wireLiveControls(){
+  document.getElementById('btnPlay').onclick = () => { playing = !playing; document.getElementById('btnPlay').textContent = playing ? 'Pause' : 'Play'; };
+  document.getElementById('btnZoomIn').onclick = () => { zoomAt(1.1); };
+  document.getElementById('btnZoomOut').onclick = () => { zoomAt(0.9); };
+  document.getElementById('btnReset').onclick = resetFlow;
+  document.getElementById('btnSubmitDemo').onclick = () => spawnManaged();
+  document.getElementById('livePriority').onchange = (e) => { manualPriorityMode = e.target.value; };
+}
+
+function cacheSVGRefs(){
+  svg = document.getElementById('svg');
+  root = document.getElementById('zoomRoot');
+  tokensLayer = document.getElementById('tokens');
+  labelsLayer = document.getElementById('labels');
+  host = document.getElementById('svg');
+}
 
 function applyTransform(){ root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); }
 function zoomAt(f){ scale=Math.min(1.8,Math.max(0.7,scale*f)); applyTransform(); }
 
 let dragging=false, lastX=0, lastY=0;
-host.addEventListener('mousedown',e=>{dragging=true; lastX=e.clientX; lastY=e.clientY; host.classList.add('dragging');});
-window.addEventListener('mouseup',()=>{dragging=false; host.classList.remove('dragging');});
-window.addEventListener('mousemove',e=>{
-  if(!dragging) return;
-  const dx=e.clientX-lastX, dy=e.clientY-lastY; panX+=dx; panY+=dy; lastX=e.clientX; lastY=e.clientY; applyTransform();
-});
+function enablePanZoom(){
+  host.addEventListener('mousedown',e=>{dragging=true; lastX=e.clientX; lastY=e.clientY; host.classList.add('dragging');});
+  window.addEventListener('mouseup',()=>{dragging=false; host.classList.remove('dragging');});
+  window.addEventListener('mousemove',e=>{
+    if(!dragging) return;
+    const dx=e.clientX-lastX, dy=e.clientY-lastY; panX+=dx; panY+=dy; lastX=e.clientX; lastY=e.clientY; applyTransform();
+  });
+}
 
 /* Node map for the live flow */
 const N = {
@@ -698,7 +705,7 @@ function randomReqType(branch){
   const map={SS:SS,HD:HD,FT:FT,MD:MD};
   return pick(map[branch]||['Request']);
 }
-const ORIGINS = ["East Wing","West Wing","DIA Louges","Commercial"]; // note: DIA Lounges spelled “Louges” intentionally to simulate noisy data :)
+const ORIGINS = ["East Wing","West Wing","DIA Louges","Commercial"]; // noisy label by design
 
 function spawnManaged(){
   if (waveSpawned >= targetConcurrent) resetWave();
@@ -837,6 +844,10 @@ requestAnimationFrame(animate);
 
 /* Reset + scheduler bootstrap */
 function resetFlow(){
+  cacheSVGRefs();
+  wireLiveControls();
+  enablePanZoom();
+
   scale=1; panX=0; panY=0; applyTransform();
   animate.last=null;
   [...tokensLayer.children].forEach(n=>n.remove());
@@ -853,9 +864,10 @@ function resetFlow(){
   completedHistory.length = 0;
   updateSinceResetBanner();
 
-  // seed a few with spacing so it doesn't blast in
-  const seedCount = Math.min(6, targetConcurrent);
-  for (let i=0;i<seedCount;i++){ setTimeout(()=> spawnManaged(), i*rnd(300,700)); }
+  // seed: half immediate + half staggered so numbers move at once
+  const seedCount = Math.min(8, targetConcurrent);
+  for (let i=0;i<Math.ceil(seedCount/2);i++) spawnManaged(); // immediate
+  for (let i=0;i<Math.floor(seedCount/2);i++) setTimeout(spawnManaged, 400 + i*rnd(250,600));
 
   if (schedulerTimer) clearTimeout(schedulerTimer);
   ensureBacklog();
@@ -863,7 +875,6 @@ function resetFlow(){
 function updateSinceResetBanner(){
   document.getElementById('sinceResetStamp').textContent = fmtDT(resetStartedAt);
 }
-resetFlow();
 
 /* Small label helper */
 function label(text,x,y,fill='#fff',bg='#000',ms=900){
@@ -913,7 +924,7 @@ function updateMetrics(){
 
   // Rolling window metrics
   const windowStart = new Date(now.getTime() - WINDOW_MIN*60*1000);
-  // prune history older than, say, 12 hours to keep memory tiny
+  // prune history older than 12h to keep memory tiny
   const cutoff = new Date(now.getTime() - 12*60*60*1000);
   while (completedHistory.length && completedHistory[0].completedAt < cutoff) completedHistory.shift();
 
@@ -925,7 +936,7 @@ function updateMetrics(){
   const slaPctWin = winDone.length ? Math.round((slaOkWin/winDone.length)*100) : null;
   setText('mSlaWin', slaPctWin==null ? '—' : (slaPctWin + '%'));
 
-  // Priority Queue (active, sorted: urgent > high > standard, then oldest first)
+  // Priority Queue (active, sorted)
   const prRank = p => p===PR.urgent?0 : p===PR.high?1 : 2;
   const priorityRows = active
     .slice()
@@ -939,7 +950,7 @@ function updateMetrics(){
     ])).join('');
   setHTML('tbodyPriority', priorityRows || `<tr><td colspan="4">No active items</td></tr>`);
 
-  // Department Workload & Performance (by branch)
+  // Department Workload & Performance
   const depts = ['SS','HD','FT','MD'];
   const deptRows = depts.map(d=>{
     const a = active.filter(t=>t.branch===d);
@@ -948,12 +959,12 @@ function updateMetrics(){
   }).join('');
   setHTML('tbodyDeptWorkload', deptRows || `<tr><td colspan="3">—</td></tr>`);
 
-  // “Departmental Overtime” proxy (toy model): utilization ≈ active share, overtime grows with high backlog
+  // Departmental Overtime proxy
   const fte = {SS:12,HD:8,FT:6,MD:10};
   const otRows = depts.map(d=>{
     const open = active.filter(t=>t.branch===d).length;
-    const util = Math.min(1, open / Math.max(1, fte[d]/2)); // arbitrary proxy
-    const ot = Math.max(0, Math.round((open - fte[d]*0.6) * 1.7)); // arbitrary proxy hours
+    const util = Math.min(1, open / Math.max(1, fte[d]/2));
+    const ot = Math.max(0, Math.round((open - fte[d]*0.6) * 1.7));
     return row([deptName(d), fte[d], Math.round(util*100)+'%', ot+' hrs']);
   }).join('');
   setHTML('tbodyOvertime', otRows);
@@ -985,10 +996,17 @@ function badge(p){
 }
 function typeFromToken(t){ return t.reqType || 'Request'; }
 function escapeHTML(s){ return String(s).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
-function displayBU(s){ return s==='DIA Louges'?'DIA Lounges':s; } // normalize display
+function displayBU(s){ return s==='DIA Louges'?'DIA Lounges':s; }
 
 // keep the dashboard fresh every second
-setInterval(()=>{ scheduleMetricsUpdate(); }, METRIC_TICK_MS);
+setInterval(()=>{ scheduleMetricsUpdate(); }, 1000);
+
+/* ---- Robust boot: wait for DOM so SVG exists, then reset ---- */
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  setTimeout(()=> resetFlow(), 0);
+} else {
+  window.addEventListener('DOMContentLoaded', () => setTimeout(()=> resetFlow(), 0));
+}
 </script>
 </body>
 </html>

@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CSS Workflow Designer - EKFC</title>
+<style>
+  :root{
+    --ekfc-red:#C8102E; --ekfc-red-dark:#A00E24; --gold:#B8975F;
+    --text:#111; --muted:#666; --bg:#f5f5f5; --card:#fff; --line:#ddd; --soft:#f8f8f8;
+    --SS:#2f7ed8; --HD:#28a745; --FT:#7b61ff; --MD:#ff6b8b;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);min-height:100vh;color:var(--text);overflow:hidden}
+
+  /* Header - matching original demo */
+  .header{background:var(--card);border-bottom:3px solid var(--ekfc-red);padding:15px 30px;box-shadow:0 2px 4px rgba(0,0,0,.08)}
+  .header-content{display:flex;justify-content:space-between;align-items:center}
+  .header-left{display:flex;align-items:center;gap:20px}
+  .logo-text{color:var(--ekfc-red);font-size:24px;font-weight:bold}
+  .header h1{font-size:20px;font-weight:normal}
+  .header-subtitle{color:var(--muted);font-size:14px}
+  .header-actions{display:flex;gap:10px}
+
+  /* Buttons - original demo style */
+  .btn{background:var(--card);border:1px solid var(--line);padding:8px 16px;border-radius:3px;cursor:pointer;font-size:13px;transition:.2s;font-family:inherit}
+  .btn:hover{background:var(--soft)}
+  .btn-primary{background:var(--ekfc-red);color:#fff;border-color:var(--ekfc-red)}
+  .btn-primary:hover{background:var(--ekfc-red-dark)}
+  .btn-success{background:#28a745;color:#fff;border-color:#28a745}
+  .btn-success:hover{background:#218838}
+  .btn:disabled{opacity:0.5;cursor:not-allowed}
+
+  /* Layout */
+  .main-container{display:flex;height:calc(100vh - 68px);overflow:hidden}
+  .canvas-area{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+  .toolbar{background:var(--card);border-bottom:1px solid var(--line);padding:10px 20px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .toolbar-group{display:flex;gap:6px;align-items:center;padding:0 10px;border-right:1px solid var(--line)}
+  .toolbar-group:last-child{border-right:none}
+  .canvas-workspace{flex:1;overflow:auto;position:relative;background:#fafafa}
+
+  /* Right Sidebar */
+  .right-sidebar{width:360px;background:var(--card);border-left:1px solid var(--line);overflow-y:auto;display:flex;flex-direction:column}
+  .sidebar-section{padding:20px;border-bottom:1px solid var(--line)}
+  .sidebar-title{font-size:15px;font-weight:600;margin-bottom:12px;color:var(--ekfc-red)}
+  .form-group{margin-bottom:14px}
+  .form-group label{display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:#444}
+  .form-group input, .form-group select, .form-group textarea{width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:3px;font-size:12px;font-family:inherit}
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus{outline:none;border-color:var(--ekfc-red)}
+  .form-group-inline{display:flex;gap:8px}
+  .form-group-inline>*{flex:1}
+
+  /* Department Cards */
+  .dept-card{background:#fff;border:1px solid var(--line);border-radius:4px;padding:12px;margin-bottom:10px}
+  .dept-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .dept-name{font-weight:600;font-size:13px}
+  .dept-color{width:20px;height:20px;border-radius:3px;border:1px solid #ddd}
+  .dept-actions{display:flex;gap:6px}
+  .icon-btn{background:transparent;border:none;cursor:pointer;padding:4px 6px;border-radius:3px;color:#666;font-size:11px}
+  .icon-btn:hover{background:#f0f0f0}
+
+  /* SVG Canvas */
+  .svg-canvas{width:100%;height:100%;background:#fff;cursor:grab;user-select:none;position:relative}
+  .svg-canvas.dragging{cursor:grabbing}
+  .svg-canvas.crosshair{cursor:crosshair}
+
+  /* Grid */
+  .grid-pattern{stroke:#e8e8e8;stroke-width:0.5}
+
+  /* SVG Elements - original demo style */
+  .stage-node{cursor:pointer;transition:filter .2s}
+  .stage-node:hover{filter:drop-shadow(0 2px 6px rgba(0,0,0,.15))}
+  .stage-node.selected{filter:drop-shadow(0 0 8px rgba(200,16,46,.6))}
+  .stage-rect{fill:#fff;stroke:#C8102E;stroke-width:1.5;rx:8}
+  .stage-text{fill:#000;font-size:12px;font-weight:500;text-anchor:middle;pointer-events:none;font-family:Arial,Helvetica,sans-serif}
+
+  /* Edges with control points */
+  .edge-group{cursor:pointer}
+  .edge-path{stroke:#c7c7c7;stroke-width:2;fill:none;marker-end:url(#arrow)}
+  .edge-path.selected{stroke:#C8102E;stroke-width:2.5}
+  .edge-control{fill:#fff;stroke:#C8102E;stroke-width:1.5;cursor:move;opacity:0}
+  .edge-group:hover .edge-control, .edge-group.selected .edge-control{opacity:1}
+
+  /* Comments - original demo style */
+  .comment-marker{cursor:pointer}
+  .comment-marker circle{fill:#FFD600;stroke:#333;stroke-width:1.5}
+  .comment-marker text{fill:#000;font-size:11px;font-weight:700;text-anchor:middle;pointer-events:none}
+  .comment-panel{position:absolute;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.15);padding:12px;min-width:280px;max-width:320px;z-index:1000;display:none}
+  .comment-panel.active{display:block}
+
+  /* Modals */
+  .modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:2000}
+  .modal.active{display:flex}
+  .modal-content{background:#fff;border-radius:4px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
+  .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--gold)}
+  .modal-title{font-size:18px;font-weight:600}
+  .close-modal{background:transparent;border:none;font-size:24px;cursor:pointer;color:#999;line-height:1}
+  .close-modal:hover{color:#333}
+
+  /* Process Step Modal */
+  .tab-buttons{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+  .tab-btn{background:transparent;border:none;padding:10px 16px;cursor:pointer;font-size:13px;color:#666;border-bottom:2px solid transparent;transition:.2s}
+  .tab-btn:hover{color:#333}
+  .tab-btn.active{color:var(--ekfc-red);border-bottom-color:var(--ekfc-red)}
+  .tab-content{display:none}
+  .tab-content.active{display:block}
+
+  /* SLA Indicator */
+  .sla-indicator{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+  .sla-green{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+  .sla-yellow{background:#fff3cd;color:#856404;border:1px solid #ffeeba}
+  .sla-red{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+
+  /* Dependency List */
+  .dependency-item{background:#f9f9f9;border:1px solid var(--line);border-radius:3px;padding:10px;margin-bottom:8px}
+  .dependency-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+  .dependency-dept{font-weight:600;font-size:12px}
+  .dependency-meta{font-size:11px;color:#666}
+
+  /* Alert */
+  .alert{padding:10px 12px;border-radius:4px;margin-bottom:12px;font-size:12px}
+  .alert-info{background:#d1ecf1;border:1px solid #bee5eb;color:#0c5460}
+  .alert-success{background:#d4edda;border:1px solid #c3e6cb;color:#155724}
+
+  /* Code block */
+  .code-block{background:#f5f5f5;border:1px solid #ddd;border-radius:4px;padding:12px;font-family:'Courier New',monospace;font-size:11px;overflow-x:auto;max-height:300px}
+
+  /* Swimlane view */
+  .swimlane{fill:none;stroke:#ddd;stroke-width:1}
+  .swimlane-label{font-size:14px;font-weight:600;fill:#666;font-family:Arial,Helvetica,sans-serif}
+
+  /* Checkbox */
+  input[type="checkbox"]{cursor:pointer;margin-right:4px}
+
+  /* Badge */
+  .badge{display:inline-block;padding:3px 8px;border-radius:3px;font-size:11px;font-weight:600;margin-left:6px}
+  .badge-new{background:#28a745;color:#fff}
+</style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-content">
+      <div class="header-left">
+        <span class="logo-text">Emirates|Flight Catering</span>
+        <div>
+          <h1>CSS Workflow Designer <span class="badge badge-new">v2</span></h1>
+          <div class="header-subtitle">Culinary Shared Services • Workflow & SLA Management</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn" onclick="undoAction()" id="btnUndo" disabled>↶ Undo</button>
+        <button class="btn" onclick="redoAction()" id="btnRedo" disabled>↷ Redo</button>
+        <button class="btn" onclick="loadConfig()">Load</button>
+        <button class="btn btn-success" onclick="exportConfig()">Export</button>
+        <button class="btn btn-primary" onclick="saveConfig()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="main-container">
+    <!-- Canvas Area -->
+    <div class="canvas-area">
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <button class="btn" id="btnAddNode">+ Node</button>
+          <button class="btn" id="btnAddConnection">+ Connection</button>
+          <button class="btn" id="btnAddComment">+ Comment</button>
+        </div>
+        <div class="toolbar-group">
+          <label style="font-size:12px;color:#666">
+            <input type="checkbox" id="gridToggle" checked onchange="toggleGrid()"> Grid
+          </label>
+          <label style="font-size:12px;color:#666">
+            <input type="checkbox" id="snapToggle" checked onchange="toggleSnap()"> Snap
+          </label>
+          <label style="font-size:12px;color:#666">
+            <input type="checkbox" id="swimlaneToggle" onchange="toggleSwimlanes()"> Swimlanes
+          </label>
+        </div>
+        <div class="toolbar-group">
+          <button class="btn" id="btnZoomIn">Zoom +</button>
+          <button class="btn" id="btnZoomOut">Zoom −</button>
+          <button class="btn" id="btnResetView">Reset View</button>
+        </div>
+        <div style="flex:1"></div>
+        <div class="toolbar-group">
+          <span style="font-size:12px;color:#666">Department:</span>
+          <select id="deptSelector" style="padding:6px 10px;border:1px solid #ccc;border-radius:3px;font-size:12px" onchange="switchDepartment()">
+            <option value="">All Departments</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="canvas-workspace">
+        <svg id="workflowCanvas" class="svg-canvas" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+              <polygon points="0,0 10,4 0,8" fill="#c7c7c7"></polygon>
+            </marker>
+            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M 20 0 L 0 0 0 20" fill="none" class="grid-pattern"/>
+            </pattern>
+          </defs>
+          <g id="zoomRoot" transform="translate(0,0) scale(1)">
+            <rect id="gridRect" width="1600" height="1000" fill="url(#grid)" opacity="0.5"/>
+            <g id="swimlanes"></g>
+            <g id="edges"></g>
+            <g id="stages"></g>
+            <g id="comments"></g>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Right Sidebar -->
+    <div class="right-sidebar">
+      <!-- Departments -->
+      <div class="sidebar-section">
+        <div class="sidebar-title">Departments</div>
+        <div id="departmentsList"></div>
+        <button class="btn btn-primary" style="width:100%" onclick="addDepartment()">+ Add Department</button>
+      </div>
+
+      <!-- Node Inspector -->
+      <div class="sidebar-section" id="nodeInspector" style="display:none">
+        <div class="sidebar-title">Node Properties</div>
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="nodeName" oninput="updateSelectedNode()">
+        </div>
+        <div class="form-group">
+          <label>Department</label>
+          <select id="nodeDepartment" onchange="updateSelectedNode()"></select>
+        </div>
+        <div class="form-group-inline">
+          <div class="form-group" style="margin-bottom:0">
+            <label>X</label>
+            <input type="number" id="nodeX" oninput="updateSelectedNode()">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Y</label>
+            <input type="number" id="nodeY" oninput="updateSelectedNode()">
+          </div>
+        </div>
+        <button class="btn" style="width:100%;margin-top:10px" onclick="openProcessModal()">Configure Process Step</button>
+        <button class="btn" style="width:100%;margin-top:6px" onclick="duplicateNode()">Duplicate</button>
+        <button class="btn" style="width:100%;margin-top:6px;background:#dc3545;color:#fff" onclick="deleteNode()">Delete</button>
+      </div>
+
+      <!-- Quick Guide -->
+      <div class="sidebar-section" style="background:#f9f9f9">
+        <div class="sidebar-title">Quick Guide</div>
+        <div style="font-size:11px;line-height:1.6;color:#555">
+          <p style="margin-bottom:6px"><strong>Navigation:</strong></p>
+          <ul style="margin-left:16px;margin-bottom:8px">
+            <li>Click & drag canvas to pan</li>
+            <li>Use zoom buttons to zoom in/out</li>
+          </ul>
+          <p style="margin-bottom:6px"><strong>Editing:</strong></p>
+          <ul style="margin-left:16px;margin-bottom:8px">
+            <li>Click node to select</li>
+            <li><strong>Shift+drag</strong> node to move</li>
+            <li>Drag edge control points for curves</li>
+            <li>Double-click node for details</li>
+          </ul>
+          <p style="margin-bottom:6px"><strong>Shortcuts:</strong></p>
+          <ul style="margin-left:16px">
+            <li><strong>Ctrl+Z</strong> Undo</li>
+            <li><strong>Ctrl+Y</strong> Redo</li>
+            <li><strong>Delete</strong> Remove selected</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Process Step Configuration Modal -->
+  <div id="processModal" class="modal">
+    <div class="modal-content" style="max-width:700px">
+      <div class="modal-header">
+        <div class="modal-title">Process Step Configuration</div>
+        <button class="close-modal" onclick="closeProcessModal()">&times;</button>
+      </div>
+
+      <div class="tab-buttons">
+        <button class="tab-btn active" onclick="switchProcessTab('basic')">Basic Info</button>
+        <button class="tab-btn" onclick="switchProcessTab('sla')">SLA Settings</button>
+        <button class="tab-btn" onclick="switchProcessTab('dependencies')">Dependencies</button>
+        <button class="tab-btn" onclick="switchProcessTab('resources')">Resources</button>
+      </div>
+
+      <!-- Basic Info Tab -->
+      <div id="tab-basic" class="tab-content active">
+        <div class="form-group">
+          <label>Process Step Name</label>
+          <input type="text" id="processName" placeholder="e.g., Request Submission">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="processDesc" rows="3" placeholder="Detailed description of this process step..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Owner / Responsible Person</label>
+          <input type="text" id="processOwner" placeholder="e.g., Sarah Johnson">
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select id="processCategory">
+            <option>Task</option>
+            <option>Approval</option>
+            <option>Review</option>
+            <option>Decision Point</option>
+            <option>Milestone</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- SLA Settings Tab -->
+      <div id="tab-sla" class="tab-content">
+        <div class="alert alert-info">
+          Configure SLA timeframes for this process step. Time is calculated in business hours.
+        </div>
+        <div class="form-group">
+          <label>Expected Duration</label>
+          <div class="form-group-inline">
+            <input type="number" id="slaDuration" placeholder="24" min="0">
+            <select id="slaUnit">
+              <option value="hours">Hours</option>
+              <option value="days">Days</option>
+              <option value="weeks">Weeks</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Buffer Time (Optional)</label>
+          <div class="form-group-inline">
+            <input type="number" id="slaBuffer" placeholder="4" min="0">
+            <select id="slaBufferUnit">
+              <option value="hours">Hours</option>
+              <option value="days">Days</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Priority Level</label>
+          <select id="slaPriority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Escalation Threshold (% of SLA)</label>
+          <input type="number" id="slaEscalation" placeholder="80" min="0" max="100">
+          <small style="font-size:10px;color:#666">Alert when this % of time is consumed</small>
+        </div>
+        <div class="form-group">
+          <label>Escalation Contact</label>
+          <input type="text" id="slaContact" placeholder="Manager name or email">
+        </div>
+      </div>
+
+      <!-- Dependencies Tab -->
+      <div id="tab-dependencies" class="tab-content">
+        <div class="alert alert-info">
+          Add dependencies on other departments or process steps.
+        </div>
+        <div id="dependenciesList"></div>
+        <button class="btn btn-primary" onclick="addDependency()">+ Add Dependency</button>
+      </div>
+
+      <!-- Resources Tab -->
+      <div id="tab-resources" class="tab-content">
+        <div class="form-group">
+          <label>Required Resources / Tools</label>
+          <textarea id="resourceTools" rows="2" placeholder="e.g., ServiceDesk Plus, SharePoint, Excel"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Standard Operating Procedure (Link)</label>
+          <input type="url" id="resourceSOP" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>Template Documents (Link)</label>
+          <input type="url" id="resourceTemplates" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>Training Materials (Link)</label>
+          <input type="url" id="resourceTraining" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>Help / FAQ (Link)</label>
+          <input type="url" id="resourceHelp" placeholder="https://...">
+        </div>
+      </div>
+
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--line);text-align:right">
+        <button class="btn" onclick="closeProcessModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveProcessConfig()">Save Configuration</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export Modal -->
+  <div id="exportModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">Export Configuration</div>
+        <button class="close-modal" onclick="closeExportModal()">&times;</button>
+      </div>
+      <div class="alert alert-success">
+        Configuration ready for ServiceDesk Plus implementation team.
+      </div>
+      <div class="form-group">
+        <label>Configuration Name</label>
+        <input type="text" id="exportName" value="CSS Workflow Configuration">
+      </div>
+      <div class="form-group">
+        <label>Department</label>
+        <input type="text" id="exportDept" placeholder="e.g., Health & Diet">
+      </div>
+      <div class="form-group">
+        <label>Notes for IT Team</label>
+        <textarea id="exportNotes" rows="3" placeholder="Implementation notes and instructions..."></textarea>
+      </div>
+      <div class="code-block" id="exportJSON"></div>
+      <button class="btn btn-success" style="width:100%;margin-top:10px" onclick="downloadConfig()">Download JSON</button>
+      <button class="btn" style="width:100%;margin-top:6px" onclick="copyToClipboard()">Copy to Clipboard</button>
+      <button class="btn" style="width:100%;margin-top:6px" onclick="downloadSVG()">Download as SVG Image</button>
+    </div>
+  </div>
+
+<script>
+/* ===== STATE MANAGEMENT ===== */
+const GRID_SIZE = 20;
+let gridEnabled = true;
+let snapEnabled = true;
+let swimlanesEnabled = false;
+
+const state = {
+  departments: [
+    {id: 'SS', name: 'Standards & Specs', color: '#2f7ed8', fte: 12, abbr: 'S&S'},
+    {id: 'HD', name: 'Health & Diet', color: '#28a745', fte: 8, abbr: 'H&D'},
+    {id: 'FT', name: 'Food Tech', color: '#7b61ff', fte: 6, abbr: 'FT'},
+    {id: 'MD', name: 'Menu Development', color: '#ff6b8b', fte: 10, abbr: 'MD'}
+  ],
+  nodes: [
+    {id: 'intake', name: 'Unified Intake', type: 'intake', x: 780, y: 140, width: 180, height: 50, processConfig: null},
+    {id: 'router', name: 'Router', type: 'router', x: 780, y: 280, width: 160, height: 50, processConfig: null},
+    {id: 'SS_coord', name: 'S&S Coordinator', type: 'coordinator', dept: 'SS', x: 220, y: 440, width: 180, height: 50, processConfig: null},
+    {id: 'HD_coord', name: 'H&D Coordinator', type: 'coordinator', dept: 'HD', x: 520, y: 440, width: 180, height: 50, processConfig: null},
+    {id: 'FT_coord', name: 'FT Coordinator', type: 'coordinator', dept: 'FT', x: 820, y: 440, width: 180, height: 50, processConfig: null},
+    {id: 'MD_coord', name: 'MD Coordinator', type: 'coordinator', dept: 'MD', x: 1120, y: 440, width: 180, height: 50, processConfig: null},
+    {id: 'delivery', name: 'Delivery & Done', type: 'delivery', x: 780, y: 820, width: 180, height: 50, processConfig: null}
+  ],
+  edges: [
+    {id: 'e1', from: 'intake', to: 'router', cp1x: 0, cp1y: 0, cp2x: 0, cp2y: 0},
+    {id: 'e2', from: 'router', to: 'SS_coord', cp1x: -100, cp1y: 40, cp2x: 100, cp2y: -40},
+    {id: 'e3', from: 'router', to: 'HD_coord', cp1x: -50, cp1y: 40, cp2x: 50, cp2y: -40},
+    {id: 'e4', from: 'router', to: 'FT_coord', cp1x: 0, cp1y: 40, cp2x: 0, cp2y: -40},
+    {id: 'e5', from: 'router', to: 'MD_coord', cp1x: 100, cp1y: 40, cp2x: -100, cp2y: -40},
+    {id: 'e6', from: 'SS_coord', to: 'delivery', cp1x: -50, cp1y: 100, cp2x: 50, cp2y: -100},
+    {id: 'e7', from: 'HD_coord', to: 'delivery', cp1x: -30, cp1y: 80, cp2x: 30, cp2y: -80},
+    {id: 'e8', from: 'FT_coord', to: 'delivery', cp1x: 0, cp1y: 60, cp2x: 0, cp2y: -60},
+    {id: 'e9', from: 'MD_coord', to: 'delivery', cp1x: 50, cp1y: 100, cp2x: -50, cp2y: -100}
+  ],
+  comments: [],
+  selectedNode: null,
+  selectedEdge: null,
+  currentDepartment: null
+};
+
+let nextCommentId = 1;
+let nextNodeId = 100;
+let nextEdgeId = 100;
+
+/* History for undo/redo */
+const history = {
+  states: [],
+  currentIndex: -1,
+  maxStates: 50
+};
+
+/* ===== INITIALIZATION ===== */
+function init() {
+  renderDepartments();
+  renderDepartmentSelector();
+  renderVisualWorkflow();
+  setupCanvasInteraction();
+  setupKeyboardShortcuts();
+  saveToHistory(); // Initial state
+}
+
+/* ===== UNDO/REDO ===== */
+function saveToHistory() {
+  // Remove any states after current index
+  history.states = history.states.slice(0, history.currentIndex + 1);
+
+  // Add new state
+  history.states.push(JSON.parse(JSON.stringify(state)));
+
+  // Limit history size
+  if (history.states.length > history.maxStates) {
+    history.states.shift();
+  } else {
+    history.currentIndex++;
+  }
+
+  updateUndoRedoButtons();
+}
+
+function undoAction() {
+  if (history.currentIndex > 0) {
+    history.currentIndex--;
+    Object.assign(state, JSON.parse(JSON.stringify(history.states[history.currentIndex])));
+    renderVisualWorkflow();
+    renderDepartments();
+    updateUndoRedoButtons();
+  }
+}
+
+function redoAction() {
+  if (history.currentIndex < history.states.length - 1) {
+    history.currentIndex++;
+    Object.assign(state, JSON.parse(JSON.stringify(history.states[history.currentIndex])));
+    renderVisualWorkflow();
+    renderDepartments();
+    updateUndoRedoButtons();
+  }
+}
+
+function updateUndoRedoButtons() {
+  document.getElementById('btnUndo').disabled = history.currentIndex <= 0;
+  document.getElementById('btnRedo').disabled = history.currentIndex >= history.states.length - 1;
+}
+
+/* ===== KEYBOARD SHORTCUTS ===== */
+function setupKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undoAction();
+      } else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        redoAction();
+      }
+    }
+
+    if (e.key === 'Delete' && state.selectedNode) {
+      deleteNode();
+    }
+  });
+}
+
+/* ===== GRID & SNAP ===== */
+function toggleGrid() {
+  gridEnabled = document.getElementById('gridToggle').checked;
+  document.getElementById('gridRect').style.opacity = gridEnabled ? '0.5' : '0';
+}
+
+function toggleSnap() {
+  snapEnabled = document.getElementById('snapToggle').checked;
+}
+
+function snapToGrid(value) {
+  if (!snapEnabled) return value;
+  return Math.round(value / GRID_SIZE) * GRID_SIZE;
+}
+
+/* ===== SWIMLANES ===== */
+function toggleSwimlanes() {
+  swimlanesEnabled = document.getElementById('swimlaneToggle').checked;
+  renderSwimlanes();
+}
+
+function renderSwimlanes() {
+  const container = document.getElementById('swimlanes');
+  container.innerHTML = '';
+
+  if (!swimlanesEnabled) return;
+
+  const laneHeight = 200;
+  const startY = 100;
+
+  state.departments.forEach((dept, idx) => {
+    const y = startY + idx * laneHeight;
+
+    // Lane background
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', 0);
+    rect.setAttribute('y', y);
+    rect.setAttribute('width', 1600);
+    rect.setAttribute('height', laneHeight);
+    rect.setAttribute('fill', dept.color + '08');
+    rect.setAttribute('stroke', dept.color + '40');
+    rect.setAttribute('stroke-width', 1);
+    container.appendChild(rect);
+
+    // Lane label
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', 20);
+    text.setAttribute('y', y + 30);
+    text.setAttribute('class', 'swimlane-label');
+    text.setAttribute('fill', dept.color);
+    text.textContent = dept.name;
+    container.appendChild(text);
+  });
+}
+
+/* ===== DEPARTMENTS ===== */
+function renderDepartments() {
+  const container = document.getElementById('departmentsList');
+  container.innerHTML = state.departments.map(dept => `
+    <div class="dept-card">
+      <div class="dept-card-header">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="dept-color" style="background:${dept.color}"></div>
+          <div class="dept-name">${dept.name}</div>
+        </div>
+        <div class="dept-actions">
+          <button class="icon-btn" onclick="editDepartment('${dept.id}')">✎</button>
+          <button class="icon-btn" onclick="deleteDepartment('${dept.id}')">×</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#666">
+        <strong>Abbr:</strong> ${dept.abbr} • <strong>FTE:</strong> ${dept.fte}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderDepartmentSelector() {
+  const selector = document.getElementById('deptSelector');
+  selector.innerHTML = '<option value="">All Departments</option>' +
+    state.departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+}
+
+function switchDepartment() {
+  state.currentDepartment = document.getElementById('deptSelector').value || null;
+  renderVisualWorkflow();
+}
+
+function addDepartment() {
+  const name = prompt('Department name:');
+  if (!name) return;
+
+  const abbr = prompt('Abbreviation:', name.substring(0, 3).toUpperCase());
+  const fte = parseInt(prompt('FTE count:', '5')) || 5;
+  const color = '#' + Math.floor(Math.random()*16777215).toString(16);
+
+  state.departments.push({id: 'DEPT_' + Date.now(), name, abbr, fte, color});
+  renderDepartments();
+  renderDepartmentSelector();
+  saveToHistory();
+}
+
+function editDepartment(id) {
+  const dept = state.departments.find(d => d.id === id);
+  if (!dept) return;
+
+  const name = prompt('Department name:', dept.name);
+  if (name) dept.name = name;
+
+  renderDepartments();
+  renderDepartmentSelector();
+  saveToHistory();
+}
+
+function deleteDepartment(id) {
+  if (!confirm('Delete this department?')) return;
+  state.departments = state.departments.filter(d => d.id !== id);
+  renderDepartments();
+  renderDepartmentSelector();
+  saveToHistory();
+}
+
+/* ===== VISUAL WORKFLOW ===== */
+function renderVisualWorkflow() {
+  renderEdges();
+  renderNodes();
+  renderComments();
+  renderSwimlanes();
+}
+
+function renderEdges() {
+  const container = document.getElementById('edges');
+  container.innerHTML = '';
+
+  state.edges.forEach(edge => {
+    const fromNode = state.nodes.find(n => n.id === edge.from);
+    const toNode = state.nodes.find(n => n.id === edge.to);
+    if (!fromNode || !toNode) return;
+
+    // Filter by department if needed
+    if (state.currentDepartment) {
+      if (fromNode.dept !== state.currentDepartment && toNode.dept !== state.currentDepartment) {
+        return;
+      }
+    }
+
+    const x1 = fromNode.x + (fromNode.width || 160) / 2;
+    const y1 = fromNode.y + (fromNode.height || 50);
+    const x2 = toNode.x + (toNode.width || 160) / 2;
+    const y2 = toNode.y;
+
+    // Control points (relative to start and end)
+    const cp1x = x1 + (edge.cp1x || 0);
+    const cp1y = y1 + (edge.cp1y || (y2 - y1) / 3);
+    const cp2x = x2 + (edge.cp2x || 0);
+    const cp2y = y2 + (edge.cp2y || -(y2 - y1) / 3);
+
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'edge-group');
+    g.setAttribute('data-id', edge.id);
+    if (state.selectedEdge === edge.id) g.classList.add('selected');
+
+    // Path
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('class', 'edge-path');
+    path.setAttribute('d', `M${x1},${y1} C${cp1x},${cp1y} ${cp2x},${cp2y} ${x2},${y2}`);
+
+    // Control point 1
+    const ctrl1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    ctrl1.setAttribute('class', 'edge-control');
+    ctrl1.setAttribute('cx', cp1x);
+    ctrl1.setAttribute('cy', cp1y);
+    ctrl1.setAttribute('r', 5);
+    ctrl1.setAttribute('data-cp', '1');
+
+    // Control point 2
+    const ctrl2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    ctrl2.setAttribute('class', 'edge-control');
+    ctrl2.setAttribute('cx', cp2x);
+    ctrl2.setAttribute('cy', cp2y);
+    ctrl2.setAttribute('r', 5);
+    ctrl2.setAttribute('data-cp', '2');
+
+    g.appendChild(path);
+    g.appendChild(ctrl1);
+    g.appendChild(ctrl2);
+
+    g.addEventListener('click', (e) => {
+      if (!e.target.classList.contains('edge-control')) {
+        selectEdge(edge.id);
+      }
+    });
+
+    container.appendChild(g);
+  });
+}
+
+function renderNodes() {
+  const container = document.getElementById('stages');
+  container.innerHTML = '';
+
+  state.nodes.forEach(node => {
+    // Filter by department
+    if (state.currentDepartment && node.dept !== state.currentDepartment) {
+      return;
+    }
+
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'stage-node');
+    g.setAttribute('data-id', node.id);
+    if (state.selectedNode === node.id) g.classList.add('selected');
+
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('class', 'stage-rect');
+    rect.setAttribute('x', node.x);
+    rect.setAttribute('y', node.y);
+    rect.setAttribute('width', node.width || 160);
+    rect.setAttribute('height', node.height || 50);
+
+    // Color by department
+    if (node.dept) {
+      const dept = state.departments.find(d => d.id === node.dept);
+      if (dept) {
+        rect.setAttribute('fill', dept.color + '22');
+        rect.setAttribute('stroke', dept.color);
+      }
+    }
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('class', 'stage-text');
+    text.setAttribute('x', node.x + (node.width || 160) / 2);
+    text.setAttribute('y', node.y + (node.height || 50) / 2 + 4);
+    text.textContent = node.name;
+
+    g.appendChild(rect);
+    g.appendChild(text);
+
+    g.addEventListener('click', () => selectNode(node.id));
+    g.addEventListener('dblclick', () => openProcessModal());
+
+    container.appendChild(g);
+  });
+}
+
+function renderComments() {
+  const container = document.getElementById('comments');
+  container.innerHTML = '';
+  // Comments rendering (simplified for now)
+}
+
+/* ===== NODE SELECTION & EDITING ===== */
+function selectNode(id) {
+  state.selectedNode = id;
+  state.selectedEdge = null;
+  const node = state.nodes.find(n => n.id === id);
+
+  if (node) {
+    document.getElementById('nodeInspector').style.display = 'block';
+    document.getElementById('nodeName').value = node.name;
+    document.getElementById('nodeX').value = node.x;
+    document.getElementById('nodeY').value = node.y;
+
+    const deptSelect = document.getElementById('nodeDepartment');
+    deptSelect.innerHTML = '<option value="">None</option>' +
+      state.departments.map(d => `<option value="${d.id}" ${node.dept === d.id ? 'selected' : ''}>${d.name}</option>`).join('');
+  }
+
+  renderVisualWorkflow();
+}
+
+function selectEdge(id) {
+  state.selectedEdge = id;
+  state.selectedNode = null;
+  document.getElementById('nodeInspector').style.display = 'none';
+  renderVisualWorkflow();
+}
+
+function updateSelectedNode() {
+  if (!state.selectedNode) return;
+  const node = state.nodes.find(n => n.id === state.selectedNode);
+  if (!node) return;
+
+  node.name = document.getElementById('nodeName').value;
+  node.dept = document.getElementById('nodeDepartment').value || null;
+  node.x = parseInt(document.getElementById('nodeX').value) || node.x;
+  node.y = parseInt(document.getElementById('nodeY').value) || node.y;
+
+  renderVisualWorkflow();
+}
+
+function duplicateNode() {
+  if (!state.selectedNode) return;
+  const node = state.nodes.find(n => n.id === state.selectedNode);
+  if (!node) return;
+
+  const newNode = {...node, id: 'node_' + nextNodeId++, x: node.x + 50, y: node.y + 50};
+  state.nodes.push(newNode);
+  renderVisualWorkflow();
+  saveToHistory();
+}
+
+function deleteNode() {
+  if (!state.selectedNode) return;
+  if (!confirm('Delete this node?')) return;
+
+  state.nodes = state.nodes.filter(n => n.id !== state.selectedNode);
+  state.edges = state.edges.filter(e => e.from !== state.selectedNode && e.to !== state.selectedNode);
+  state.selectedNode = null;
+  document.getElementById('nodeInspector').style.display = 'none';
+
+  renderVisualWorkflow();
+  saveToHistory();
+}
+
+/* ===== CANVAS INTERACTION ===== */
+let scale = 1, panX = 0, panY = 0;
+let isDragging = false, isDraggingNode = false, isDraggingControl = false;
+let isAddingNode = false, isAddingConnection = false, isAddingComment = false;
+let lastX = 0, lastY = 0;
+let draggedNode = null, draggedEdge = null, draggedCP = null;
+let dragOffsetX = 0, dragOffsetY = 0;
+let connectionStartNode = null;
+
+function setupCanvasInteraction() {
+  const canvas = document.getElementById('workflowCanvas');
+  const root = document.getElementById('zoomRoot');
+
+  document.getElementById('btnAddNode').addEventListener('click', () => {
+    isAddingNode = true;
+    isAddingConnection = false;
+    isAddingComment = false;
+    canvas.classList.add('crosshair');
+  });
+
+  document.getElementById('btnAddConnection').addEventListener('click', () => {
+    isAddingConnection = true;
+    isAddingNode = false;
+    isAddingComment = false;
+    connectionStartNode = null;
+    canvas.classList.add('crosshair');
+    alert('Click start node, then end node.');
+  });
+
+  document.getElementById('btnAddComment').addEventListener('click', () => {
+    isAddingComment = true;
+    isAddingNode = false;
+    isAddingConnection = false;
+    canvas.classList.add('crosshair');
+  });
+
+  canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const svgX = ((e.clientX - rect.left - panX) / scale);
+    const svgY = ((e.clientY - rect.top - panY) / scale);
+
+    // Check for control point drag
+    if (e.target.classList.contains('edge-control')) {
+      isDraggingControl = true;
+      const edgeGroup = e.target.closest('.edge-group');
+      draggedEdge = state.edges.find(edge => edge.id === edgeGroup.getAttribute('data-id'));
+      draggedCP = e.target.getAttribute('data-cp');
+      return;
+    }
+
+    const clickedNode = findNodeAtPosition(svgX, svgY);
+
+    // Adding node
+    if (isAddingNode && !clickedNode) {
+      const name = prompt('Node name:');
+      if (name) {
+        const x = snapToGrid(svgX - 80);
+        const y = snapToGrid(svgY - 25);
+        state.nodes.push({
+          id: 'node_' + nextNodeId++,
+          name,
+          type: 'specialist',
+          x,
+          y,
+          width: 160,
+          height: 50,
+          processConfig: null
+        });
+        renderVisualWorkflow();
+        saveToHistory();
+      }
+      isAddingNode = false;
+      canvas.classList.remove('crosshair');
+      return;
+    }
+
+    // Adding connection
+    if (isAddingConnection && clickedNode) {
+      if (!connectionStartNode) {
+        connectionStartNode = clickedNode.id;
+      } else {
+        if (connectionStartNode !== clickedNode.id) {
+          state.edges.push({
+            id: 'edge_' + nextEdgeId++,
+            from: connectionStartNode,
+            to: clickedNode.id,
+            cp1x: 0,
+            cp1y: 0,
+            cp2x: 0,
+            cp2y: 0
+          });
+          renderVisualWorkflow();
+          saveToHistory();
+        }
+        connectionStartNode = null;
+        isAddingConnection = false;
+        canvas.classList.remove('crosshair');
+      }
+      return;
+    }
+
+    // Adding comment
+    if (isAddingComment) {
+      const text = prompt('Comment:');
+      if (text) {
+        state.comments.push({
+          id: nextCommentId++,
+          x: svgX,
+          y: svgY,
+          text,
+          author: 'Manager',
+          time: new Date().toLocaleString()
+        });
+        renderComments();
+        saveToHistory();
+      }
+      isAddingComment = false;
+      canvas.classList.remove('crosshair');
+      return;
+    }
+
+    // Dragging node
+    if (clickedNode && e.shiftKey) {
+      isDraggingNode = true;
+      draggedNode = clickedNode;
+      dragOffsetX = svgX - clickedNode.x;
+      dragOffsetY = svgY - clickedNode.y;
+      canvas.style.cursor = 'move';
+      return;
+    }
+
+    // Pan canvas
+    if (!clickedNode && !e.target.classList.contains('edge-control')) {
+      isDragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      canvas.classList.add('dragging');
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isDraggingNode || isDraggingControl) {
+      saveToHistory();
+    }
+    isDragging = false;
+    isDraggingNode = false;
+    isDraggingControl = false;
+    draggedNode = null;
+    draggedEdge = null;
+    draggedCP = null;
+    canvas.classList.remove('dragging');
+    canvas.style.cursor = '';
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const svgX = ((e.clientX - rect.left - panX) / scale);
+    const svgY = ((e.clientY - rect.top - panY) / scale);
+
+    // Dragging control point
+    if (isDraggingControl && draggedEdge) {
+      const fromNode = state.nodes.find(n => n.id === draggedEdge.from);
+      const toNode = state.nodes.find(n => n.id === draggedEdge.to);
+
+      if (draggedCP === '1') {
+        const x1 = fromNode.x + (fromNode.width || 160) / 2;
+        const y1 = fromNode.y + (fromNode.height || 50);
+        draggedEdge.cp1x = svgX - x1;
+        draggedEdge.cp1y = svgY - y1;
+      } else if (draggedCP === '2') {
+        const x2 = toNode.x + (toNode.width || 160) / 2;
+        const y2 = toNode.y;
+        draggedEdge.cp2x = svgX - x2;
+        draggedEdge.cp2y = svgY - y2;
+      }
+      renderVisualWorkflow();
+      return;
+    }
+
+    // Dragging node
+    if (isDraggingNode && draggedNode) {
+      draggedNode.x = snapToGrid(svgX - dragOffsetX);
+      draggedNode.y = snapToGrid(svgY - dragOffsetY);
+      renderVisualWorkflow();
+
+      if (state.selectedNode === draggedNode.id) {
+        document.getElementById('nodeX').value = Math.round(draggedNode.x);
+        document.getElementById('nodeY').value = Math.round(draggedNode.y);
+      }
+      return;
+    }
+
+    // Panning
+    if (isDragging) {
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      panX += dx;
+      panY += dy;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      root.setAttribute('transform', `translate(${panX},${panY}) scale(${scale})`);
+    }
+  });
+
+  document.getElementById('btnZoomIn').addEventListener('click', () => {
+    scale = Math.min(2, scale * 1.2);
+    root.setAttribute('transform', `translate(${panX},${panY}) scale(${scale})`);
+  });
+
+  document.getElementById('btnZoomOut').addEventListener('click', () => {
+    scale = Math.max(0.5, scale / 1.2);
+    root.setAttribute('transform', `translate(${panX},${panY}) scale(${scale})`);
+  });
+
+  document.getElementById('btnResetView').addEventListener('click', () => {
+    scale = 1;
+    panX = 0;
+    panY = 0;
+    root.setAttribute('transform', 'translate(0,0) scale(1)');
+  });
+}
+
+function findNodeAtPosition(x, y) {
+  return state.nodes.find(node => {
+    return x >= node.x &&
+           x <= node.x + (node.width || 160) &&
+           y >= node.y &&
+           y <= node.y + (node.height || 50);
+  });
+}
+
+/* ===== PROCESS STEP MODAL ===== */
+let currentProcessNode = null;
+
+function openProcessModal() {
+  if (!state.selectedNode) return;
+  currentProcessNode = state.nodes.find(n => n.id === state.selectedNode);
+  if (!currentProcessNode) return;
+
+  const config = currentProcessNode.processConfig || {};
+
+  // Load basic info
+  document.getElementById('processName').value = config.name || currentProcessNode.name;
+  document.getElementById('processDesc').value = config.description || '';
+  document.getElementById('processOwner').value = config.owner || '';
+  document.getElementById('processCategory').value = config.category || 'Task';
+
+  // Load SLA
+  document.getElementById('slaDuration').value = config.slaDuration || '';
+  document.getElementById('slaUnit').value = config.slaUnit || 'hours';
+  document.getElementById('slaBuffer').value = config.slaBuffer || '';
+  document.getElementById('slaBufferUnit').value = config.slaBufferUnit || 'hours';
+  document.getElementById('slaPriority').value = config.slaPriority || 'medium';
+  document.getElementById('slaEscalation').value = config.slaEscalation || '80';
+  document.getElementById('slaContact').value = config.slaContact || '';
+
+  // Load resources
+  document.getElementById('resourceTools').value = config.resourceTools || '';
+  document.getElementById('resourceSOP').value = config.resourceSOP || '';
+  document.getElementById('resourceTemplates').value = config.resourceTemplates || '';
+  document.getElementById('resourceTraining').value = config.resourceTraining || '';
+  document.getElementById('resourceHelp').value = config.resourceHelp || '';
+
+  renderDependenciesList(config.dependencies || []);
+
+  document.getElementById('processModal').classList.add('active');
+}
+
+function closeProcessModal() {
+  document.getElementById('processModal').classList.remove('active');
+  currentProcessNode = null;
+}
+
+function switchProcessTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+  event.target.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+function saveProcessConfig() {
+  if (!currentProcessNode) return;
+
+  const config = {
+    name: document.getElementById('processName').value,
+    description: document.getElementById('processDesc').value,
+    owner: document.getElementById('processOwner').value,
+    category: document.getElementById('processCategory').value,
+    slaDuration: document.getElementById('slaDuration').value,
+    slaUnit: document.getElementById('slaUnit').value,
+    slaBuffer: document.getElementById('slaBuffer').value,
+    slaBufferUnit: document.getElementById('slaBufferUnit').value,
+    slaPriority: document.getElementById('slaPriority').value,
+    slaEscalation: document.getElementById('slaEscalation').value,
+    slaContact: document.getElementById('slaContact').value,
+    dependencies: currentDependencies,
+    resourceTools: document.getElementById('resourceTools').value,
+    resourceSOP: document.getElementById('resourceSOP').value,
+    resourceTemplates: document.getElementById('resourceTemplates').value,
+    resourceTraining: document.getElementById('resourceTraining').value,
+    resourceHelp: document.getElementById('resourceHelp').value
+  };
+
+  currentProcessNode.processConfig = config;
+  if (config.name) currentProcessNode.name = config.name;
+
+  renderVisualWorkflow();
+  closeProcessModal();
+  saveToHistory();
+}
+
+/* ===== DEPENDENCIES ===== */
+let currentDependencies = [];
+
+function renderDependenciesList(deps) {
+  currentDependencies = deps;
+  const container = document.getElementById('dependenciesList');
+
+  if (deps.length === 0) {
+    container.innerHTML = '<p style="font-size:11px;color:#999;padding:10px 0">No dependencies added yet.</p>';
+    return;
+  }
+
+  container.innerHTML = deps.map((dep, idx) => `
+    <div class="dependency-item">
+      <div class="dependency-header">
+        <div class="dependency-dept">${dep.department}</div>
+        <button class="icon-btn" onclick="removeDependency(${idx})">×</button>
+      </div>
+      <div class="dependency-meta">
+        <strong>Type:</strong> ${dep.type} • <strong>SLA:</strong> ${dep.sla || 'Not set'}
+      </div>
+      <div style="font-size:11px;color:#666;margin-top:4px">${dep.description || 'No description'}</div>
+    </div>
+  `).join('');
+}
+
+function addDependency() {
+  const dept = prompt('Department name:');
+  if (!dept) return;
+
+  const type = prompt('Dependency type (requires/informs/approves):', 'requires');
+  const description = prompt('What is needed:', '');
+  const sla = prompt('Expected response time (e.g., 24 hours):', '');
+
+  currentDependencies.push({department: dept, type, description, sla});
+  renderDependenciesList(currentDependencies);
+}
+
+function removeDependency(idx) {
+  currentDependencies.splice(idx, 1);
+  renderDependenciesList(currentDependencies);
+}
+
+/* ===== CONFIG MANAGEMENT ===== */
+function saveConfig() {
+  localStorage.setItem('cssWorkflowConfig', JSON.stringify(state));
+  alert('Configuration saved locally!');
+}
+
+function loadConfig() {
+  const saved = localStorage.getItem('cssWorkflowConfig');
+  if (!saved) {
+    alert('No saved configuration found.');
+    return;
+  }
+
+  if (!confirm('Load saved configuration?')) return;
+
+  Object.assign(state, JSON.parse(saved));
+  renderDepartments();
+  renderDepartmentSelector();
+  renderVisualWorkflow();
+  saveToHistory();
+  alert('Configuration loaded!');
+}
+
+function exportConfig() {
+  const config = {
+    metadata: {
+      name: 'CSS Workflow Configuration',
+      department: state.currentDepartment || 'All Departments',
+      version: '2.0',
+      exportedAt: new Date().toISOString(),
+      tool: 'CSS Workflow Designer v2'
+    },
+    departments: state.departments,
+    nodes: state.nodes,
+    edges: state.edges,
+    comments: state.comments
+  };
+
+  document.getElementById('exportJSON').textContent = JSON.stringify(config, null, 2);
+  document.getElementById('exportModal').classList.add('active');
+}
+
+function closeExportModal() {
+  document.getElementById('exportModal').classList.remove('active');
+}
+
+function downloadConfig() {
+  const name = document.getElementById('exportName').value || 'workflow-config';
+  const dept = document.getElementById('exportDept').value || '';
+  const notes = document.getElementById('exportNotes').value;
+
+  const config = JSON.parse(document.getElementById('exportJSON').textContent);
+  config.metadata.name = name;
+  config.metadata.department = dept;
+  config.metadata.notes = notes;
+
+  const blob = new Blob([JSON.stringify(config, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (dept ? dept + '-' : '') + name.toLowerCase().replace(/\s+/g, '-') + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function copyToClipboard() {
+  const text = document.getElementById('exportJSON').textContent;
+  navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard!'));
+}
+
+function downloadSVG() {
+  const svg = document.getElementById('workflowCanvas');
+  const svgData = new XMLSerializer().serializeToString(svg);
+  const blob = new Blob([svgData], {type: 'image/svg+xml'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'workflow-diagram.svg';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ===== INITIALIZE ===== */
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

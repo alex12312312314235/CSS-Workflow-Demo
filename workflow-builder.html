@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CSS Workflow Builder - EKFC Management Tool</title>
+<style>
+  :root{
+    --ekfc-red:#C8102E; --ekfc-red-dark:#A00E24; --gold:#B8975F;
+    --text:#111; --muted:#666; --bg:#f5f5f5; --card:#fff; --line:#ddd; --soft:#f8f8f8;
+    --sidebar-width: 380px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',Arial,Helvetica,sans-serif;background:var(--bg);min-height:100vh;color:var(--text);overflow:hidden}
+
+  /* Header */
+  .header{background:var(--card);border-bottom:3px solid var(--ekfc-red);padding:15px 30px;box-shadow:0 2px 4px rgba(0,0,0,.08);z-index:100}
+  .header-content{display:flex;justify-content:space-between;align-items:center}
+  .header-left{display:flex;align-items:center;gap:20px}
+  .logo-text{color:var(--ekfc-red);font-size:24px;font-weight:bold}
+  .header h1{font-size:20px;font-weight:normal}
+  .header-subtitle{color:var(--muted);font-size:14px}
+  .header-actions{display:flex;gap:10px}
+  .btn{background:var(--card);border:1px solid var(--line);padding:8px 16px;border-radius:4px;cursor:pointer;font-size:13px;transition:.2s}
+  .btn:hover{background:var(--soft)}
+  .btn-primary{background:var(--ekfc-red);color:#fff;border-color:var(--ekfc-red)}
+  .btn-primary:hover{background:var(--ekfc-red-dark)}
+  .btn-success{background:#28a745;color:#fff;border-color:#28a745}
+  .btn-success:hover{background:#218838}
+
+  /* Main Layout */
+  .main-container{display:flex;height:calc(100vh - 68px);overflow:hidden}
+
+  /* Canvas Area */
+  .canvas-area{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+  .canvas-toolbar{background:var(--card);border-bottom:1px solid var(--line);padding:10px 20px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .canvas-workspace{flex:1;overflow:auto;position:relative;background:#fafafa}
+
+  /* Tabs */
+  .nav-tabs{display:flex;background:var(--card);border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+  .nav-tab{background:var(--card);border:none;color:#666;padding:8px 18px;cursor:pointer;font-size:13px;transition:.2s;border-right:1px solid var(--line)}
+  .nav-tab:last-child{border-right:none}
+  .nav-tab:hover{background:var(--soft)}
+  .nav-tab.active{background:var(--ekfc-red);color:#fff}
+
+  /* Right Sidebar */
+  .right-sidebar{width:var(--sidebar-width);background:var(--card);border-left:1px solid var(--line);overflow-y:auto;display:flex;flex-direction:column}
+  .sidebar-section{padding:20px;border-bottom:1px solid var(--line)}
+  .sidebar-title{font-size:15px;font-weight:600;margin-bottom:12px;color:var(--ekfc-red)}
+  .form-group{margin-bottom:14px}
+  .form-group label{display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:#444}
+  .form-group input, .form-group select, .form-group textarea{width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:3px;font-size:12px;font-family:inherit}
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus{outline:none;border-color:var(--ekfc-red)}
+  .form-group-inline{display:flex;gap:8px}
+  .form-group-inline>*{flex:1}
+
+  /* Department Cards */
+  .dept-card{background:#fff;border:1px solid var(--line);border-radius:4px;padding:12px;margin-bottom:10px;position:relative}
+  .dept-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .dept-name{font-weight:600;font-size:13px}
+  .dept-color{width:20px;height:20px;border-radius:3px;border:1px solid #ddd}
+  .dept-actions{display:flex;gap:6px}
+  .icon-btn{background:transparent;border:none;cursor:pointer;padding:4px 6px;border-radius:3px;color:#666;font-size:11px}
+  .icon-btn:hover{background:#f0f0f0}
+  .dept-info{font-size:11px;color:#666;margin-top:4px}
+
+  /* SVG Workflow Canvas */
+  .svg-canvas{width:100%;min-height:800px;background:#fff;border:1px solid #ddd;cursor:grab;user-select:none}
+  .svg-canvas.dragging{cursor:grabbing}
+
+  /* SVG Elements */
+  .stage-node{cursor:pointer;transition:filter .2s}
+  .stage-node:hover{filter:drop-shadow(0 2px 6px rgba(0,0,0,.15))}
+  .stage-node.selected{filter:drop-shadow(0 0 8px rgba(200,16,46,.6))}
+  .stage-rect{fill:#fff;stroke:#C8102E;stroke-width:1.5;rx:8}
+  .stage-text{fill:#000;font-size:12px;font-weight:500;text-anchor:middle;pointer-events:none}
+  .edge-path{stroke:#c7c7c7;stroke-width:2;fill:none;marker-end:url(#arrow)}
+  .token-demo{filter:drop-shadow(0 1px 4px rgba(0,0,0,.15))}
+
+  /* Comments (Figma-style) */
+  .comment-marker{cursor:pointer}
+  .comment-marker circle{fill:#FFD600;stroke:#333;stroke-width:1.5}
+  .comment-marker text{fill:#000;font-size:11px;font-weight:700;text-anchor:middle;pointer-events:none}
+  .comment-panel{position:absolute;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.15);padding:12px;min-width:280px;max-width:320px;z-index:1000;display:none}
+  .comment-panel.active{display:block}
+  .comment-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #eee}
+  .comment-author{font-weight:600;font-size:12px}
+  .comment-time{font-size:10px;color:#999}
+  .comment-body{font-size:12px;line-height:1.5;margin-bottom:10px}
+  .comment-reply{width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:3px;font-size:11px;resize:vertical}
+
+  /* List items */
+  .list-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#fafafa;border:1px solid #eee;border-radius:3px;margin-bottom:6px;font-size:12px}
+  .list-item-content{flex:1}
+  .list-item-name{font-weight:600}
+  .list-item-meta{font-size:11px;color:#666;margin-top:2px}
+
+  /* Color picker */
+  .color-picker-group{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .color-option{width:28px;height:28px;border-radius:4px;border:2px solid transparent;cursor:pointer;transition:.2s}
+  .color-option:hover{transform:scale(1.1)}
+  .color-option.selected{border-color:#000}
+
+  /* Export modal */
+  .modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:2000}
+  .modal.active{display:flex}
+  .modal-content{background:#fff;border-radius:8px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
+  .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--gold)}
+  .modal-title{font-size:18px;font-weight:600}
+  .close-modal{background:transparent;border:none;font-size:24px;cursor:pointer;color:#999}
+  .close-modal:hover{color:#333}
+
+  /* Code block */
+  .code-block{background:#f5f5f5;border:1px solid #ddd;border-radius:4px;padding:12px;font-family:'Courier New',monospace;font-size:11px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;margin-top:10px}
+
+  /* Alerts */
+  .alert{padding:10px 12px;border-radius:4px;margin-bottom:12px;font-size:12px}
+  .alert-info{background:#d1ecf1;border:1px solid #bee5eb;color:#0c5460}
+  .alert-warning{background:#fff3cd;border:1px solid #ffeeba;color:#856404}
+  .alert-success{background:#d4edda;border:1px solid #c3e6cb;color:#155724}
+
+  /* Workflow step editor */
+  .step-editor{background:#f9f9f9;border:1px solid #e0e0e0;border-radius:4px;padding:10px;margin-bottom:8px}
+  .step-editor-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .step-number-badge{background:var(--ekfc-red);color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+
+  /* Drag handle */
+  .drag-handle{cursor:move;color:#999;margin-right:8px}
+
+  /* Badge */
+  .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;text-transform:uppercase}
+  .badge-primary{background:#C8102E;color:#fff}
+  .badge-secondary{background:#6c757d;color:#fff}
+  .badge-success{background:#28a745;color:#fff}
+</style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-content">
+      <div class="header-left">
+        <span class="logo-text">Emirates|Flight Catering</span>
+        <div>
+          <h1>CSS Workflow Builder</h1>
+          <div class="header-subtitle">Design & Configure Department Workflows</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn" onclick="loadConfig()">Load Config</button>
+        <button class="btn btn-success" onclick="exportConfig()">Export Configuration</button>
+        <button class="btn btn-primary" onclick="saveConfig()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="main-container">
+    <!-- Canvas Area -->
+    <div class="canvas-area">
+      <div class="canvas-toolbar">
+        <div class="nav-tabs">
+          <button class="nav-tab" onclick="switchTab('simple')">Workflow Steps</button>
+          <button class="nav-tab active" onclick="switchTab('visual')">Visual Workflow</button>
+        </div>
+        <div style="flex:1"></div>
+        <button class="btn" id="btnAddNode">+ Add Node</button>
+        <button class="btn" id="btnAddConnection">+ Add Connection</button>
+        <button class="btn" id="btnAddComment">+ Add Comment</button>
+        <span style="color:#ccc;margin:0 8px">|</span>
+        <button class="btn" id="btnZoomIn">Zoom +</button>
+        <button class="btn" id="btnZoomOut">Zoom −</button>
+        <button class="btn" id="btnResetView">Reset View</button>
+      </div>
+
+      <div class="canvas-workspace">
+        <!-- Simple Workflow Tab -->
+        <div id="simple-tab" class="tab-content" style="display:none;padding:20px">
+          <div style="max-width:900px;margin:0 auto">
+            <div class="alert alert-info">
+              Configure your workflow steps below. These steps will be reflected in the visual workflow and can be customized per department and priority level.
+            </div>
+            <div id="workflowStepsContainer"></div>
+            <button class="btn btn-primary" onclick="addWorkflowStep()">+ Add Workflow Step</button>
+          </div>
+        </div>
+
+        <!-- Visual Workflow Tab -->
+        <div id="visual-tab" class="tab-content">
+          <svg id="workflowCanvas" class="svg-canvas" viewBox="0 0 1400 900" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                <polygon points="0,0 10,4 0,8" fill="#c7c7c7"></polygon>
+              </marker>
+            </defs>
+            <g id="zoomRoot" transform="translate(0,0) scale(1)">
+              <g id="edges"></g>
+              <g id="stages"></g>
+              <g id="comments"></g>
+            </g>
+          </svg>
+
+          <!-- Comment Panel (floating) -->
+          <div id="commentPanel" class="comment-panel">
+            <div class="comment-header">
+              <div>
+                <div class="comment-author" id="commentAuthor">User</div>
+                <div class="comment-time" id="commentTime">Just now</div>
+              </div>
+              <button class="close-modal" onclick="closeCommentPanel()">&times;</button>
+            </div>
+            <div class="comment-body" id="commentBody"></div>
+            <textarea class="comment-reply" id="commentReplyInput" placeholder="Add a reply..."></textarea>
+            <button class="btn btn-primary" style="margin-top:8px;width:100%" onclick="addCommentReply()">Reply</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Sidebar -->
+    <div class="right-sidebar">
+      <!-- Departments Section -->
+      <div class="sidebar-section">
+        <div class="sidebar-title">Departments</div>
+        <div id="departmentsList"></div>
+        <button class="btn btn-primary" style="width:100%" onclick="addDepartment()">+ Add Department</button>
+      </div>
+
+      <!-- Priority Levels Section -->
+      <div class="sidebar-section">
+        <div class="sidebar-title">Priority Levels</div>
+        <div id="priorityLevelsList"></div>
+        <button class="btn btn-primary" style="width:100%" onclick="addPriorityLevel()">+ Add Priority Level</button>
+      </div>
+
+      <!-- Node Inspector (when node selected) -->
+      <div class="sidebar-section" id="nodeInspector" style="display:none">
+        <div class="sidebar-title">Node Properties</div>
+        <div class="form-group">
+          <label>Node Name</label>
+          <input type="text" id="nodeName" oninput="updateSelectedNode()">
+        </div>
+        <div class="form-group">
+          <label>Node Type</label>
+          <select id="nodeType" onchange="updateSelectedNode()">
+            <option value="intake">Intake</option>
+            <option value="router">Router</option>
+            <option value="coordinator">Coordinator</option>
+            <option value="specialist">Specialist</option>
+            <option value="delivery">Delivery</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Department</label>
+          <select id="nodeDepartment" onchange="updateSelectedNode()"></select>
+        </div>
+        <div class="form-group">
+          <label>Position X</label>
+          <input type="number" id="nodeX" oninput="updateSelectedNode()">
+        </div>
+        <div class="form-group">
+          <label>Position Y</label>
+          <input type="number" id="nodeY" oninput="updateSelectedNode()">
+        </div>
+        <button class="btn" style="width:100%;margin-bottom:6px" onclick="duplicateNode()">Duplicate Node</button>
+        <button class="btn" style="width:100%;background:#dc3545;color:#fff;border-color:#dc3545" onclick="deleteNode()">Delete Node</button>
+      </div>
+
+      <!-- Workflow Settings -->
+      <div class="sidebar-section">
+        <div class="sidebar-title">Workflow Settings</div>
+        <div class="form-group">
+          <label>Business Hours</label>
+          <div class="form-group-inline">
+            <input type="time" id="workStartTime" value="09:00" onchange="saveWorkflowSettings()">
+            <input type="time" id="workEndTime" value="18:00" onchange="saveWorkflowSettings()">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Work Days</label>
+          <div style="font-size:11px;color:#666;margin-top:4px">
+            <label style="display:inline-flex;align-items:center;margin-right:10px">
+              <input type="checkbox" value="1" checked onchange="saveWorkflowSettings()"> Mon
+            </label>
+            <label style="display:inline-flex;align-items:center;margin-right:10px">
+              <input type="checkbox" value="2" checked onchange="saveWorkflowSettings()"> Tue
+            </label>
+            <label style="display:inline-flex;align-items:center;margin-right:10px">
+              <input type="checkbox" value="3" checked onchange="saveWorkflowSettings()"> Wed
+            </label>
+            <label style="display:inline-flex;align-items:center;margin-right:10px">
+              <input type="checkbox" value="4" checked onchange="saveWorkflowSettings()"> Thu
+            </label>
+            <label style="display:inline-flex;align-items:center;">
+              <input type="checkbox" value="5" checked onchange="saveWorkflowSettings()"> Fri
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Instructions -->
+      <div class="sidebar-section" style="background:#f9f9f9">
+        <div class="sidebar-title">Quick Guide</div>
+        <div style="font-size:11px;line-height:1.6;color:#555">
+          <p style="margin-bottom:8px"><strong>Visual Workflow:</strong></p>
+          <ul style="margin-left:16px;margin-bottom:10px">
+            <li>Click a node to select and edit</li>
+            <li><strong>Shift+Click</strong> and drag to move nodes</li>
+            <li>Use "+ Add Node" to place new nodes</li>
+            <li>Use "+ Add Connection" to link nodes</li>
+            <li>Add comments for collaboration</li>
+          </ul>
+          <p style="margin-bottom:8px"><strong>Workflow Steps:</strong></p>
+          <ul style="margin-left:16px;margin-bottom:10px">
+            <li>Define sequential workflow steps</li>
+            <li>Set SLA hours for each step</li>
+            <li>Drag to reorder steps</li>
+          </ul>
+          <p style="margin-bottom:8px"><strong>Export:</strong></p>
+          <ul style="margin-left:16px">
+            <li>Click "Export Configuration"</li>
+            <li>Download JSON for IT team</li>
+            <li>Include notes and instructions</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export Modal -->
+  <div id="exportModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">Export Configuration</div>
+        <button class="close-modal" onclick="closeExportModal()">&times;</button>
+      </div>
+      <div class="alert alert-success">
+        Configuration ready for export. Share this JSON with your IT team and service desk consultants.
+      </div>
+      <div class="form-group">
+        <label>Configuration Name</label>
+        <input type="text" id="exportName" value="CSS Workflow Configuration" placeholder="Configuration name">
+      </div>
+      <div class="form-group">
+        <label>Notes for IT Team</label>
+        <textarea id="exportNotes" rows="3" placeholder="Add any specific instructions or notes for the implementation team..."></textarea>
+      </div>
+      <div class="code-block" id="exportJSON"></div>
+      <button class="btn btn-success" style="width:100%;margin-top:10px" onclick="downloadConfig()">Download JSON File</button>
+      <button class="btn" style="width:100%;margin-top:6px" onclick="copyToClipboard()">Copy to Clipboard</button>
+    </div>
+  </div>
+
+<script>
+/* ===== STATE MANAGEMENT ===== */
+const state = {
+  departments: [
+    {id: 'SS', name: 'Standards & Specs', color: '#2f7ed8', fte: 12, abbr: 'S&S'},
+    {id: 'HD', name: 'Health & Diet', color: '#28a745', fte: 8, abbr: 'H&D'},
+    {id: 'FT', name: 'Food Tech', color: '#7b61ff', fte: 6, abbr: 'FT'},
+    {id: 'MD', name: 'Menu Development', color: '#ff6b8b', fte: 10, abbr: 'MD'}
+  ],
+  priorityLevels: [
+    {id: 'standard', name: 'Standard', color: '#28a745', targetHours: 120, escalate: false},
+    {id: 'high', name: 'High', color: '#ff9a2f', targetHours: 96, escalate: true},
+    {id: 'urgent', name: 'Urgent', color: '#dc3545', targetHours: 48, escalate: true}
+  ],
+  workflowSteps: [
+    {id: 1, name: 'Request Submission', description: 'BU submits request through portal', slaHours: 0},
+    {id: 2, name: 'CSS Admin Intake', description: 'Initial processing and routing', slaHours: 24},
+    {id: 3, name: 'Department Assignment', description: 'Assigned to specialist', slaHours: 48},
+    {id: 4, name: 'Technical Review', description: 'Specialist performs assessment', slaHours: 24},
+    {id: 5, name: 'Manager Approval', description: 'Manager review and approval', slaHours: 24},
+    {id: 6, name: 'Delivery', description: 'Results delivered to requester', slaHours: 0}
+  ],
+  nodes: [
+    {id: 'intake', name: 'Unified Intake', type: 'intake', x: 700, y: 120, width: 180, height: 50},
+    {id: 'router', name: 'Router', type: 'router', x: 700, y: 240, width: 160, height: 50},
+    {id: 'SS_coord', name: 'S&S Coordinator', type: 'coordinator', dept: 'SS', x: 200, y: 380, width: 180, height: 50},
+    {id: 'HD_coord', name: 'H&D Coordinator', type: 'coordinator', dept: 'HD', x: 450, y: 380, width: 180, height: 50},
+    {id: 'FT_coord', name: 'FT Coordinator', type: 'coordinator', dept: 'FT', x: 700, y: 380, width: 180, height: 50},
+    {id: 'MD_coord', name: 'MD Coordinator', type: 'coordinator', dept: 'MD', x: 950, y: 380, width: 180, height: 50},
+    {id: 'SS_A', name: 'S&S Specialist A', type: 'specialist', dept: 'SS', x: 140, y: 520, width: 160, height: 46},
+    {id: 'SS_B', name: 'S&S Specialist B', type: 'specialist', dept: 'SS', x: 200, y: 600, width: 160, height: 46},
+    {id: 'HD_A', name: 'H&D Specialist A', type: 'specialist', dept: 'HD', x: 390, y: 520, width: 160, height: 46},
+    {id: 'HD_B', name: 'H&D Specialist B', type: 'specialist', dept: 'HD', x: 450, y: 600, width: 160, height: 46},
+    {id: 'FT_A', name: 'FT Specialist A', type: 'specialist', dept: 'FT', x: 640, y: 520, width: 160, height: 46},
+    {id: 'FT_B', name: 'FT Specialist B', type: 'specialist', dept: 'FT', x: 700, y: 600, width: 160, height: 46},
+    {id: 'MD_A', name: 'MD Specialist A', type: 'specialist', dept: 'MD', x: 890, y: 520, width: 160, height: 46},
+    {id: 'MD_B', name: 'MD Specialist B', type: 'specialist', dept: 'MD', x: 950, y: 600, width: 160, height: 46},
+    {id: 'delivery', name: 'Delivery & Done', type: 'delivery', x: 700, y: 740, width: 180, height: 50}
+  ],
+  edges: [
+    {from: 'intake', to: 'router'},
+    {from: 'router', to: 'SS_coord'},
+    {from: 'router', to: 'HD_coord'},
+    {from: 'router', to: 'FT_coord'},
+    {from: 'router', to: 'MD_coord'},
+    {from: 'SS_coord', to: 'SS_A'},
+    {from: 'SS_coord', to: 'SS_B'},
+    {from: 'HD_coord', to: 'HD_A'},
+    {from: 'HD_coord', to: 'HD_B'},
+    {from: 'FT_coord', to: 'FT_A'},
+    {from: 'FT_coord', to: 'FT_B'},
+    {from: 'MD_coord', to: 'MD_A'},
+    {from: 'MD_coord', to: 'MD_B'},
+    {from: 'SS_A', to: 'delivery'},
+    {from: 'SS_B', to: 'delivery'},
+    {from: 'HD_A', to: 'delivery'},
+    {from: 'HD_B', to: 'delivery'},
+    {from: 'FT_A', to: 'delivery'},
+    {from: 'FT_B', to: 'delivery'},
+    {from: 'MD_A', to: 'delivery'},
+    {from: 'MD_B', to: 'delivery'}
+  ],
+  comments: [],
+  selectedNode: null,
+  workflowSettings: {
+    startHour: 9,
+    endHour: 18,
+    workDays: [1, 2, 3, 4, 5]
+  }
+};
+
+let nextCommentId = 1;
+let nextDeptId = 1;
+let nextPriorityId = 1;
+let nextStepId = 7;
+let nextNodeId = 1;
+
+/* ===== INITIALIZATION ===== */
+function init() {
+  renderDepartments();
+  renderPriorityLevels();
+  renderWorkflowSteps();
+  renderVisualWorkflow();
+  setupCanvasInteraction();
+}
+
+/* ===== TAB SWITCHING ===== */
+function switchTab(tab) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+
+  document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+  document.getElementById(tab + '-tab').style.display = tab === 'simple' ? 'block' : 'block';
+}
+
+/* ===== DEPARTMENTS ===== */
+function renderDepartments() {
+  const container = document.getElementById('departmentsList');
+  container.innerHTML = state.departments.map(dept => `
+    <div class="dept-card">
+      <div class="dept-card-header">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="dept-color" style="background:${dept.color}"></div>
+          <div class="dept-name">${dept.name}</div>
+        </div>
+        <div class="dept-actions">
+          <button class="icon-btn" onclick="editDepartment('${dept.id}')">✎</button>
+          <button class="icon-btn" onclick="deleteDepartment('${dept.id}')">×</button>
+        </div>
+      </div>
+      <div class="dept-info">
+        <strong>Abbr:</strong> ${dept.abbr} • <strong>FTE:</strong> ${dept.fte}
+      </div>
+    </div>
+  `).join('');
+}
+
+function addDepartment() {
+  const name = prompt('Department name:');
+  if (!name) return;
+
+  const abbr = prompt('Abbreviation:', name.substring(0, 3).toUpperCase());
+  const fte = parseInt(prompt('FTE count:', '5')) || 5;
+  const color = '#' + Math.floor(Math.random()*16777215).toString(16);
+
+  state.departments.push({
+    id: 'DEPT_' + nextDeptId++,
+    name,
+    abbr,
+    fte,
+    color
+  });
+
+  renderDepartments();
+  renderVisualWorkflow();
+}
+
+function editDepartment(id) {
+  const dept = state.departments.find(d => d.id === id);
+  if (!dept) return;
+
+  const name = prompt('Department name:', dept.name);
+  if (name) dept.name = name;
+
+  const abbr = prompt('Abbreviation:', dept.abbr);
+  if (abbr) dept.abbr = abbr;
+
+  const fte = prompt('FTE count:', dept.fte);
+  if (fte) dept.fte = parseInt(fte);
+
+  renderDepartments();
+  renderVisualWorkflow();
+}
+
+function deleteDepartment(id) {
+  if (!confirm('Delete this department? This will also remove associated nodes.')) return;
+
+  state.departments = state.departments.filter(d => d.id !== id);
+  state.nodes = state.nodes.filter(n => n.dept !== id);
+
+  renderDepartments();
+  renderVisualWorkflow();
+}
+
+/* ===== PRIORITY LEVELS ===== */
+function renderPriorityLevels() {
+  const container = document.getElementById('priorityLevelsList');
+  container.innerHTML = state.priorityLevels.map(priority => `
+    <div class="list-item">
+      <div class="list-item-content">
+        <div class="list-item-name" style="color:${priority.color}">${priority.name}</div>
+        <div class="list-item-meta">SLA: ${priority.targetHours}h • Escalate: ${priority.escalate ? 'Yes' : 'No'}</div>
+      </div>
+      <div class="dept-actions">
+        <button class="icon-btn" onclick="editPriorityLevel('${priority.id}')">✎</button>
+        <button class="icon-btn" onclick="deletePriorityLevel('${priority.id}')">×</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addPriorityLevel() {
+  const name = prompt('Priority level name:');
+  if (!name) return;
+
+  const targetHours = parseInt(prompt('Target SLA (hours):', '72')) || 72;
+  const escalate = confirm('Enable escalation for this priority?');
+  const color = '#' + Math.floor(Math.random()*16777215).toString(16);
+
+  state.priorityLevels.push({
+    id: 'PRIORITY_' + nextPriorityId++,
+    name,
+    color,
+    targetHours,
+    escalate
+  });
+
+  renderPriorityLevels();
+}
+
+function editPriorityLevel(id) {
+  const priority = state.priorityLevels.find(p => p.id === id);
+  if (!priority) return;
+
+  const name = prompt('Priority name:', priority.name);
+  if (name) priority.name = name;
+
+  const hours = prompt('Target SLA (hours):', priority.targetHours);
+  if (hours) priority.targetHours = parseInt(hours);
+
+  priority.escalate = confirm('Enable escalation?');
+
+  renderPriorityLevels();
+}
+
+function deletePriorityLevel(id) {
+  if (!confirm('Delete this priority level?')) return;
+  state.priorityLevels = state.priorityLevels.filter(p => p.id !== id);
+  renderPriorityLevels();
+}
+
+/* ===== WORKFLOW STEPS ===== */
+function renderWorkflowSteps() {
+  const container = document.getElementById('workflowStepsContainer');
+  container.innerHTML = state.workflowSteps.map((step, idx) => `
+    <div class="step-editor" draggable="true">
+      <div class="step-editor-header">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="drag-handle">⋮⋮</span>
+          <div class="step-number-badge">${idx + 1}</div>
+          <strong>${step.name}</strong>
+        </div>
+        <div>
+          <button class="icon-btn" onclick="editWorkflowStep(${step.id})">✎</button>
+          <button class="icon-btn" onclick="deleteWorkflowStep(${step.id})">×</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#666;margin-bottom:6px">${step.description}</div>
+      <div style="font-size:11px"><strong>SLA:</strong> ${step.slaHours}h</div>
+    </div>
+  `).join('');
+}
+
+function addWorkflowStep() {
+  const name = prompt('Step name:');
+  if (!name) return;
+
+  const description = prompt('Description:', '');
+  const slaHours = parseInt(prompt('SLA hours:', '24')) || 24;
+
+  state.workflowSteps.push({
+    id: nextStepId++,
+    name,
+    description,
+    slaHours
+  });
+
+  renderWorkflowSteps();
+}
+
+function editWorkflowStep(id) {
+  const step = state.workflowSteps.find(s => s.id === id);
+  if (!step) return;
+
+  const name = prompt('Step name:', step.name);
+  if (name) step.name = name;
+
+  const description = prompt('Description:', step.description);
+  if (description !== null) step.description = description;
+
+  const hours = prompt('SLA hours:', step.slaHours);
+  if (hours) step.slaHours = parseInt(hours);
+
+  renderWorkflowSteps();
+}
+
+function deleteWorkflowStep(id) {
+  if (!confirm('Delete this workflow step?')) return;
+  state.workflowSteps = state.workflowSteps.filter(s => s.id !== id);
+  renderWorkflowSteps();
+}
+
+/* ===== VISUAL WORKFLOW ===== */
+function renderVisualWorkflow() {
+  renderEdges();
+  renderNodes();
+  renderComments();
+}
+
+function renderEdges() {
+  const container = document.getElementById('edges');
+  container.innerHTML = '';
+
+  state.edges.forEach(edge => {
+    const fromNode = state.nodes.find(n => n.id === edge.from);
+    const toNode = state.nodes.find(n => n.id === edge.to);
+    if (!fromNode || !toNode) return;
+
+    const x1 = fromNode.x + (fromNode.width || 160) / 2;
+    const y1 = fromNode.y + (fromNode.height || 50);
+    const x2 = toNode.x + (toNode.width || 160) / 2;
+    const y2 = toNode.y;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('class', 'edge-path');
+    path.setAttribute('d', `M${x1},${y1} L${x2},${y2}`);
+    container.appendChild(path);
+  });
+}
+
+function renderNodes() {
+  const container = document.getElementById('stages');
+  container.innerHTML = '';
+
+  state.nodes.forEach(node => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'stage-node');
+    g.setAttribute('data-id', node.id);
+    if (state.selectedNode === node.id) g.classList.add('selected');
+
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('class', 'stage-rect');
+    rect.setAttribute('x', node.x);
+    rect.setAttribute('y', node.y);
+    rect.setAttribute('width', node.width || 160);
+    rect.setAttribute('height', node.height || 50);
+
+    // Color by department
+    if (node.dept) {
+      const dept = state.departments.find(d => d.id === node.dept);
+      if (dept) {
+        rect.setAttribute('fill', dept.color + '22');
+        rect.setAttribute('stroke', dept.color);
+      }
+    }
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('class', 'stage-text');
+    text.setAttribute('x', node.x + (node.width || 160) / 2);
+    text.setAttribute('y', node.y + (node.height || 50) / 2 + 4);
+    text.textContent = node.name;
+
+    g.appendChild(rect);
+    g.appendChild(text);
+
+    g.addEventListener('click', () => selectNode(node.id));
+
+    container.appendChild(g);
+  });
+}
+
+function selectNode(id) {
+  state.selectedNode = id;
+  const node = state.nodes.find(n => n.id === id);
+
+  if (node) {
+    document.getElementById('nodeInspector').style.display = 'block';
+    document.getElementById('nodeName').value = node.name;
+    document.getElementById('nodeType').value = node.type || 'specialist';
+    document.getElementById('nodeX').value = node.x;
+    document.getElementById('nodeY').value = node.y;
+
+    // Populate department dropdown
+    const deptSelect = document.getElementById('nodeDepartment');
+    deptSelect.innerHTML = '<option value="">None</option>' +
+      state.departments.map(d => `<option value="${d.id}" ${node.dept === d.id ? 'selected' : ''}>${d.name}</option>`).join('');
+  }
+
+  renderNodes();
+}
+
+function updateSelectedNode() {
+  if (!state.selectedNode) return;
+  const node = state.nodes.find(n => n.id === state.selectedNode);
+  if (!node) return;
+
+  node.name = document.getElementById('nodeName').value;
+  node.type = document.getElementById('nodeType').value;
+  node.dept = document.getElementById('nodeDepartment').value || null;
+  node.x = parseInt(document.getElementById('nodeX').value) || node.x;
+  node.y = parseInt(document.getElementById('nodeY').value) || node.y;
+
+  renderVisualWorkflow();
+}
+
+function duplicateNode() {
+  if (!state.selectedNode) return;
+  const node = state.nodes.find(n => n.id === state.selectedNode);
+  if (!node) return;
+
+  const newNode = {
+    ...node,
+    id: 'node_' + nextNodeId++,
+    x: node.x + 50,
+    y: node.y + 50
+  };
+
+  state.nodes.push(newNode);
+  renderVisualWorkflow();
+}
+
+function deleteNode() {
+  if (!state.selectedNode) return;
+  if (!confirm('Delete this node?')) return;
+
+  state.nodes = state.nodes.filter(n => n.id !== state.selectedNode);
+  state.edges = state.edges.filter(e => e.from !== state.selectedNode && e.to !== state.selectedNode);
+  state.selectedNode = null;
+  document.getElementById('nodeInspector').style.display = 'none';
+
+  renderVisualWorkflow();
+}
+
+/* ===== COMMENTS (Figma-style) ===== */
+function renderComments() {
+  const container = document.getElementById('comments');
+  container.innerHTML = '';
+
+  state.comments.forEach((comment, idx) => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'comment-marker');
+    g.setAttribute('data-id', comment.id);
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', comment.x);
+    circle.setAttribute('cy', comment.y);
+    circle.setAttribute('r', 14);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', comment.x);
+    text.setAttribute('y', comment.y + 4);
+    text.textContent = idx + 1;
+
+    g.appendChild(circle);
+    g.appendChild(text);
+
+    g.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showCommentPanel(comment);
+    });
+
+    container.appendChild(g);
+  });
+}
+
+let isAddingComment = false;
+
+document.getElementById('btnAddComment').addEventListener('click', () => {
+  isAddingComment = true;
+  document.getElementById('workflowCanvas').style.cursor = 'crosshair';
+});
+
+function showCommentPanel(comment) {
+  const panel = document.getElementById('commentPanel');
+  panel.classList.add('active');
+
+  document.getElementById('commentAuthor').textContent = comment.author;
+  document.getElementById('commentTime').textContent = comment.time;
+  document.getElementById('commentBody').textContent = comment.text;
+
+  // Position near the comment marker
+  const canvas = document.getElementById('workflowCanvas');
+  const rect = canvas.getBoundingClientRect();
+  panel.style.left = (comment.x * rect.width / 1400 + 20) + 'px';
+  panel.style.top = (comment.y * rect.height / 900 + 20) + 'px';
+}
+
+function closeCommentPanel() {
+  document.getElementById('commentPanel').classList.remove('active');
+}
+
+function addCommentReply() {
+  const text = document.getElementById('commentReplyInput').value;
+  if (!text) return;
+
+  alert('Reply added: ' + text);
+  document.getElementById('commentReplyInput').value = '';
+  closeCommentPanel();
+}
+
+/* ===== CANVAS INTERACTION ===== */
+let scale = 1, panX = 0, panY = 0;
+let isDragging = false, lastX = 0, lastY = 0;
+
+let isAddingNode = false;
+let isAddingConnection = false;
+let connectionStartNode = null;
+let isDraggingNode = false;
+let draggedNode = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+function setupCanvasInteraction() {
+  const canvas = document.getElementById('workflowCanvas');
+  const root = document.getElementById('zoomRoot');
+
+  // Add Node button
+  document.getElementById('btnAddNode').addEventListener('click', () => {
+    isAddingNode = true;
+    isAddingConnection = false;
+    isAddingComment = false;
+    canvas.style.cursor = 'crosshair';
+  });
+
+  // Add Connection button
+  document.getElementById('btnAddConnection').addEventListener('click', () => {
+    isAddingConnection = true;
+    isAddingNode = false;
+    isAddingComment = false;
+    connectionStartNode = null;
+    canvas.style.cursor = 'crosshair';
+    alert('Click on the start node, then click on the end node to create a connection.');
+  });
+
+  canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const svgX = ((e.clientX - rect.left - panX) / scale) * (1400 / rect.width);
+    const svgY = ((e.clientY - rect.top - panY) / scale) * (900 / rect.height);
+
+    // Check if clicking on a node
+    const clickedNode = findNodeAtPosition(svgX, svgY);
+
+    // Adding new node mode
+    if (isAddingNode && !clickedNode) {
+      const name = prompt('Node name:');
+      if (name) {
+        state.nodes.push({
+          id: 'node_' + nextNodeId++,
+          name,
+          type: 'specialist',
+          x: svgX - 80,
+          y: svgY - 25,
+          width: 160,
+          height: 50
+        });
+        renderVisualWorkflow();
+      }
+      isAddingNode = false;
+      canvas.style.cursor = 'grab';
+      return;
+    }
+
+    // Adding connection mode
+    if (isAddingConnection && clickedNode) {
+      if (!connectionStartNode) {
+        connectionStartNode = clickedNode.id;
+        alert('Now click on the target node.');
+      } else {
+        if (connectionStartNode !== clickedNode.id) {
+          state.edges.push({
+            from: connectionStartNode,
+            to: clickedNode.id
+          });
+          renderVisualWorkflow();
+        }
+        connectionStartNode = null;
+        isAddingConnection = false;
+        canvas.style.cursor = 'grab';
+      }
+      return;
+    }
+
+    // Adding comment mode
+    if (isAddingComment) {
+      const text = prompt('Comment:');
+      if (text) {
+        state.comments.push({
+          id: nextCommentId++,
+          x: svgX,
+          y: svgY,
+          text,
+          author: 'Manager',
+          time: new Date().toLocaleString()
+        });
+        renderComments();
+      }
+      isAddingComment = false;
+      canvas.style.cursor = 'grab';
+      return;
+    }
+
+    // Start dragging node
+    if (clickedNode && e.shiftKey) {
+      isDraggingNode = true;
+      draggedNode = clickedNode;
+      dragOffsetX = svgX - clickedNode.x;
+      dragOffsetY = svgY - clickedNode.y;
+      canvas.style.cursor = 'move';
+      return;
+    }
+
+    // Pan canvas
+    if (!clickedNode) {
+      isDragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      canvas.classList.add('dragging');
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    isDragging = false;
+    isDraggingNode = false;
+    draggedNode = null;
+    canvas.classList.remove('dragging');
+    if (!isAddingNode && !isAddingConnection && !isAddingComment) {
+      canvas.style.cursor = 'grab';
+    }
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const svgX = ((e.clientX - rect.left - panX) / scale) * (1400 / rect.width);
+    const svgY = ((e.clientY - rect.top - panY) / scale) * (900 / rect.height);
+
+    // Dragging node
+    if (isDraggingNode && draggedNode) {
+      draggedNode.x = Math.max(0, Math.min(1300, svgX - dragOffsetX));
+      draggedNode.y = Math.max(0, Math.min(850, svgY - dragOffsetY));
+      renderVisualWorkflow();
+
+      // Update inspector if this is the selected node
+      if (state.selectedNode === draggedNode.id) {
+        document.getElementById('nodeX').value = Math.round(draggedNode.x);
+        document.getElementById('nodeY').value = Math.round(draggedNode.y);
+      }
+      return;
+    }
+
+    // Panning canvas
+    if (isDragging) {
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      panX += dx;
+      panY += dy;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      root.setAttribute('transform', `translate(${panX},${panY}) scale(${scale})`);
+    }
+  });
+
+  document.getElementById('btnZoomIn').addEventListener('click', () => {
+    scale = Math.min(2, scale * 1.2);
+    root.setAttribute('transform', `translate(${panX},${panY}) scale(${scale})`);
+  });
+
+  document.getElementById('btnZoomOut').addEventListener('click', () => {
+    scale = Math.max(0.5, scale / 1.2);
+    root.setAttribute('transform', `translate(${panX},${panY}) scale(${scale})`);
+  });
+
+  document.getElementById('btnResetView').addEventListener('click', () => {
+    scale = 1;
+    panX = 0;
+    panY = 0;
+    root.setAttribute('transform', `translate(0,0) scale(1)`);
+  });
+}
+
+function findNodeAtPosition(x, y) {
+  return state.nodes.find(node => {
+    return x >= node.x &&
+           x <= node.x + (node.width || 160) &&
+           y >= node.y &&
+           y <= node.y + (node.height || 50);
+  });
+}
+
+/* ===== CONFIGURATION EXPORT ===== */
+function exportConfig() {
+  const config = {
+    metadata: {
+      name: 'CSS Workflow Configuration',
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      exportedBy: 'CSS Management Team'
+    },
+    departments: state.departments,
+    priorityLevels: state.priorityLevels,
+    workflowSteps: state.workflowSteps,
+    visualWorkflow: {
+      nodes: state.nodes,
+      edges: state.edges
+    },
+    comments: state.comments,
+    settings: state.workflowSettings
+  };
+
+  document.getElementById('exportJSON').textContent = JSON.stringify(config, null, 2);
+  document.getElementById('exportModal').classList.add('active');
+}
+
+function closeExportModal() {
+  document.getElementById('exportModal').classList.remove('active');
+}
+
+function downloadConfig() {
+  const name = document.getElementById('exportName').value || 'workflow-config';
+  const notes = document.getElementById('exportNotes').value;
+
+  const config = JSON.parse(document.getElementById('exportJSON').textContent);
+  config.metadata.name = name;
+  config.metadata.notes = notes;
+
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name.toLowerCase().replace(/\s+/g, '-') + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function copyToClipboard() {
+  const text = document.getElementById('exportJSON').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    alert('Configuration copied to clipboard!');
+  });
+}
+
+function saveConfig() {
+  localStorage.setItem('cssWorkflowConfig', JSON.stringify(state));
+  alert('Configuration saved locally!');
+}
+
+function loadConfig() {
+  const saved = localStorage.getItem('cssWorkflowConfig');
+  if (!saved) {
+    alert('No saved configuration found.');
+    return;
+  }
+
+  if (!confirm('Load saved configuration? This will replace current data.')) return;
+
+  const loaded = JSON.parse(saved);
+  Object.assign(state, loaded);
+
+  renderDepartments();
+  renderPriorityLevels();
+  renderWorkflowSteps();
+  renderVisualWorkflow();
+
+  alert('Configuration loaded!');
+}
+
+function saveWorkflowSettings() {
+  // Save workflow settings (business hours, work days)
+  console.log('Workflow settings saved');
+}
+
+/* ===== INITIALIZE ===== */
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

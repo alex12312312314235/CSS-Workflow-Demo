@@ -661,6 +661,7 @@
           <div class="action-buttons action-buttons-right">
             <button class="btn" onclick="resetWorkflow()">Clear Form</button>
             <button class="btn btn-secondary" onclick="saveDraft()">Save as Draft</button>
+            <button class="btn" onclick="validateWorkflow()" style="background:#3498DB;color:#fff;border-color:#3498DB">🔍 Check Workflow</button>
             <button class="btn btn-primary" onclick="addToCollection()">Add to Department Collection</button>
           </div>
         </div>
@@ -807,6 +808,20 @@
     </div>
   </div>
 
+  <!-- Workflow Validation Modal -->
+  <div id="validationModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">🔍 Workflow Validation Results</h3>
+        <button class="close-modal" onclick="closeValidationModal()">&times;</button>
+      </div>
+      <div id="validationContent"></div>
+      <div class="action-buttons action-buttons-right">
+        <button class="btn btn-primary" onclick="closeValidationModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
 <!-- Include Dropdown Configuration and Components -->
 <script src="dropdownConfig.js"></script>
 <script src="dropdownComponents.js"></script>
@@ -947,8 +962,16 @@ function initWorkflowHeaderDropdowns() {
       placeholder: 'Search or select role...',
       required: true,
       showCategories: true,
-      onChange: 'updateWorkflowField("owner", document.getElementById("workflowOwner-value").value)'
+      onChange: 'updateWorkflowOwner()'
     });
+  }
+}
+
+/* ===== UPDATE WORKFLOW OWNER ===== */
+function updateWorkflowOwner() {
+  const hiddenInput = document.getElementById('workflowOwner-value');
+  if (hiddenInput) {
+    currentWorkflow.owner = hiddenInput.value;
   }
 }
 
@@ -1642,6 +1665,237 @@ function updateSummary() {
   }
 }
 
+/* ===== WORKFLOW VALIDATION ===== */
+function validateWorkflow() {
+  // Capture current data first
+  captureCurrentWorkflowData();
+
+  const errors = [];
+  const warnings = [];
+  const suggestions = [];
+  let isValid = true;
+
+  // 1. CHECK WORKFLOW HEADER
+  if (!currentWorkflow.name || currentWorkflow.name.trim() === '') {
+    errors.push('❌ Workflow name is required');
+    isValid = false;
+  }
+
+  if (!currentWorkflow.department) {
+    errors.push('❌ Department/Function is required');
+    isValid = false;
+  }
+
+  if (!currentWorkflow.category) {
+    errors.push('❌ Workflow category is required');
+    isValid = false;
+  }
+
+  if (!currentWorkflow.owner) {
+    errors.push('❌ Workflow owner (role) is required');
+    isValid = false;
+  }
+
+  if (!currentWorkflow.status) {
+    warnings.push('⚠️ Workflow status is not set (defaults to Draft)');
+  }
+
+  if (!currentWorkflow.initiationSource) {
+    warnings.push('⚠️ Initiation source is not specified');
+  }
+
+  // 2. CHECK STEPS EXIST
+  if (!currentWorkflow.steps || currentWorkflow.steps.length === 0) {
+    errors.push('❌ No workflow steps defined - add at least one step');
+    isValid = false;
+  } else {
+    // 3. CHECK EACH STEP
+    currentWorkflow.steps.forEach((step, index) => {
+      const stepNum = index + 1;
+
+      // Required fields
+      if (!step.name || step.name.trim() === '') {
+        errors.push(`❌ Step ${stepNum}: Name is required`);
+        isValid = false;
+      }
+
+      if (!step.stepType) {
+        errors.push(`❌ Step ${stepNum}: Step type is required`);
+        isValid = false;
+      }
+
+      // Get responsible role from hidden input
+      const roleInput = document.getElementById(`step-${step.id}-role-value`);
+      if (!roleInput || !roleInput.value) {
+        errors.push(`❌ Step ${stepNum} (${step.name || 'Unnamed'}): Responsible role is required`);
+        isValid = false;
+      }
+
+      if (!step.expectedDuration || parseFloat(step.expectedDuration) <= 0) {
+        errors.push(`❌ Step ${stepNum} (${step.name || 'Unnamed'}): Duration must be greater than 0`);
+        isValid = false;
+      }
+
+      if (!step.durationUnit) {
+        warnings.push(`⚠️ Step ${stepNum} (${step.name || 'Unnamed'}): Duration unit not set (defaults to business days)`);
+      }
+
+      // Warnings for best practices
+      if (!step.commonActivity) {
+        suggestions.push(`💡 Step ${stepNum} (${step.name || 'Unnamed'}): Consider selecting a common activity for consistency`);
+      }
+
+      if (!step.description || step.description.trim() === '') {
+        suggestions.push(`💡 Step ${stepNum} (${step.name || 'Unnamed'}): Adding a description helps clarify the step`);
+      }
+
+      if (step.riskLevel === 'high' && (!step.slaBuffer || parseFloat(step.slaBuffer) === 0)) {
+        warnings.push(`⚠️ Step ${stepNum} (${step.name || 'Unnamed'}): High risk step with no buffer time - consider adding buffer`);
+      }
+
+      if (step.dependencies && step.dependencies.length >= 5) {
+        warnings.push(`⚠️ Step ${stepNum} (${step.name || 'Unnamed'}): High number of dependencies (${step.dependencies.length}) may cause delays`);
+      }
+
+      // Check for very long durations
+      const duration = parseFloat(step.expectedDuration) || 0;
+      const unit = step.durationUnit || 'business-days';
+      let hours = duration;
+      if (unit === 'business-days' || unit === 'days') hours *= 8;
+      if (unit === 'calendar-days') hours *= 24;
+      if (unit === 'weeks') hours *= 40;
+
+      if (hours > 160) { // More than 4 weeks
+        warnings.push(`⚠️ Step ${stepNum} (${step.name || 'Unnamed'}): Duration is quite long (${duration} ${unit}) - consider breaking into smaller steps`);
+      }
+    });
+
+    // 4. CHECK FOR DUPLICATE STEP NAMES
+    const stepNames = currentWorkflow.steps.map(s => s.name.trim().toLowerCase()).filter(n => n !== '');
+    const duplicates = stepNames.filter((name, index) => stepNames.indexOf(name) !== index);
+    if (duplicates.length > 0) {
+      warnings.push(`⚠️ Duplicate step names detected: ${[...new Set(duplicates)].join(', ')}`);
+    }
+
+    // 5. CHECK WORKFLOW FLOW
+    const hasApproval = currentWorkflow.steps.some(s => s.stepType === 'approval');
+    if (!hasApproval) {
+      suggestions.push('💡 No approval steps found - consider if any approvals are needed in this workflow');
+    }
+
+    const hasReview = currentWorkflow.steps.some(s => s.stepType === 'review');
+    if (!hasReview && currentWorkflow.steps.length > 3) {
+      suggestions.push('💡 No review/verification steps found - consider adding quality checks');
+    }
+  }
+
+  // 6. CHECK SLA TARGET
+  if (!currentWorkflow.slaTarget || parseFloat(currentWorkflow.slaTarget) <= 0) {
+    warnings.push('⚠️ No SLA target set - this helps track if workflow is on schedule');
+  } else {
+    // Check if steps fit within SLA
+    const totalHours = currentWorkflow.steps.reduce((sum, step) => {
+      const duration = parseFloat(step.expectedDuration) || 0;
+      const buffer = parseFloat(step.slaBuffer) || 0;
+      const unit = step.durationUnit || 'business-days';
+      let hours = duration + buffer;
+
+      if (unit === 'hours') hours = hours;
+      else if (unit === 'business-days' || unit === 'days') hours *= 8;
+      else if (unit === 'calendar-days') hours *= 24;
+      else if (unit === 'weeks') hours *= 40;
+
+      return sum + hours;
+    }, 0);
+
+    const slaHours = parseFloat(currentWorkflow.slaTarget) * 8;
+    if (totalHours > slaHours) {
+      warnings.push(`⚠️ Total workflow duration (${(totalHours/8).toFixed(1)} days) exceeds SLA target (${currentWorkflow.slaTarget} days) by ${((totalHours - slaHours)/8).toFixed(1)} days`);
+    }
+  }
+
+  // 7. DISPLAY VALIDATION RESULTS
+  displayValidationResults(isValid, errors, warnings, suggestions);
+}
+
+function displayValidationResults(isValid, errors, warnings, suggestions) {
+  const content = document.getElementById('validationContent');
+
+  let html = '';
+
+  // Overall status
+  if (isValid && errors.length === 0) {
+    html += `
+      <div class="alert alert-success" style="font-size:16px;padding:20px;text-align:center">
+        <div style="font-size:48px;margin-bottom:10px">✅</div>
+        <strong>Workflow is Valid!</strong>
+        <p style="margin-top:10px">All required fields are filled and the workflow is ready to save.</p>
+      </div>
+    `;
+  } else {
+    html += `
+      <div class="alert alert-warning" style="font-size:16px;padding:20px;text-align:center">
+        <div style="font-size:48px;margin-bottom:10px">⚠️</div>
+        <strong>Issues Found</strong>
+        <p style="margin-top:10px">Please review and fix the issues below before saving.</p>
+      </div>
+    `;
+  }
+
+  // Errors (blocking)
+  if (errors.length > 0) {
+    html += `
+      <div style="margin-top:20px">
+        <h4 style="color:#E74C3C;margin-bottom:10px">🚫 Errors (Must Fix):</h4>
+        <ul style="list-style:none;padding:0">
+          ${errors.map(err => `<li style="padding:8px;margin-bottom:5px;background:#f8d7da;border-left:3px solid #E74C3C;border-radius:3px">${err}</li>`).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  // Warnings (should fix)
+  if (warnings.length > 0) {
+    html += `
+      <div style="margin-top:20px">
+        <h4 style="color:#F39C12;margin-bottom:10px">⚠️ Warnings (Should Review):</h4>
+        <ul style="list-style:none;padding:0">
+          ${warnings.map(warn => `<li style="padding:8px;margin-bottom:5px;background:#fff3cd;border-left:3px solid #F39C12;border-radius:3px">${warn}</li>`).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  // Suggestions (nice to have)
+  if (suggestions.length > 0) {
+    html += `
+      <div style="margin-top:20px">
+        <h4 style="color:#3498DB;margin-bottom:10px">💡 Suggestions (Optional):</h4>
+        <ul style="list-style:none;padding:0">
+          ${suggestions.map(sug => `<li style="padding:8px;margin-bottom:5px;background:#d1ecf1;border-left:3px solid #3498DB;border-radius:3px">${sug}</li>`).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  // Summary counts
+  html += `
+    <div style="margin-top:20px;padding:15px;background:#f8f9fa;border-radius:4px;text-align:center">
+      <strong>Summary:</strong>
+      <span style="color:#E74C3C">${errors.length} Error${errors.length !== 1 ? 's' : ''}</span>,
+      <span style="color:#F39C12">${warnings.length} Warning${warnings.length !== 1 ? 's' : ''}</span>,
+      <span style="color:#3498DB">${suggestions.length} Suggestion${suggestions.length !== 1 ? 's' : ''}</span>
+    </div>
+  `;
+
+  content.innerHTML = html;
+  document.getElementById('validationModal').classList.add('active');
+}
+
+function closeValidationModal() {
+  document.getElementById('validationModal').classList.remove('active');
+}
+
 /* ===== WORKFLOW ACTIONS ===== */
 function resetWorkflow() {
   if (confirm('Clear all fields and start over?')) {
@@ -1729,8 +1983,11 @@ function captureCurrentWorkflowData() {
   const categorySelect = document.getElementById('workflowCategory');
   currentWorkflow.category = categorySelect ? categorySelect.value : '';
 
+  // Get owner from hidden value input (searchable dropdown)
   const ownerValue = document.getElementById('workflowOwner-value');
-  currentWorkflow.owner = ownerValue ? ownerValue.value : '';
+  if (ownerValue && ownerValue.value) {
+    currentWorkflow.owner = ownerValue.value;
+  }
 
   const deptSelect = document.getElementById('workflowDepartment');
   currentWorkflow.department = deptSelect ? deptSelect.value : '';

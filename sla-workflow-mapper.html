@@ -181,6 +181,307 @@
   .welcome-feature-text{flex:1}
   .welcome-feature-title{font-weight:600;margin-bottom:4px}
   .welcome-feature-desc{font-size:13px;color:#666}
+
+  /* ===== ENHANCED DROPDOWN STYLES (V2.0) ===== */
+
+  /* Standard Dropdown Enhancement */
+  .dropdown-standard{
+    width:100%;
+    padding:8px 12px;
+    border:1px solid #ccc;
+    border-radius:4px;
+    font-size:13px;
+    font-family:inherit;
+    background:#fff;
+    cursor:pointer;
+    transition:border-color 0.2s;
+  }
+  .dropdown-standard:hover{
+    border-color:var(--ekfc-red);
+  }
+  .dropdown-standard:focus{
+    outline:none;
+    border-color:var(--ekfc-red);
+    box-shadow:0 0 0 3px rgba(200, 16, 46, 0.1);
+  }
+
+  /* Searchable Dropdown */
+  .searchable-dropdown{
+    position:relative;
+    width:100%;
+  }
+  .searchable-dropdown-input{
+    width:100%;
+    padding:8px 30px 8px 12px;
+    border:1px solid #ccc;
+    border-radius:4px;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .searchable-dropdown-input:focus{
+    outline:none;
+    border-color:var(--ekfc-red);
+    box-shadow:0 0 0 3px rgba(200, 16, 46, 0.1);
+  }
+  .searchable-dropdown-arrow{
+    position:absolute;
+    right:8px;
+    top:50%;
+    transform:translateY(-50%);
+    pointer-events:none;
+    color:#666;
+    font-size:10px;
+  }
+  .searchable-dropdown-options{
+    position:absolute;
+    top:100%;
+    left:0;
+    right:0;
+    background:#fff;
+    border:1px solid #ccc;
+    border-top:none;
+    border-radius:0 0 4px 4px;
+    max-height:250px;
+    overflow-y:auto;
+    z-index:1000;
+    box-shadow:0 4px 6px rgba(0,0,0,0.1);
+  }
+  .dropdown-option{
+    padding:8px 12px;
+    cursor:pointer;
+    font-size:13px;
+    transition:background 0.15s;
+  }
+  .dropdown-option:hover{
+    background:#f8f8f8;
+  }
+  .dropdown-option.selected{
+    background:#e8f6f5;
+    color:var(--ekfc-red);
+  }
+  .dropdown-category{
+    padding:6px 12px;
+    font-size:11px;
+    font-weight:600;
+    color:#95A5A6;
+    text-transform:uppercase;
+    background:#f8f8f8;
+    border-top:1px solid #eee;
+  }
+  .dropdown-category:first-child{
+    border-top:none;
+  }
+  .no-results{
+    padding:10px;
+    color:#999;
+    text-align:center;
+    font-size:12px;
+  }
+
+  /* Multi-Select Dropdown */
+  .multi-select-dropdown{
+    position:relative;
+    width:100%;
+  }
+  .multi-select-tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px;
+    padding:6px;
+    border:1px solid #ccc;
+    border-radius:4px;
+    min-height:38px;
+    background:#fff;
+    cursor:text;
+  }
+  .multi-select-tags:focus-within{
+    border-color:var(--ekfc-red);
+    box-shadow:0 0 0 3px rgba(200, 16, 46, 0.1);
+  }
+  .multi-select-input{
+    flex:1;
+    min-width:120px;
+    border:none;
+    outline:none;
+    padding:2px 4px;
+    font-size:13px;
+  }
+  .multi-select-options{
+    position:absolute;
+    top:100%;
+    left:0;
+    right:0;
+    background:#fff;
+    border:1px solid #ccc;
+    border-top:none;
+    border-radius:0 0 4px 4px;
+    max-height:200px;
+    overflow-y:auto;
+    z-index:1000;
+    box-shadow:0 4px 6px rgba(0,0,0,0.1);
+  }
+  .multi-select-option{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 12px;
+    cursor:pointer;
+    font-size:13px;
+    transition:background 0.15s;
+  }
+  .multi-select-option:hover{
+    background:#f8f8f8;
+  }
+  .multi-select-option input[type="checkbox"]{
+    width:auto;
+    cursor:pointer;
+  }
+  .multi-select-count{
+    position:absolute;
+    top:-20px;
+    right:0;
+    font-size:11px;
+    color:#999;
+  }
+
+  /* Tag Styling */
+  .tag{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:4px 8px;
+    border-radius:12px;
+    font-size:11px;
+    font-weight:500;
+    white-space:nowrap;
+  }
+  .tag-remove{
+    cursor:pointer;
+    font-weight:bold;
+    font-size:14px;
+    line-height:1;
+    opacity:0.7;
+    transition:opacity 0.2s;
+  }
+  .tag-remove:hover{
+    opacity:1;
+  }
+
+  /* Tags Container (for remarks section) */
+  .tags-container{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:8px;
+  }
+  .tag-selector{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:10px;
+    padding:10px;
+    background:#f9f9f9;
+    border-radius:4px;
+  }
+  .tag-option{
+    padding:4px 10px;
+    border:1px solid #ddd;
+    border-radius:12px;
+    font-size:11px;
+    cursor:pointer;
+    background:#fff;
+    transition:all 0.2s;
+  }
+  .tag-option:hover{
+    background:#f8f8f8;
+    border-color:#999;
+  }
+  .tag-option.selected{
+    background:var(--ekfc-red);
+    color:#fff;
+    border-color:var(--ekfc-red);
+  }
+
+  /* Validation Warnings */
+  .validation-warning{
+    padding:8px 12px;
+    margin-top:8px;
+    border-radius:3px;
+    font-size:12px;
+    line-height:1.4;
+  }
+  .validation-warning.validation-warning{
+    background:#fff3cd;
+    border-left:3px solid #F39C12;
+    color:#856404;
+  }
+  .validation-warning.validation-error{
+    background:#f8d7da;
+    border-left:3px solid #E74C3C;
+    color:#721c24;
+  }
+  .validation-warning.validation-info,
+  .validation-warning.validation-tip{
+    background:#d1ecf1;
+    border-left:3px solid #3498DB;
+    color:#0c5460;
+  }
+
+  /* Status Badge */
+  .status-badge{
+    display:inline-block;
+    padding:3px 10px;
+    border-radius:12px;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+  }
+  .status-draft{background:#95A5A620;color:#95A5A6;border:1px solid #95A5A6}
+  .status-active{background:#3498DB20;color:#3498DB;border:1px solid #3498DB}
+  .status-under-review{background:#F39C1220;color:#F39C12;border:1px solid #F39C12}
+  .status-approved{background:#27AE6020;color:#27AE60;border:1px solid #27AE60}
+  .status-on-hold{background:#E67E2220;color:#E67E22;border:1px solid #E67E22}
+  .status-archived{background:#7F8C8D20;color:#7F8C8D;border:1px solid #7F8C8D}
+  .status-obsolete{background:#2C3E5020;color:#2C3E50;border:1px solid #2C3E50}
+
+  /* Risk Level Badge */
+  .risk-badge{
+    display:inline-block;
+    padding:3px 10px;
+    border-radius:12px;
+    font-size:11px;
+    font-weight:700;
+  }
+  .risk-low{background:#27AE6020;color:#27AE60;border:1px solid #27AE60}
+  .risk-medium{background:#F39C1220;color:#F39C12;border:1px solid #F39C12}
+  .risk-high{background:#E74C3C20;color:#E74C3C;border:1px solid #E74C3C}
+
+  /* Enhanced form layout for new fields */
+  .form-row-4{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:10px;
+  }
+  .form-group-inline{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .form-group-inline label{
+    margin-bottom:0;
+    white-space:nowrap;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .form-row-3, .form-row-4{
+      grid-template-columns:1fr;
+    }
+    .searchable-dropdown-options,
+    .multi-select-options{
+      max-height:180px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -266,49 +567,76 @@
             <div class="form-row">
               <div class="form-group">
                 <label>
-                  Category
+                  Department/Function *
+                  <span class="tooltip">
+                    <span class="tooltip-icon">?</span>
+                    <span class="tooltiptext">Which department or function owns this workflow?</span>
+                  </span>
+                </label>
+                <div id="workflowDepartment-container"></div>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  Workflow Category/Type *
                   <span class="tooltip">
                     <span class="tooltip-icon">?</span>
                     <span class="tooltiptext">What type of workflow is this?</span>
                   </span>
                 </label>
-                <select id="workflowCategory">
-                  <option>Request Processing</option>
-                  <option>Approval Flow</option>
-                  <option>Data Management</option>
-                  <option>Reporting</option>
-                  <option>Quality Control</option>
-                  <option>Documentation</option>
-                  <option>Training</option>
-                  <option>Other</option>
-                </select>
+                <div id="workflowCategory-container"></div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>
+                  Initiation Source *
+                  <span class="tooltip">
+                    <span class="tooltip-icon">?</span>
+                    <span class="tooltiptext">How is this workflow typically initiated?</span>
+                  </span>
+                </label>
+                <div id="workflowInitiationSource-container"></div>
               </div>
 
               <div class="form-group">
                 <label>
-                  Priority Level
+                  Priority Level *
                   <span class="tooltip">
                     <span class="tooltip-icon">?</span>
                     <span class="tooltiptext">How critical is this workflow to operations?</span>
                   </span>
                 </label>
-                <select id="workflowPriority">
-                  <option value="high">High Priority</option>
-                  <option value="medium" selected>Medium Priority</option>
-                  <option value="low">Low Priority</option>
+                <select id="workflowPriority" class="dropdown-standard" onchange="updateWorkflowField('priority', this.value)">
+                  <option value="high">🔴 High (Urgent/Critical)</option>
+                  <option value="medium" selected>🟡 Medium (Standard)</option>
+                  <option value="low">🟢 Low (Nice to have)</option>
                 </select>
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
-                <label>Workflow Owner</label>
-                <input type="text" id="workflowOwner" placeholder="Your name">
+                <label>
+                  Workflow Status *
+                  <span class="tooltip">
+                    <span class="tooltip-icon">?</span>
+                    <span class="tooltiptext">Current status of this workflow definition</span>
+                  </span>
+                </label>
+                <div id="workflowStatus-container"></div>
               </div>
 
               <div class="form-group">
-                <label>Department</label>
-                <input type="text" id="workflowDepartment" placeholder="e.g., Health & Diet">
+                <label>
+                  Workflow Owner (Role) *
+                  <span class="tooltip">
+                    <span class="tooltip-icon">?</span>
+                    <span class="tooltiptext">Role responsible for this workflow (not personal name)</span>
+                  </span>
+                </label>
+                <div id="workflowOwner-container"></div>
               </div>
             </div>
           </div>
@@ -479,16 +807,25 @@
     </div>
   </div>
 
+<!-- Include Dropdown Configuration and Components -->
+<script src="dropdownConfig.js"></script>
+<script src="dropdownComponents.js"></script>
+
 <script>
 /* ===== STATE MANAGEMENT ===== */
 let workflows = [];
 let currentWorkflow = {
   id: null,
   name: '',
-  category: '',
-  owner: '',
-  department: '',
+  category: '', // Category ID
+  categoryData: {}, // Full category object
+  owner: '', // Owner role
+  department: '', // Department ID
+  departmentData: {}, // Full department object
   priority: 'medium',
+  status: 'draft', // NEW: Workflow status
+  initiationSource: '', // NEW: How workflow was initiated
+  initiationSourceData: {}, // Full initiation source object
   dateCreated: null,
   dateModified: null,
   steps: [],
@@ -516,6 +853,9 @@ function init() {
     document.getElementById('builderMain').style.display = 'none';
   }
 
+  // Initialize workflow header dropdowns
+  initWorkflowHeaderDropdowns();
+
   // Populate filter dropdowns
   updateFilterDropdowns();
 
@@ -527,6 +867,102 @@ function closeWelcome() {
   document.getElementById('welcomeScreen').style.display = 'none';
   document.getElementById('builderMain').style.display = 'grid';
   localStorage.setItem('hasVisitedBefore', 'true');
+}
+
+/* ===== WORKFLOW HEADER DROPDOWN INITIALIZATION ===== */
+function initWorkflowHeaderDropdowns() {
+  // Department Dropdown
+  const deptContainer = document.getElementById('workflowDepartment-container');
+  if (deptContainer) {
+    deptContainer.innerHTML = DropdownComponents.createStandardDropdown({
+      id: 'workflowDepartment',
+      name: 'workflowDepartment',
+      items: dropdownConfig.departments,
+      selectedValue: currentWorkflow.department,
+      placeholder: 'Select department...',
+      required: true,
+      showIcons: false,
+      includeRecent: true,
+      recentField: 'workflowDepartment',
+      onChange: 'updateWorkflowField("department", this.value)'
+    });
+  }
+
+  // Category Dropdown
+  const catContainer = document.getElementById('workflowCategory-container');
+  if (catContainer) {
+    catContainer.innerHTML = DropdownComponents.createStandardDropdown({
+      id: 'workflowCategory',
+      name: 'workflowCategory',
+      items: dropdownConfig.categories,
+      selectedValue: currentWorkflow.category,
+      placeholder: 'Select category...',
+      required: true,
+      showIcons: true,
+      includeRecent: true,
+      recentField: 'workflowCategory',
+      onChange: 'updateWorkflowField("category", this.value)'
+    });
+  }
+
+  // Initiation Source Dropdown
+  const initSourceContainer = document.getElementById('workflowInitiationSource-container');
+  if (initSourceContainer) {
+    initSourceContainer.innerHTML = DropdownComponents.createStandardDropdown({
+      id: 'workflowInitiationSource',
+      name: 'workflowInitiationSource',
+      items: dropdownConfig.initiationSources,
+      selectedValue: currentWorkflow.initiationSource,
+      placeholder: 'Select initiation source...',
+      required: true,
+      includeRecent: true,
+      recentField: 'workflowInitiationSource',
+      onChange: 'updateWorkflowField("initiationSource", this.value)'
+    });
+  }
+
+  // Status Dropdown
+  const statusContainer = document.getElementById('workflowStatus-container');
+  if (statusContainer) {
+    statusContainer.innerHTML = DropdownComponents.createStandardDropdown({
+      id: 'workflowStatus',
+      name: 'workflowStatus',
+      items: dropdownConfig.statuses,
+      selectedValue: currentWorkflow.status || 'draft',
+      placeholder: 'Select status...',
+      required: true,
+      onChange: 'updateWorkflowField("status", this.value)'
+    });
+  }
+
+  // Owner (Searchable Role Dropdown)
+  const ownerContainer = document.getElementById('workflowOwner-container');
+  if (ownerContainer) {
+    const allRoles = DropdownHelpers.getAllRolesWithCategories();
+    ownerContainer.innerHTML = DropdownComponents.createSearchableDropdown({
+      id: 'workflowOwner',
+      name: 'workflowOwner',
+      items: allRoles,
+      selectedValue: currentWorkflow.owner,
+      placeholder: 'Search or select role...',
+      required: true,
+      showCategories: true,
+      onChange: 'updateWorkflowField("owner", document.getElementById("workflowOwner-value").value)'
+    });
+  }
+}
+
+/* ===== UPDATE WORKFLOW FIELD ===== */
+function updateWorkflowField(field, value) {
+  currentWorkflow[field] = value;
+
+  // Save to recent selections
+  DropdownHelpers.saveRecentSelection(`workflow${field.charAt(0).toUpperCase() + field.slice(1)}`, value);
+
+  // Update summary if needed
+  if (field === 'priority' || field === 'department' || field === 'status') {
+    updateSummary();
+  }
 }
 
 /* ===== PAGE SWITCHING ===== */
@@ -553,15 +989,26 @@ function addStep() {
     name: '',
     description: '',
     responsiblePerson: '',
+    responsibleRole: '', // NEW: Role title
+    responsibleDepartments: [], // NEW: Multi-select departments
     expectedDuration: '',
-    durationUnit: 'hours',
+    durationUnit: 'business-days', // Changed default to business-days
     slaBuffer: '',
     stepType: 'task',
+    stepTypeData: {}, // Full step type object
+    commonActivity: '', // NEW: Activity ID
+    commonActivityData: {}, // Full activity object
+    dependencies: [], // NEW: Array of dependency IDs
+    dependenciesData: [], // Full dependency objects
+    riskLevel: '', // NEW: low/medium/high
+    stepStatus: 'not-started', // NEW: Step status for tracking
     remarks: {
       notes: '',
       knownIssues: '',
+      knownIssuesTags: [], // NEW: Array of tag IDs
       dependencies: '',
       bestPractices: '',
+      bestPracticesTags: [], // NEW: Array of tag IDs
       freeformComments: ''
     }
   };
@@ -580,6 +1027,7 @@ function renderSteps() {
     return;
   }
 
+  // First, render HTML structure with placeholder containers
   container.innerHTML = currentWorkflow.steps.map((step, index) => `
     <div class="step-card" data-step-id="${step.id}">
       <div class="step-card-header">
@@ -587,63 +1035,85 @@ function renderSteps() {
           <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
           <div class="step-number">${index + 1}</div>
           <div class="step-content">
+            <!-- Step Name -->
             <div class="form-group" style="margin-bottom:8px">
               <input type="text" placeholder="Step name (e.g., Submit Request)"
-                     value="${step.name}"
+                     value="${step.name || ''}"
                      onchange="updateStepField(${step.id}, 'name', this.value)"
                      style="font-weight:600;font-size:14px">
             </div>
+
+            <!-- Step Description -->
             <div class="form-group" style="margin-bottom:8px">
               <textarea placeholder="Brief description of this step..."
                         onchange="updateStepField(${step.id}, 'description', this.value)"
-                        style="min-height:50px">${step.description}</textarea>
+                        style="min-height:50px">${step.description || ''}</textarea>
             </div>
-            <div class="form-row-3" style="margin-bottom:8px">
+
+            <!-- Row 1: Step Type & Common Activity -->
+            <div class="form-row" style="margin-bottom:8px">
               <div class="form-group" style="margin-bottom:0">
-                <label style="font-size:11px">Responsible Person</label>
-                <input type="text" placeholder="Who handles this?"
-                       value="${step.responsiblePerson}"
-                       onchange="updateStepField(${step.id}, 'responsiblePerson', this.value)">
+                <label style="font-size:11px">Step Type *</label>
+                <div id="step-${step.id}-type-container"></div>
               </div>
               <div class="form-group" style="margin-bottom:0">
-                <label style="font-size:11px">Duration</label>
-                <input type="number" placeholder="24" min="0"
-                       value="${step.expectedDuration}"
-                       onchange="updateStepField(${step.id}, 'expectedDuration', this.value)">
+                <label style="font-size:11px">Common Activity</label>
+                <div id="step-${step.id}-activity-container"></div>
+              </div>
+            </div>
+
+            <!-- Row 2: Responsible Role & Duration -->
+            <div class="form-row-3" style="margin-bottom:8px">
+              <div class="form-group" style="margin-bottom:0">
+                <label style="font-size:11px">Responsible Role *</label>
+                <div id="step-${step.id}-role-container"></div>
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label style="font-size:11px">Duration *</label>
+                <input type="number" placeholder="5" min="0" step="0.5"
+                       value="${step.expectedDuration || ''}"
+                       onchange="updateStepField(${step.id}, 'expectedDuration', this.value)"
+                       style="width:100%">
               </div>
               <div class="form-group" style="margin-bottom:0">
                 <label style="font-size:11px">Unit</label>
-                <select onchange="updateStepField(${step.id}, 'durationUnit', this.value)">
-                  <option value="hours" ${step.durationUnit === 'hours' ? 'selected' : ''}>Hours</option>
-                  <option value="days" ${step.durationUnit === 'days' ? 'selected' : ''}>Days</option>
-                  <option value="weeks" ${step.durationUnit === 'weeks' ? 'selected' : ''}>Weeks</option>
-                </select>
+                <div id="step-${step.id}-duration-unit-container"></div>
               </div>
             </div>
-            <div class="form-row" style="margin-bottom:0">
+
+            <!-- Row 3: Risk Level, Step Status, Buffer -->
+            <div class="form-row-3" style="margin-bottom:8px">
               <div class="form-group" style="margin-bottom:0">
-                <label style="font-size:11px">Step Type</label>
-                <select onchange="updateStepField(${step.id}, 'stepType', this.value)">
-                  <option value="task" ${step.stepType === 'task' ? 'selected' : ''}>Standard Task</option>
-                  <option value="approval" ${step.stepType === 'approval' ? 'selected' : ''}>Approval</option>
-                  <option value="review" ${step.stepType === 'review' ? 'selected' : ''}>Review</option>
-                  <option value="decision" ${step.stepType === 'decision' ? 'selected' : ''}>Decision</option>
-                  <option value="external" ${step.stepType === 'external' ? 'selected' : ''}>External Dependency</option>
-                </select>
+                <label style="font-size:11px">Risk Level</label>
+                <div id="step-${step.id}-risk-container"></div>
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label style="font-size:11px">Step Status</label>
+                <div id="step-${step.id}-status-container"></div>
               </div>
               <div class="form-group" style="margin-bottom:0">
                 <label style="font-size:11px">
-                  Buffer Time (optional)
+                  Buffer Time
                   <span class="tooltip">
                     <span class="tooltip-icon">?</span>
-                    <span class="tooltiptext">Extra time cushion for unexpected delays</span>
+                    <span class="tooltiptext">Extra time for unexpected delays (same unit as duration)</span>
                   </span>
                 </label>
-                <input type="number" placeholder="e.g., 2" min="0"
-                       value="${step.slaBuffer}"
-                       onchange="updateStepField(${step.id}, 'slaBuffer', this.value)">
+                <input type="number" placeholder="0" min="0" step="0.5"
+                       value="${step.slaBuffer || ''}"
+                       onchange="updateStepField(${step.id}, 'slaBuffer', this.value)"
+                       style="width:100%">
               </div>
             </div>
+
+            <!-- Row 4: Dependencies (Multi-select) -->
+            <div class="form-group" style="margin-bottom:0">
+              <label style="font-size:11px">Dependencies (What this step requires)</label>
+              <div id="step-${step.id}-dependencies-container"></div>
+            </div>
+
+            <!-- Validation Warnings -->
+            <div id="step-${step.id}-warnings"></div>
           </div>
         </div>
         <div class="step-header-right">
@@ -653,40 +1123,338 @@ function renderSteps() {
         </div>
       </div>
 
+      <!-- Enhanced Remarks Section with Tags -->
       <div class="remarks-section">
         <button class="remarks-toggle" onclick="toggleRemarks(${step.id})">
           <span id="remarks-arrow-${step.id}">▶</span> Remarks & Notes (Optional)
         </button>
         <div class="remarks-content" id="remarks-${step.id}">
+          <!-- General Notes -->
           <div class="remarks-field">
             <label>📝 Notes</label>
             <textarea placeholder="General notes about this step..."
-                      onchange="updateRemarkField(${step.id}, 'notes', this.value)">${step.remarks.notes}</textarea>
+                      onchange="updateRemarkField(${step.id}, 'notes', this.value)">${step.remarks.notes || ''}</textarea>
           </div>
+
+          <!-- Known Issues with Tags -->
           <div class="remarks-field">
             <label>⚠️ Known Issues</label>
-            <textarea placeholder="Common problems or delays..."
-                      onchange="updateRemarkField(${step.id}, 'knownIssues', this.value)">${step.remarks.knownIssues}</textarea>
+            <div class="tag-selector" id="step-${step.id}-issues-tags"></div>
+            <textarea placeholder="Describe any known issues or challenges..."
+                      onchange="updateRemarkField(${step.id}, 'knownIssues', this.value)">${step.remarks.knownIssues || ''}</textarea>
           </div>
-          <div class="remarks-field">
-            <label>🔗 Dependencies</label>
-            <textarea placeholder="What this step depends on..."
-                      onchange="updateRemarkField(${step.id}, 'dependencies', this.value)">${step.remarks.dependencies}</textarea>
-          </div>
+
+          <!-- Best Practices with Tags -->
           <div class="remarks-field">
             <label>✅ Best Practices</label>
+            <div class="tag-selector" id="step-${step.id}-practices-tags"></div>
             <textarea placeholder="Tips for completing this step efficiently..."
-                      onchange="updateRemarkField(${step.id}, 'bestPractices', this.value)">${step.remarks.bestPractices}</textarea>
+                      onchange="updateRemarkField(${step.id}, 'bestPractices', this.value)">${step.remarks.bestPractices || ''}</textarea>
           </div>
+
+          <!-- Additional Comments -->
           <div class="remarks-field">
             <label>💬 Additional Comments</label>
             <textarea placeholder="Any other relevant information..."
-                      onchange="updateRemarkField(${step.id}, 'freeformComments', this.value)">${step.remarks.freeformComments}</textarea>
+                      onchange="updateRemarkField(${step.id}, 'freeformComments', this.value)">${step.remarks.freeformComments || ''}</textarea>
           </div>
         </div>
       </div>
     </div>
   `).join('');
+
+  // Second, populate all dropdowns for each step
+  currentWorkflow.steps.forEach((step, index) => {
+    initializeStepDropdowns(step);
+  });
+}
+
+/* ===== STEP DROPDOWN INITIALIZATION ===== */
+function initializeStepDropdowns(step) {
+  const stepId = step.id;
+
+  // 1. Step Type Dropdown (with icons)
+  const typeContainer = document.getElementById(`step-${stepId}-type-container`);
+  if (typeContainer) {
+    typeContainer.innerHTML = DropdownComponents.createStandardDropdown({
+      id: `step-${stepId}-type`,
+      name: `step-${stepId}-type`,
+      items: dropdownConfig.stepTypes,
+      selectedValue: step.stepType || 'task',
+      placeholder: 'Select type...',
+      required: true,
+      showIcons: true,
+      onChange: `updateStepType(${stepId}, this.value)`
+    });
+  }
+
+  // 2. Common Activity Dropdown (cascades from Step Type)
+  updateActivityDropdown(stepId, step.stepType || 'task', step.commonActivity);
+
+  // 3. Responsible Role Dropdown (searchable)
+  const roleContainer = document.getElementById(`step-${stepId}-role-container`);
+  if (roleContainer) {
+    const allRoles = DropdownHelpers.getAllRolesWithCategories();
+    roleContainer.innerHTML = DropdownComponents.createSearchableDropdown({
+      id: `step-${stepId}-role`,
+      name: `step-${stepId}-role`,
+      items: allRoles,
+      selectedValue: step.responsibleRole || step.responsiblePerson || '',
+      placeholder: 'Search role...',
+      required: true,
+      showCategories: true,
+      onChange: `updateStepField(${stepId}, 'responsibleRole', document.getElementById('step-${stepId}-role-value').value)`
+    });
+  }
+
+  // 4. Duration Unit Dropdown (business days default)
+  const durationUnitContainer = document.getElementById(`step-${stepId}-duration-unit-container`);
+  if (durationUnitContainer) {
+    durationUnitContainer.innerHTML = DropdownComponents.createStandardDropdown({
+      id: `step-${stepId}-duration-unit`,
+      name: `step-${stepId}-duration-unit`,
+      items: dropdownConfig.durationUnits,
+      selectedValue: step.durationUnit || 'business-days',
+      placeholder: '',
+      onChange: `updateStepField(${stepId}, 'durationUnit', this.value)`
+    });
+  }
+
+  // 5. Risk Level Dropdown
+  const riskContainer = document.getElementById(`step-${stepId}-risk-container`);
+  if (riskContainer) {
+    riskContainer.innerHTML = DropdownComponents.createStandardDropdown({
+      id: `step-${stepId}-risk`,
+      name: `step-${stepId}-risk`,
+      items: dropdownConfig.riskLevels,
+      selectedValue: step.riskLevel || '',
+      placeholder: 'Select risk...',
+      showIcons: true,
+      onChange: `updateStepField(${stepId}, 'riskLevel', this.value); checkStepValidation(${stepId})`
+    });
+  }
+
+  // 6. Step Status Dropdown
+  const statusContainer = document.getElementById(`step-${stepId}-status-container`);
+  if (statusContainer) {
+    statusContainer.innerHTML = DropdownComponents.createStandardDropdown({
+      id: `step-${stepId}-status`,
+      name: `step-${stepId}-status`,
+      items: dropdownConfig.stepStatuses,
+      selectedValue: step.stepStatus || 'not-started',
+      placeholder: 'Status...',
+      showIcons: true,
+      onChange: `updateStepField(${stepId}, 'stepStatus', this.value)`
+    });
+  }
+
+  // 7. Dependencies Multi-Select
+  const depsContainer = document.getElementById(`step-${stepId}-dependencies-container`);
+  if (depsContainer) {
+    depsContainer.innerHTML = DropdownComponents.createMultiSelectDropdown({
+      id: `step-${stepId}-dependencies`,
+      name: `step-${stepId}-dependencies`,
+      items: dropdownConfig.dependencies,
+      selectedValues: step.dependencies || [],
+      placeholder: 'Select dependencies...',
+      showColors: true,
+      categoryColors: {
+        'internal': '#3498DB',
+        'external': '#E67E22',
+        'custom': '#95A5A6'
+      }
+    });
+  }
+
+  // 8. Known Issues Tags
+  initializeIssueTags(stepId, step.remarks.knownIssuesTags || []);
+
+  // 9. Best Practices Tags
+  initializePracticeTags(stepId, step.remarks.bestPracticesTags || []);
+
+  // 10. Check for validation warnings
+  checkStepValidation(stepId);
+}
+
+/* ===== UPDATE ACTIVITY DROPDOWN (CASCADING) ===== */
+function updateActivityDropdown(stepId, stepType, selectedActivity) {
+  const activityContainer = document.getElementById(`step-${stepId}-activity-container`);
+  if (!activityContainer) return;
+
+  const activities = DropdownHelpers.getActivitiesForStepType(stepType);
+
+  if (activities.length === 0) {
+    activityContainer.innerHTML = '<select class="dropdown-standard" disabled><option>No activities</option></select>';
+    return;
+  }
+
+  activityContainer.innerHTML = DropdownComponents.createStandardDropdown({
+    id: `step-${stepId}-activity`,
+    name: `step-${stepId}-activity`,
+    items: activities,
+    selectedValue: selectedActivity || '',
+    placeholder: 'Select activity...',
+    onChange: `updateStepActivity(${stepId}, this.value)`
+  });
+}
+
+/* ===== UPDATE STEP TYPE (TRIGGERS CASCADE) ===== */
+function updateStepType(stepId, stepType) {
+  const step = currentWorkflow.steps.find(s => s.id === stepId);
+  if (!step) return;
+
+  step.stepType = stepType;
+
+  // Clear activity when type changes
+  step.commonActivity = '';
+
+  // Update activity dropdown
+  updateActivityDropdown(stepId, stepType, '');
+
+  // Update timeline color
+  updateSummary();
+  updateTimeline();
+}
+
+/* ===== UPDATE STEP ACTIVITY ===== */
+function updateStepActivity(stepId, activityId) {
+  const step = currentWorkflow.steps.find(s => s.id === stepId);
+  if (!step) return;
+
+  step.commonActivity = activityId;
+
+  // Auto-populate step name if empty
+  const activity = dropdownConfig.activities[activityId];
+  if (activity && !step.name) {
+    step.name = activity.label;
+    // Update the name input field
+    const nameInput = document.querySelector(`[data-step-id="${stepId}"] input[placeholder*="Step name"]`);
+    if (nameInput) {
+      nameInput.value = activity.label;
+    }
+  }
+}
+
+/* ===== INITIALIZE ISSUE TAGS ===== */
+function initializeIssueTags(stepId, selectedTags) {
+  const container = document.getElementById(`step-${stepId}-issues-tags`);
+  if (!container) return;
+
+  container.innerHTML = dropdownConfig.knownIssuesTags.map(tag => {
+    const isSelected = selectedTags.includes(tag.id);
+    return `
+      <span class="tag-option ${isSelected ? 'selected' : ''}"
+            style="background-color: ${isSelected ? tag.color : '#fff'}; color: ${isSelected ? '#fff' : '#333'}; border-color: ${tag.color}"
+            onclick="toggleIssueTag(${stepId}, '${tag.id}', '${tag.color}', this)">
+        ${tag.label}
+      </span>
+    `;
+  }).join('');
+}
+
+/* ===== TOGGLE ISSUE TAG ===== */
+function toggleIssueTag(stepId, tagId, tagColor, element) {
+  const step = currentWorkflow.steps.find(s => s.id === stepId);
+  if (!step) return;
+
+  if (!step.remarks.knownIssuesTags) {
+    step.remarks.knownIssuesTags = [];
+  }
+
+  const index = step.remarks.knownIssuesTags.indexOf(tagId);
+  if (index > -1) {
+    // Remove tag
+    step.remarks.knownIssuesTags.splice(index, 1);
+    element.classList.remove('selected');
+    element.style.backgroundColor = '#fff';
+    element.style.color = '#333';
+  } else {
+    // Add tag
+    step.remarks.knownIssuesTags.push(tagId);
+    element.classList.add('selected');
+    element.style.backgroundColor = tagColor;
+    element.style.color = '#fff';
+  }
+}
+
+/* ===== INITIALIZE PRACTICE TAGS ===== */
+function initializePracticeTags(stepId, selectedTags) {
+  const container = document.getElementById(`step-${stepId}-practices-tags`);
+  if (!container) return;
+
+  container.innerHTML = dropdownConfig.bestPracticesTags.map(tag => {
+    const isSelected = selectedTags.includes(tag.id);
+    return `
+      <span class="tag-option ${isSelected ? 'selected' : ''}"
+            style="background-color: ${isSelected ? tag.color : '#fff'}; color: ${isSelected ? '#fff' : '#333'}; border-color: ${tag.color}"
+            onclick="togglePracticeTag(${stepId}, '${tag.id}', '${tag.color}', this)">
+        ${tag.label}
+      </span>
+    `;
+  }).join('');
+}
+
+/* ===== TOGGLE PRACTICE TAG ===== */
+function togglePracticeTag(stepId, tagId, tagColor, element) {
+  const step = currentWorkflow.steps.find(s => s.id === stepId);
+  if (!step) return;
+
+  if (!step.remarks.bestPracticesTags) {
+    step.remarks.bestPracticesTags = [];
+  }
+
+  const index = step.remarks.bestPracticesTags.indexOf(tagId);
+  if (index > -1) {
+    // Remove tag
+    step.remarks.bestPracticesTags.splice(index, 1);
+    element.classList.remove('selected');
+    element.style.backgroundColor = '#fff';
+    element.style.color = '#333';
+  } else {
+    // Add tag
+    step.remarks.bestPracticesTags.push(tagId);
+    element.classList.add('selected');
+    element.style.backgroundColor = tagColor;
+    element.style.color = '#fff';
+  }
+}
+
+/* ===== VALIDATION WARNINGS ===== */
+function checkStepValidation(stepId) {
+  const step = currentWorkflow.steps.find(s => s.id === stepId);
+  if (!step) return;
+
+  const warningsContainer = document.getElementById(`step-${stepId}-warnings`);
+  if (!warningsContainer) return;
+
+  const warnings = [];
+
+  // Check for high dependency count
+  if (step.dependencies && step.dependencies.length >= 5) {
+    warnings.push({
+      type: 'warning',
+      message: `High dependency count (${step.dependencies.length}). This may cause delays.`
+    });
+  }
+
+  // Check for high risk + short duration
+  if (step.riskLevel === 'high' && step.expectedDuration && parseFloat(step.expectedDuration) <= 1) {
+    warnings.push({
+      type: 'warning',
+      message: 'High risk with short duration. Consider adding buffer time.'
+    });
+  }
+
+  // Check for missing buffer on risky steps
+  if (step.riskLevel === 'high' && (!step.slaBuffer || parseFloat(step.slaBuffer) === 0)) {
+    warnings.push({
+      type: 'tip',
+      message: 'Consider adding buffer time for high-risk steps.'
+    });
+  }
+
+  // Display warnings
+  DropdownUI.showValidationWarning(`step-${stepId}-warnings`, warnings);
 }
 
 function toggleRemarks(stepId) {
@@ -704,11 +1472,25 @@ function toggleRemarks(stepId) {
 
 function updateStepField(stepId, field, value) {
   const step = currentWorkflow.steps.find(s => s.id === stepId);
-  if (step) {
+  if (!step) return;
+
+  // Handle dependencies field (multi-select)
+  if (field === 'dependencies') {
+    const depsInput = document.getElementById(`step-${stepId}-dependencies`);
+    if (depsInput) {
+      step.dependencies = depsInput.value ? depsInput.value.split(',') : [];
+    }
+  } else {
     step[field] = value;
-    updateSummary();
-    updateTimeline();
   }
+
+  // Check validation after updates
+  if (field === 'riskLevel' || field === 'expectedDuration' || field === 'slaBuffer') {
+    checkStepValidation(stepId);
+  }
+
+  updateSummary();
+  updateTimeline();
 }
 
 function updateRemarkField(stepId, field, value) {
@@ -782,26 +1564,44 @@ function updateSummary() {
   currentWorkflow.steps.forEach(step => {
     const duration = parseFloat(step.expectedDuration) || 0;
     const buffer = parseFloat(step.slaBuffer) || 0;
-    const unit = step.durationUnit;
+    const unit = step.durationUnit || 'business-days';
 
     let hours = duration + buffer;
-    if (unit === 'days') hours *= 8; // 8 business hours per day
-    if (unit === 'weeks') hours *= 40; // 5 days * 8 hours
+
+    // Convert to hours based on unit
+    if (unit === 'hours') {
+      hours = hours; // Already in hours
+    } else if (unit === 'business-days' || unit === 'days') {
+      hours *= 8; // 8 business hours per day
+    } else if (unit === 'calendar-days') {
+      hours *= 24; // 24 hours per calendar day
+    } else if (unit === 'weeks') {
+      hours *= 40; // 5 business days * 8 hours
+    }
 
     totalHours += hours;
   });
 
   const days = (totalHours / 8).toFixed(1);
-  document.getElementById('summaryTotalDuration').textContent = `${totalHours}h (${days} days)`;
+  document.getElementById('summaryTotalDuration').textContent = `${totalHours}h (${days} business days)`;
 
   // Find longest step
   let longestStep = null;
   let longestDuration = 0;
   currentWorkflow.steps.forEach(step => {
     const duration = parseFloat(step.expectedDuration) || 0;
+    const unit = step.durationUnit || 'business-days';
     let hours = duration;
-    if (step.durationUnit === 'days') hours *= 8;
-    if (step.durationUnit === 'weeks') hours *= 40;
+
+    if (unit === 'hours') {
+      hours = hours;
+    } else if (unit === 'business-days' || unit === 'days') {
+      hours *= 8;
+    } else if (unit === 'calendar-days') {
+      hours *= 24;
+    } else if (unit === 'weeks') {
+      hours *= 40;
+    }
 
     if (hours > longestDuration) {
       longestDuration = hours;
@@ -821,7 +1621,7 @@ function updateSummary() {
   const slaStatusDiv = document.getElementById('slaStatus');
 
   if (slaTarget && stepCount > 0) {
-    const targetHours = slaTarget * 8; // Convert days to hours
+    const targetHours = slaTarget * 8; // Convert business days to hours
     const difference = targetHours - totalHours;
 
     let badgeClass, statusText;
@@ -849,9 +1649,14 @@ function resetWorkflow() {
       id: null,
       name: '',
       category: '',
+      categoryData: {},
       owner: '',
       department: '',
+      departmentData: {},
       priority: 'medium',
+      status: 'draft',
+      initiationSource: '',
+      initiationSourceData: {},
       dateCreated: null,
       dateModified: null,
       steps: [],
@@ -860,11 +1665,10 @@ function resetWorkflow() {
     stepCounter = 0;
 
     document.getElementById('workflowName').value = '';
-    document.getElementById('workflowCategory').selectedIndex = 0;
-    document.getElementById('workflowPriority').value = 'medium';
-    document.getElementById('workflowOwner').value = '';
-    document.getElementById('workflowDepartment').value = '';
     document.getElementById('slaTarget').value = '';
+
+    // Reinitialize dropdowns with empty values
+    initWorkflowHeaderDropdowns();
 
     renderSteps();
     updateSummary();
@@ -920,10 +1724,25 @@ function addToCollection() {
 
 function captureCurrentWorkflowData() {
   currentWorkflow.name = document.getElementById('workflowName').value.trim();
-  currentWorkflow.category = document.getElementById('workflowCategory').value;
-  currentWorkflow.owner = document.getElementById('workflowOwner').value.trim();
-  currentWorkflow.department = document.getElementById('workflowDepartment').value.trim();
+
+  // Get values from dropdowns
+  const categorySelect = document.getElementById('workflowCategory');
+  currentWorkflow.category = categorySelect ? categorySelect.value : '';
+
+  const ownerValue = document.getElementById('workflowOwner-value');
+  currentWorkflow.owner = ownerValue ? ownerValue.value : '';
+
+  const deptSelect = document.getElementById('workflowDepartment');
+  currentWorkflow.department = deptSelect ? deptSelect.value : '';
+
   currentWorkflow.priority = document.getElementById('workflowPriority').value;
+
+  const statusSelect = document.getElementById('workflowStatus');
+  currentWorkflow.status = statusSelect ? statusSelect.value : 'draft';
+
+  const initSourceSelect = document.getElementById('workflowInitiationSource');
+  currentWorkflow.initiationSource = initSourceSelect ? initSourceSelect.value : '';
+
   currentWorkflow.slaTarget = parseFloat(document.getElementById('slaTarget').value) || null;
 }
 
@@ -1001,10 +1820,19 @@ function calculateWorkflowHours(workflow) {
   workflow.steps.forEach(step => {
     const duration = parseFloat(step.expectedDuration) || 0;
     const buffer = parseFloat(step.slaBuffer) || 0;
+    const unit = step.durationUnit || 'business-days';
     let hours = duration + buffer;
 
-    if (step.durationUnit === 'days') hours *= 8;
-    if (step.durationUnit === 'weeks') hours *= 40;
+    // Convert to hours based on unit
+    if (unit === 'hours') {
+      hours = hours; // Already in hours
+    } else if (unit === 'business-days' || unit === 'days') {
+      hours *= 8; // 8 business hours per day
+    } else if (unit === 'calendar-days') {
+      hours *= 24; // 24 hours per calendar day
+    } else if (unit === 'weeks') {
+      hours *= 40; // 5 business days * 8 hours
+    }
 
     totalHours += hours;
   });
@@ -1203,15 +2031,15 @@ function editWorkflow(workflowId) {
 
   // Load workflow into builder
   currentWorkflow = JSON.parse(JSON.stringify(workflow));
-  stepCounter = Math.max(...currentWorkflow.steps.map(s => s.id));
+  stepCounter = Math.max(...currentWorkflow.steps.map(s => s.id), 0);
 
-  // Populate form
-  document.getElementById('workflowName').value = currentWorkflow.name;
-  document.getElementById('workflowCategory').value = currentWorkflow.category;
-  document.getElementById('workflowOwner').value = currentWorkflow.owner;
-  document.getElementById('workflowDepartment').value = currentWorkflow.department;
-  document.getElementById('workflowPriority').value = currentWorkflow.priority;
+  // Populate form fields
+  document.getElementById('workflowName').value = currentWorkflow.name || '';
+  document.getElementById('workflowPriority').value = currentWorkflow.priority || 'medium';
   document.getElementById('slaTarget').value = currentWorkflow.slaTarget || '';
+
+  // Reinitialize dropdowns with loaded values
+  initWorkflowHeaderDropdowns();
 
   renderSteps();
   updateSummary();

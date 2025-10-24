@@ -181,6 +181,307 @@
   .welcome-feature-text{flex:1}
   .welcome-feature-title{font-weight:600;margin-bottom:4px}
   .welcome-feature-desc{font-size:13px;color:#666}
+
+  /* ===== ENHANCED DROPDOWN STYLES (V2.0) ===== */
+
+  /* Standard Dropdown Enhancement */
+  .dropdown-standard{
+    width:100%;
+    padding:8px 12px;
+    border:1px solid #ccc;
+    border-radius:4px;
+    font-size:13px;
+    font-family:inherit;
+    background:#fff;
+    cursor:pointer;
+    transition:border-color 0.2s;
+  }
+  .dropdown-standard:hover{
+    border-color:var(--ekfc-red);
+  }
+  .dropdown-standard:focus{
+    outline:none;
+    border-color:var(--ekfc-red);
+    box-shadow:0 0 0 3px rgba(200, 16, 46, 0.1);
+  }
+
+  /* Searchable Dropdown */
+  .searchable-dropdown{
+    position:relative;
+    width:100%;
+  }
+  .searchable-dropdown-input{
+    width:100%;
+    padding:8px 30px 8px 12px;
+    border:1px solid #ccc;
+    border-radius:4px;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .searchable-dropdown-input:focus{
+    outline:none;
+    border-color:var(--ekfc-red);
+    box-shadow:0 0 0 3px rgba(200, 16, 46, 0.1);
+  }
+  .searchable-dropdown-arrow{
+    position:absolute;
+    right:8px;
+    top:50%;
+    transform:translateY(-50%);
+    pointer-events:none;
+    color:#666;
+    font-size:10px;
+  }
+  .searchable-dropdown-options{
+    position:absolute;
+    top:100%;
+    left:0;
+    right:0;
+    background:#fff;
+    border:1px solid #ccc;
+    border-top:none;
+    border-radius:0 0 4px 4px;
+    max-height:250px;
+    overflow-y:auto;
+    z-index:1000;
+    box-shadow:0 4px 6px rgba(0,0,0,0.1);
+  }
+  .dropdown-option{
+    padding:8px 12px;
+    cursor:pointer;
+    font-size:13px;
+    transition:background 0.15s;
+  }
+  .dropdown-option:hover{
+    background:#f8f8f8;
+  }
+  .dropdown-option.selected{
+    background:#e8f6f5;
+    color:var(--ekfc-red);
+  }
+  .dropdown-category{
+    padding:6px 12px;
+    font-size:11px;
+    font-weight:600;
+    color:#95A5A6;
+    text-transform:uppercase;
+    background:#f8f8f8;
+    border-top:1px solid #eee;
+  }
+  .dropdown-category:first-child{
+    border-top:none;
+  }
+  .no-results{
+    padding:10px;
+    color:#999;
+    text-align:center;
+    font-size:12px;
+  }
+
+  /* Multi-Select Dropdown */
+  .multi-select-dropdown{
+    position:relative;
+    width:100%;
+  }
+  .multi-select-tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px;
+    padding:6px;
+    border:1px solid #ccc;
+    border-radius:4px;
+    min-height:38px;
+    background:#fff;
+    cursor:text;
+  }
+  .multi-select-tags:focus-within{
+    border-color:var(--ekfc-red);
+    box-shadow:0 0 0 3px rgba(200, 16, 46, 0.1);
+  }
+  .multi-select-input{
+    flex:1;
+    min-width:120px;
+    border:none;
+    outline:none;
+    padding:2px 4px;
+    font-size:13px;
+  }
+  .multi-select-options{
+    position:absolute;
+    top:100%;
+    left:0;
+    right:0;
+    background:#fff;
+    border:1px solid #ccc;
+    border-top:none;
+    border-radius:0 0 4px 4px;
+    max-height:200px;
+    overflow-y:auto;
+    z-index:1000;
+    box-shadow:0 4px 6px rgba(0,0,0,0.1);
+  }
+  .multi-select-option{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 12px;
+    cursor:pointer;
+    font-size:13px;
+    transition:background 0.15s;
+  }
+  .multi-select-option:hover{
+    background:#f8f8f8;
+  }
+  .multi-select-option input[type="checkbox"]{
+    width:auto;
+    cursor:pointer;
+  }
+  .multi-select-count{
+    position:absolute;
+    top:-20px;
+    right:0;
+    font-size:11px;
+    color:#999;
+  }
+
+  /* Tag Styling */
+  .tag{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:4px 8px;
+    border-radius:12px;
+    font-size:11px;
+    font-weight:500;
+    white-space:nowrap;
+  }
+  .tag-remove{
+    cursor:pointer;
+    font-weight:bold;
+    font-size:14px;
+    line-height:1;
+    opacity:0.7;
+    transition:opacity 0.2s;
+  }
+  .tag-remove:hover{
+    opacity:1;
+  }
+
+  /* Tags Container (for remarks section) */
+  .tags-container{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:8px;
+  }
+  .tag-selector{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:10px;
+    padding:10px;
+    background:#f9f9f9;
+    border-radius:4px;
+  }
+  .tag-option{
+    padding:4px 10px;
+    border:1px solid #ddd;
+    border-radius:12px;
+    font-size:11px;
+    cursor:pointer;
+    background:#fff;
+    transition:all 0.2s;
+  }
+  .tag-option:hover{
+    background:#f8f8f8;
+    border-color:#999;
+  }
+  .tag-option.selected{
+    background:var(--ekfc-red);
+    color:#fff;
+    border-color:var(--ekfc-red);
+  }
+
+  /* Validation Warnings */
+  .validation-warning{
+    padding:8px 12px;
+    margin-top:8px;
+    border-radius:3px;
+    font-size:12px;
+    line-height:1.4;
+  }
+  .validation-warning.validation-warning{
+    background:#fff3cd;
+    border-left:3px solid #F39C12;
+    color:#856404;
+  }
+  .validation-warning.validation-error{
+    background:#f8d7da;
+    border-left:3px solid #E74C3C;
+    color:#721c24;
+  }
+  .validation-warning.validation-info,
+  .validation-warning.validation-tip{
+    background:#d1ecf1;
+    border-left:3px solid #3498DB;
+    color:#0c5460;
+  }
+
+  /* Status Badge */
+  .status-badge{
+    display:inline-block;
+    padding:3px 10px;
+    border-radius:12px;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+  }
+  .status-draft{background:#95A5A620;color:#95A5A6;border:1px solid #95A5A6}
+  .status-active{background:#3498DB20;color:#3498DB;border:1px solid #3498DB}
+  .status-under-review{background:#F39C1220;color:#F39C12;border:1px solid #F39C12}
+  .status-approved{background:#27AE6020;color:#27AE60;border:1px solid #27AE60}
+  .status-on-hold{background:#E67E2220;color:#E67E22;border:1px solid #E67E22}
+  .status-archived{background:#7F8C8D20;color:#7F8C8D;border:1px solid #7F8C8D}
+  .status-obsolete{background:#2C3E5020;color:#2C3E50;border:1px solid #2C3E50}
+
+  /* Risk Level Badge */
+  .risk-badge{
+    display:inline-block;
+    padding:3px 10px;
+    border-radius:12px;
+    font-size:11px;
+    font-weight:700;
+  }
+  .risk-low{background:#27AE6020;color:#27AE60;border:1px solid #27AE60}
+  .risk-medium{background:#F39C1220;color:#F39C12;border:1px solid #F39C12}
+  .risk-high{background:#E74C3C20;color:#E74C3C;border:1px solid #E74C3C}
+
+  /* Enhanced form layout for new fields */
+  .form-row-4{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:10px;
+  }
+  .form-group-inline{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .form-group-inline label{
+    margin-bottom:0;
+    white-space:nowrap;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .form-row-3, .form-row-4{
+      grid-template-columns:1fr;
+    }
+    .searchable-dropdown-options,
+    .multi-select-options{
+      max-height:180px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -266,49 +567,76 @@
             <div class="form-row">
               <div class="form-group">
                 <label>
-                  Category
+                  Department/Function *
+                  <span class="tooltip">
+                    <span class="tooltip-icon">?</span>
+                    <span class="tooltiptext">Which department or function owns this workflow?</span>
+                  </span>
+                </label>
+                <div id="workflowDepartment-container"></div>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  Workflow Category/Type *
                   <span class="tooltip">
                     <span class="tooltip-icon">?</span>
                     <span class="tooltiptext">What type of workflow is this?</span>
                   </span>
                 </label>
-                <select id="workflowCategory">
-                  <option>Request Processing</option>
-                  <option>Approval Flow</option>
-                  <option>Data Management</option>
-                  <option>Reporting</option>
-                  <option>Quality Control</option>
-                  <option>Documentation</option>
-                  <option>Training</option>
-                  <option>Other</option>
-                </select>
+                <div id="workflowCategory-container"></div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>
+                  Initiation Source *
+                  <span class="tooltip">
+                    <span class="tooltip-icon">?</span>
+                    <span class="tooltiptext">How is this workflow typically initiated?</span>
+                  </span>
+                </label>
+                <div id="workflowInitiationSource-container"></div>
               </div>
 
               <div class="form-group">
                 <label>
-                  Priority Level
+                  Priority Level *
                   <span class="tooltip">
                     <span class="tooltip-icon">?</span>
                     <span class="tooltiptext">How critical is this workflow to operations?</span>
                   </span>
                 </label>
-                <select id="workflowPriority">
-                  <option value="high">High Priority</option>
-                  <option value="medium" selected>Medium Priority</option>
-                  <option value="low">Low Priority</option>
+                <select id="workflowPriority" class="dropdown-standard" onchange="updateWorkflowField('priority', this.value)">
+                  <option value="high">🔴 High (Urgent/Critical)</option>
+                  <option value="medium" selected>🟡 Medium (Standard)</option>
+                  <option value="low">🟢 Low (Nice to have)</option>
                 </select>
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
-                <label>Workflow Owner</label>
-                <input type="text" id="workflowOwner" placeholder="Your name">
+                <label>
+                  Workflow Status *
+                  <span class="tooltip">
+                    <span class="tooltip-icon">?</span>
+                    <span class="tooltiptext">Current status of this workflow definition</span>
+                  </span>
+                </label>
+                <div id="workflowStatus-container"></div>
               </div>
 
               <div class="form-group">
-                <label>Department</label>
-                <input type="text" id="workflowDepartment" placeholder="e.g., Health & Diet">
+                <label>
+                  Workflow Owner (Role) *
+                  <span class="tooltip">
+                    <span class="tooltip-icon">?</span>
+                    <span class="tooltiptext">Role responsible for this workflow (not personal name)</span>
+                  </span>
+                </label>
+                <div id="workflowOwner-container"></div>
               </div>
             </div>
           </div>
@@ -479,16 +807,25 @@
     </div>
   </div>
 
+<!-- Include Dropdown Configuration and Components -->
+<script src="dropdownConfig.js"></script>
+<script src="dropdownComponents.js"></script>
+
 <script>
 /* ===== STATE MANAGEMENT ===== */
 let workflows = [];
 let currentWorkflow = {
   id: null,
   name: '',
-  category: '',
-  owner: '',
-  department: '',
+  category: '', // Category ID
+  categoryData: {}, // Full category object
+  owner: '', // Owner role
+  department: '', // Department ID
+  departmentData: {}, // Full department object
   priority: 'medium',
+  status: 'draft', // NEW: Workflow status
+  initiationSource: '', // NEW: How workflow was initiated
+  initiationSourceData: {}, // Full initiation source object
   dateCreated: null,
   dateModified: null,
   steps: [],
@@ -516,6 +853,9 @@ function init() {
     document.getElementById('builderMain').style.display = 'none';
   }
 
+  // Initialize workflow header dropdowns
+  initWorkflowHeaderDropdowns();
+
   // Populate filter dropdowns
   updateFilterDropdowns();
 
@@ -527,6 +867,102 @@ function closeWelcome() {
   document.getElementById('welcomeScreen').style.display = 'none';
   document.getElementById('builderMain').style.display = 'grid';
   localStorage.setItem('hasVisitedBefore', 'true');
+}
+
+/* ===== WORKFLOW HEADER DROPDOWN INITIALIZATION ===== */
+function initWorkflowHeaderDropdowns() {
+  // Department Dropdown
+  const deptContainer = document.getElementById('workflowDepartment-container');
+  if (deptContainer) {
+    deptContainer.innerHTML = DropdownComponents.createStandardDropdown({
+      id: 'workflowDepartment',
+      name: 'workflowDepartment',
+      items: dropdownConfig.departments,
+      selectedValue: currentWorkflow.department,
+      placeholder: 'Select department...',
+      required: true,
+      showIcons: false,
+      includeRecent: true,
+      recentField: 'workflowDepartment',
+      onChange: 'updateWorkflowField("department", this.value)'
+    });
+  }
+
+  // Category Dropdown
+  const catContainer = document.getElementById('workflowCategory-container');
+  if (catContainer) {
+    catContainer.innerHTML = DropdownComponents.createStandardDropdown({
+      id: 'workflowCategory',
+      name: 'workflowCategory',
+      items: dropdownConfig.categories,
+      selectedValue: currentWorkflow.category,
+      placeholder: 'Select category...',
+      required: true,
+      showIcons: true,
+      includeRecent: true,
+      recentField: 'workflowCategory',
+      onChange: 'updateWorkflowField("category", this.value)'
+    });
+  }
+
+  // Initiation Source Dropdown
+  const initSourceContainer = document.getElementById('workflowInitiationSource-container');
+  if (initSourceContainer) {
+    initSourceContainer.innerHTML = DropdownComponents.createStandardDropdown({
+      id: 'workflowInitiationSource',
+      name: 'workflowInitiationSource',
+      items: dropdownConfig.initiationSources,
+      selectedValue: currentWorkflow.initiationSource,
+      placeholder: 'Select initiation source...',
+      required: true,
+      includeRecent: true,
+      recentField: 'workflowInitiationSource',
+      onChange: 'updateWorkflowField("initiationSource", this.value)'
+    });
+  }
+
+  // Status Dropdown
+  const statusContainer = document.getElementById('workflowStatus-container');
+  if (statusContainer) {
+    statusContainer.innerHTML = DropdownComponents.createStandardDropdown({
+      id: 'workflowStatus',
+      name: 'workflowStatus',
+      items: dropdownConfig.statuses,
+      selectedValue: currentWorkflow.status || 'draft',
+      placeholder: 'Select status...',
+      required: true,
+      onChange: 'updateWorkflowField("status", this.value)'
+    });
+  }
+
+  // Owner (Searchable Role Dropdown)
+  const ownerContainer = document.getElementById('workflowOwner-container');
+  if (ownerContainer) {
+    const allRoles = DropdownHelpers.getAllRolesWithCategories();
+    ownerContainer.innerHTML = DropdownComponents.createSearchableDropdown({
+      id: 'workflowOwner',
+      name: 'workflowOwner',
+      items: allRoles,
+      selectedValue: currentWorkflow.owner,
+      placeholder: 'Search or select role...',
+      required: true,
+      showCategories: true,
+      onChange: 'updateWorkflowField("owner", document.getElementById("workflowOwner-value").value)'
+    });
+  }
+}
+
+/* ===== UPDATE WORKFLOW FIELD ===== */
+function updateWorkflowField(field, value) {
+  currentWorkflow[field] = value;
+
+  // Save to recent selections
+  DropdownHelpers.saveRecentSelection(`workflow${field.charAt(0).toUpperCase() + field.slice(1)}`, value);
+
+  // Update summary if needed
+  if (field === 'priority' || field === 'department' || field === 'status') {
+    updateSummary();
+  }
 }
 
 /* ===== PAGE SWITCHING ===== */
@@ -553,15 +989,26 @@ function addStep() {
     name: '',
     description: '',
     responsiblePerson: '',
+    responsibleRole: '', // NEW: Role title
+    responsibleDepartments: [], // NEW: Multi-select departments
     expectedDuration: '',
-    durationUnit: 'hours',
+    durationUnit: 'business-days', // Changed default to business-days
     slaBuffer: '',
     stepType: 'task',
+    stepTypeData: {}, // Full step type object
+    commonActivity: '', // NEW: Activity ID
+    commonActivityData: {}, // Full activity object
+    dependencies: [], // NEW: Array of dependency IDs
+    dependenciesData: [], // Full dependency objects
+    riskLevel: '', // NEW: low/medium/high
+    stepStatus: 'not-started', // NEW: Step status for tracking
     remarks: {
       notes: '',
       knownIssues: '',
+      knownIssuesTags: [], // NEW: Array of tag IDs
       dependencies: '',
       bestPractices: '',
+      bestPracticesTags: [], // NEW: Array of tag IDs
       freeformComments: ''
     }
   };
@@ -849,9 +1296,14 @@ function resetWorkflow() {
       id: null,
       name: '',
       category: '',
+      categoryData: {},
       owner: '',
       department: '',
+      departmentData: {},
       priority: 'medium',
+      status: 'draft',
+      initiationSource: '',
+      initiationSourceData: {},
       dateCreated: null,
       dateModified: null,
       steps: [],
@@ -860,11 +1312,10 @@ function resetWorkflow() {
     stepCounter = 0;
 
     document.getElementById('workflowName').value = '';
-    document.getElementById('workflowCategory').selectedIndex = 0;
-    document.getElementById('workflowPriority').value = 'medium';
-    document.getElementById('workflowOwner').value = '';
-    document.getElementById('workflowDepartment').value = '';
     document.getElementById('slaTarget').value = '';
+
+    // Reinitialize dropdowns with empty values
+    initWorkflowHeaderDropdowns();
 
     renderSteps();
     updateSummary();
@@ -920,10 +1371,25 @@ function addToCollection() {
 
 function captureCurrentWorkflowData() {
   currentWorkflow.name = document.getElementById('workflowName').value.trim();
-  currentWorkflow.category = document.getElementById('workflowCategory').value;
-  currentWorkflow.owner = document.getElementById('workflowOwner').value.trim();
-  currentWorkflow.department = document.getElementById('workflowDepartment').value.trim();
+
+  // Get values from dropdowns
+  const categorySelect = document.getElementById('workflowCategory');
+  currentWorkflow.category = categorySelect ? categorySelect.value : '';
+
+  const ownerValue = document.getElementById('workflowOwner-value');
+  currentWorkflow.owner = ownerValue ? ownerValue.value : '';
+
+  const deptSelect = document.getElementById('workflowDepartment');
+  currentWorkflow.department = deptSelect ? deptSelect.value : '';
+
   currentWorkflow.priority = document.getElementById('workflowPriority').value;
+
+  const statusSelect = document.getElementById('workflowStatus');
+  currentWorkflow.status = statusSelect ? statusSelect.value : 'draft';
+
+  const initSourceSelect = document.getElementById('workflowInitiationSource');
+  currentWorkflow.initiationSource = initSourceSelect ? initSourceSelect.value : '';
+
   currentWorkflow.slaTarget = parseFloat(document.getElementById('slaTarget').value) || null;
 }
 
@@ -1203,15 +1669,15 @@ function editWorkflow(workflowId) {
 
   // Load workflow into builder
   currentWorkflow = JSON.parse(JSON.stringify(workflow));
-  stepCounter = Math.max(...currentWorkflow.steps.map(s => s.id));
+  stepCounter = Math.max(...currentWorkflow.steps.map(s => s.id), 0);
 
-  // Populate form
-  document.getElementById('workflowName').value = currentWorkflow.name;
-  document.getElementById('workflowCategory').value = currentWorkflow.category;
-  document.getElementById('workflowOwner').value = currentWorkflow.owner;
-  document.getElementById('workflowDepartment').value = currentWorkflow.department;
-  document.getElementById('workflowPriority').value = currentWorkflow.priority;
+  // Populate form fields
+  document.getElementById('workflowName').value = currentWorkflow.name || '';
+  document.getElementById('workflowPriority').value = currentWorkflow.priority || 'medium';
   document.getElementById('slaTarget').value = currentWorkflow.slaTarget || '';
+
+  // Reinitialize dropdowns with loaded values
+  initWorkflowHeaderDropdowns();
 
   renderSteps();
   updateSummary();

@@ -209,6 +209,37 @@ const App = {
   },
 
   /**
+   * Slugify a string (simple version)
+   */
+  slugify(text) {
+    return text
+      .toString()
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')        // Replace spaces with -
+      .replace(/[^\w\-]+/g, '')    // Remove all non-word chars
+      .replace(/\-\-+/g, '-')      // Replace multiple - with single -
+      .replace(/^-+/, '')          // Trim - from start
+      .replace(/-+$/, '');         // Trim - from end
+  },
+
+  /**
+   * Generate random 6-character string
+   */
+  generateRandomId() {
+    return Math.random().toString(36).substring(2, 8);
+  },
+
+  /**
+   * Generate unique workflow ID
+   */
+  generateWorkflowId(workType) {
+    const slug = this.slugify(workType || 'workflow');
+    const random = this.generateRandomId();
+    return slug + '-' + random;
+  },
+
+  /**
    * Initialize the application
    */
   async init() {
@@ -481,8 +512,15 @@ const App = {
 
     // Parse route
     const match = hash.match(/#\/(home|catalog|build|dept\/([^/]+)|wf\/([^/]+))/);
+
+    // Hide all screens first
+    document.querySelectorAll('.screen').forEach(screen => {
+      screen.style.display = 'none';
+    });
+
     if (!match) {
-      window.location.hash = '#/home';
+      // Show 404 instead of redirecting
+      this.render404(hash);
       return;
     }
 
@@ -505,11 +543,6 @@ const App = {
       }
     });
 
-    // Hide all screens
-    document.querySelectorAll('.screen').forEach(screen => {
-      screen.style.display = 'none';
-    });
-
     // Show and render active screen
     if (route === 'home') {
       document.getElementById('screen-home').style.display = 'block';
@@ -527,6 +560,21 @@ const App = {
       document.getElementById('screen-review').style.display = 'block';
       ReviewScreen.render(this.state.currentWorkflowId);
     }
+  },
+
+  /**
+   * Render 404 page
+   */
+  render404(invalidHash) {
+    const screen = document.getElementById('screen-home');
+    screen.style.display = 'block';
+    const container = document.getElementById('home-content');
+    container.innerHTML =
+      '<div style="text-align:center; padding:4rem 2rem;">' +
+      '<h2>404 - Page Not Found</h2>' +
+      '<p class="text-muted">The route "' + invalidHash + '" does not exist.</p>' +
+      '<button class="btn-primary" onclick="location.hash=\'#/home\'">Back to Home</button>' +
+      '</div>';
   },
 
   /**

@@ -120,17 +120,9 @@
               <!-- SLA Policy Section -->
               <div class="sla-table">
                 <h3>SLA Targets by Priority</h3>
-
-                <!-- Business Hours Interpretation Switch -->
-                <div class="form-group" style="margin-bottom: 1rem;">
-                  <label style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input type="checkbox" id="interpret-as-bh" checked onchange="BuildScreen.toggleInterpretation()">
-                    <span>Interpret SLA in business hours</span>
-                  </label>
-                  <p class="text-muted" style="margin: 0.25rem 0 0 1.5rem; font-size: 0.9rem;">
-                    When ON, feasibility is computed within your selected business hours window.
-                  </p>
-                </div>
+                <p class="text-muted" style="margin: -0.5rem 0 1rem 0; font-size: 0.9rem;">
+                  All SLA values shown in Business Days. Feasibility computed using business hours window.
+                </p>
 
                 <div class="sla-presets">
                   <button type="button" class="preset-btn" data-preset="conservative" onclick="BuildScreen.applySLAPreset('conservative')">Conservative</button>
@@ -138,13 +130,22 @@
                   <button type="button" class="preset-btn" data-preset="aggressive" onclick="BuildScreen.applySLAPreset('aggressive')">Aggressive</button>
                 </div>
 
+                <!-- Advanced Units Toggle -->
+                <details style="margin: 1rem 0;">
+                  <summary style="cursor: pointer; font-weight: 500; color: #666;">Advanced units (hours)</summary>
+                  <p class="text-muted" style="margin: 0.5rem 0; font-size: 0.85rem;">
+                    Switch to hours for finer-grained control. Changes apply to all SLA fields.
+                  </p>
+                  <div id="advanced-units-controls"></div>
+                </details>
+
                 <table>
                   <thead>
                     <tr>
                       <th>Priority</th>
-                      <th>Acknowledge</th>
-                      <th>Start Work</th>
-                      <th>Resolve</th>
+                      <th title="In Business Days. Computed using business hours window from selected profile.">Acknowledge</th>
+                      <th title="In Business Days. Computed using business hours window from selected profile.">Start Work</th>
+                      <th title="In Business Days. Computed using business hours window from selected profile.">Resolve</th>
                       <th>Escalate After (mins)</th>
                       <th>Escalate To Role</th>
                     </tr>
@@ -702,13 +703,16 @@
         this.populateTemplates();
         this.populateDropdowns();
 
-        // Initialize units if not already set
+        // Initialize units if not already set - default to Business Days
         if (!this.slaUnits || Object.keys(this.slaUnits).length === 0) {
           this.slaUnits = {};
           App.state.catalogs.priorities.forEach(p => {
-            this.slaUnits[p.id] = { ack: 'mins', start: 'mins', resolve: 'mins' };
+            this.slaUnits[p.id] = { ack: 'businessDays', start: 'businessDays', resolve: 'businessDays' };
           });
         }
+
+        // Always interpret as business hours
+        this.interpretAsBH = true;
 
         if (App.state.draftWorkflow) {
           this.loadWorkflow(App.state.draftWorkflow);
@@ -717,10 +721,6 @@
           this.renderSteps();
           this.renderSLAPolicy();
         }
-
-        // Set interpretation checkbox
-        const checkbox = document.getElementById('interpret-as-bh');
-        if (checkbox) checkbox.checked = this.interpretAsBH;
       },
 
       toggleInterpretation() {
@@ -920,6 +920,7 @@
         // Get current business hours profile for conversions
         const bhId = document.getElementById('wf-business-hours')?.value;
         const bhProfile = App.state.catalogs.businessHours.find(bh => bh.id === bhId) || App.state.catalogs.businessHours[0];
+        const minsPerDay = App.minutesPerBusinessDay(bhProfile);
 
         let html = '';
         priorities.forEach(p => {
@@ -930,82 +931,45 @@
             escalate: {}
           };
 
-          // Get units for this priority
-          const units = this.slaUnits[p.id] || { ack: 'mins', start: 'mins', resolve: 'mins' };
+          // Get units for this priority (default to businessDays for all fields)
+          const units = this.slaUnits[p.id] || { ack: 'businessDays', start: 'businessDays', resolve: 'businessDays' };
 
-          // Convert stored minutes to display values based on selected units
-          const ackValue = units.ack === 'hours' ? (sla.ackMins / 60).toFixed(1) : sla.ackMins;
-          const startValue = units.start === 'hours' ? (sla.startMins / 60).toFixed(1) : sla.startMins;
-          let resolveValue = sla.resolveMins;
-          if (units.resolve === 'hours') {
-            resolveValue = (sla.resolveMins / 60).toFixed(1);
-          } else if (units.resolve === 'businessDays') {
-            const minsPerDay = App.minutesPerBusinessDay(bhProfile);
-            resolveValue = (sla.resolveMins / minsPerDay).toFixed(1);
-          }
+          // Convert stored minutes to display values in Business Days
+          const ackBD = (sla.ackMins / minsPerDay).toFixed(1);
+          const startBD = (sla.startMins / minsPerDay).toFixed(1);
+          const resolveBD = (sla.resolveMins / minsPerDay).toFixed(1);
 
           html += '<tr>';
           html += '<td><strong>' + p.name + '</strong></td>';
 
-          // Acknowledge column with unit selector
-          html += '<td style="min-width:200px;">';
-          html += '<div style="display:flex; gap:0.25rem; margin-bottom:0.25rem;">';
-          html += '<input type="number" step="0.1" value="' + (ackValue || '') + '" id="sla-ack-' + p.id + '" data-priority="' + p.id + '" data-field="ack" onchange="BuildScreen.syncSlider(\'' + p.id + '\', \'ack\')" style="width:70px;">';
-          html += '<select data-priority="' + p.id + '" data-field="ackUnit" onchange="BuildScreen.changeSLAUnit(\'' + p.id + '\', \'ack\', this.value)" style="width:80px;">';
-          html += '<option value="mins"' + (units.ack === 'mins' ? ' selected' : '') + '>mins</option>';
-          html += '<option value="hours"' + (units.ack === 'hours' ? ' selected' : '') + '>hours</option>';
-          html += '</select>';
+          // Acknowledge column (Business Days by default)
+          html += '<td style="min-width:180px;">';
+          html += '<input type="number" step="0.5" value="' + ackBD + '" id="sla-ack-' + p.id + '" data-priority="' + p.id + '" data-field="ack" onchange="BuildScreen.syncSlider(\'' + p.id + '\', \'ack\')" style="width:100px; margin-bottom:0.25rem;">';
+          // Slider: 0-5 BD, step 0.5
+          html += '<input type="range" min="0" max="5" step="0.5" value="' + ackBD + '" id="sla-ack-slider-' + p.id + '" oninput="BuildScreen.syncInput(\'' + p.id + '\', \'ack\')" style="width:100%; margin-bottom:0.25rem;">';
+          html += '<div class="text-muted" style="font-size:0.75rem;">';
+          html += '≈ ' + ackBD + ' business days → ' + sla.ackMins + ' mins';
           html += '</div>';
-          // Slider: 0-480 mins = 0-8h
-          const ackMax = units.ack === 'hours' ? 8 : 480;
-          const ackStep = units.ack === 'hours' ? 0.1 : 1;
-          html += '<input type="range" min="0" max="' + ackMax + '" step="' + ackStep + '" value="' + (ackValue || 0) + '" id="sla-ack-slider-' + p.id + '" oninput="BuildScreen.syncInput(\'' + p.id + '\', \'ack\')" style="width:100%;">';
-          html += '<div class="text-muted" style="font-size:0.8rem;">(' + sla.ackMins + ' mins)</div>';
           html += '</td>';
 
-          // Start Work column with unit selector
-          html += '<td style="min-width:200px;">';
-          html += '<div style="display:flex; gap:0.25rem; margin-bottom:0.25rem;">';
-          html += '<input type="number" step="0.1" value="' + (startValue || '') + '" id="sla-start-' + p.id + '" data-priority="' + p.id + '" data-field="start" onchange="BuildScreen.syncSlider(\'' + p.id + '\', \'start\')" style="width:70px;">';
-          html += '<select data-priority="' + p.id + '" data-field="startUnit" onchange="BuildScreen.changeSLAUnit(\'' + p.id + '\', \'start\', this.value)" style="width:80px;">';
-          html += '<option value="mins"' + (units.start === 'mins' ? ' selected' : '') + '>mins</option>';
-          html += '<option value="hours"' + (units.start === 'hours' ? ' selected' : '') + '>hours</option>';
-          html += '</select>';
+          // Start Work column (Business Days by default)
+          html += '<td style="min-width:180px;">';
+          html += '<input type="number" step="0.5" value="' + startBD + '" id="sla-start-' + p.id + '" data-priority="' + p.id + '" data-field="start" onchange="BuildScreen.syncSlider(\'' + p.id + '\', \'start\')" style="width:100px; margin-bottom:0.25rem;">';
+          // Slider: 0-10 BD, step 0.5
+          html += '<input type="range" min="0" max="10" step="0.5" value="' + startBD + '" id="sla-start-slider-' + p.id + '" oninput="BuildScreen.syncInput(\'' + p.id + '\', \'start\')" style="width:100%; margin-bottom:0.25rem;">';
+          html += '<div class="text-muted" style="font-size:0.75rem;">';
+          html += '≈ ' + startBD + ' business days → ' + sla.startMins + ' mins';
           html += '</div>';
-          // Slider: 0-1440 mins = 0-24h
-          const startMax = units.start === 'hours' ? 24 : 1440;
-          const startStep = units.start === 'hours' ? 0.1 : 1;
-          html += '<input type="range" min="0" max="' + startMax + '" step="' + startStep + '" value="' + (startValue || 0) + '" id="sla-start-slider-' + p.id + '" oninput="BuildScreen.syncInput(\'' + p.id + '\', \'start\')" style="width:100%;">';
-          html += '<div class="text-muted" style="font-size:0.8rem;">(' + sla.startMins + ' mins)</div>';
           html += '</td>';
 
-          // Resolve column with unit selector (includes business days)
-          html += '<td style="min-width:240px;">';
-          html += '<div style="display:flex; gap:0.25rem; margin-bottom:0.25rem;">';
-          html += '<input type="number" step="0.1" value="' + (resolveValue || '') + '" id="sla-resolve-' + p.id + '" data-priority="' + p.id + '" data-field="resolve" onchange="BuildScreen.syncSlider(\'' + p.id + '\', \'resolve\')" style="width:70px;">';
-          html += '<select data-priority="' + p.id + '" data-field="resolveUnit" onchange="BuildScreen.changeSLAUnit(\'' + p.id + '\', \'resolve\', this.value)" style="width:110px;">';
-          html += '<option value="mins"' + (units.resolve === 'mins' ? ' selected' : '') + '>mins</option>';
-          html += '<option value="hours"' + (units.resolve === 'hours' ? ' selected' : '') + '>hours</option>';
-          html += '<option value="businessDays"' + (units.resolve === 'businessDays' ? ' selected' : '') + '>business days</option>';
-          html += '</select>';
+          // Resolve column (Business Days by default)
+          html += '<td style="min-width:180px;">';
+          html += '<input type="number" step="0.5" value="' + resolveBD + '" id="sla-resolve-' + p.id + '" data-priority="' + p.id + '" data-field="resolve" onchange="BuildScreen.syncSlider(\'' + p.id + '\', \'resolve\')" style="width:100px; margin-bottom:0.25rem;">';
+          // Slider: 0-20 BD, step 0.5
+          html += '<input type="range" min="0" max="20" step="0.5" value="' + resolveBD + '" id="sla-resolve-slider-' + p.id + '" oninput="BuildScreen.syncInput(\'' + p.id + '\', \'resolve\')" style="width:100%; margin-bottom:0.25rem;">';
+          html += '<div class="text-muted" style="font-size:0.75rem;">';
+          html += '≈ ' + resolveBD + ' business days → ' + sla.resolveMins + ' mins';
           html += '</div>';
-          // Slider: 60-20160 mins = 1h-14 days OR 0-20 business days
-          let resolveMax, resolveMin, resolveStep;
-          if (units.resolve === 'businessDays') {
-            resolveMax = 20;
-            resolveMin = 0;
-            resolveStep = 0.1;
-          } else if (units.resolve === 'hours') {
-            resolveMax = 336; // 14 days in hours
-            resolveMin = 1;
-            resolveStep = 0.5;
-          } else {
-            resolveMax = 20160; // 14 days
-            resolveMin = 60;    // 1 hour
-            resolveStep = 60;
-          }
-          html += '<input type="range" min="' + resolveMin + '" max="' + resolveMax + '" step="' + resolveStep + '" value="' + (resolveValue || resolveMin) + '" id="sla-resolve-slider-' + p.id + '" oninput="BuildScreen.syncInput(\'' + p.id + '\', \'resolve\')" style="width:100%;">';
-          html += '<div class="text-muted" style="font-size:0.8rem;">(' + sla.resolveMins + ' mins)</div>';
           html += '</td>';
 
           // Escalate After (mins)
@@ -1108,30 +1072,17 @@
         // Get current business hours for conversions
         const bhId = document.getElementById('wf-business-hours')?.value;
         const bhProfile = App.state.catalogs.businessHours.find(bh => bh.id === bhId) || App.state.catalogs.businessHours[0];
+        const minsPerDay = App.minutesPerBusinessDay(bhProfile);
 
         Object.keys(preset).forEach(priorityId => {
           const values = preset[priorityId];
-          const units = this.slaUnits[priorityId] || { ack: 'mins', start: 'mins', resolve: 'mins' };
 
-          // Convert preset minutes to current units
-          let ackValue = values.ackMins;
-          let startValue = values.startMins;
-          let resolveValue = values.resolveMins;
+          // Convert preset minutes to Business Days (default display unit)
+          const ackValue = (values.ackMins / minsPerDay).toFixed(1);
+          const startValue = (values.startMins / minsPerDay).toFixed(1);
+          const resolveValue = (values.resolveMins / minsPerDay).toFixed(1);
 
-          if (units.ack === 'hours') {
-            ackValue = (values.ackMins / 60).toFixed(1);
-          }
-          if (units.start === 'hours') {
-            startValue = (values.startMins / 60).toFixed(1);
-          }
-          if (units.resolve === 'hours') {
-            resolveValue = (values.resolveMins / 60).toFixed(1);
-          } else if (units.resolve === 'businessDays') {
-            const minsPerDay = App.minutesPerBusinessDay(bhProfile);
-            resolveValue = (values.resolveMins / minsPerDay).toFixed(1);
-          }
-
-          // Set values using new IDs
+          // Set values
           const ackInput = document.getElementById('sla-ack-' + priorityId);
           const startInput = document.getElementById('sla-start-' + priorityId);
           const resolveInput = document.getElementById('sla-resolve-' + priorityId);
@@ -1139,6 +1090,15 @@
           if (ackInput) ackInput.value = ackValue;
           if (startInput) startInput.value = startValue;
           if (resolveInput) resolveInput.value = resolveValue;
+
+          // Sync sliders
+          const ackSlider = document.getElementById('sla-ack-slider-' + priorityId);
+          const startSlider = document.getElementById('sla-start-slider-' + priorityId);
+          const resolveSlider = document.getElementById('sla-resolve-slider-' + priorityId);
+
+          if (ackSlider) ackSlider.value = ackValue;
+          if (startSlider) startSlider.value = startValue;
+          if (resolveSlider) resolveSlider.value = resolveValue;
         });
 
         // Re-render to show updated minutes helpers
@@ -1223,8 +1183,13 @@
         // Clear current workflow ID so next save creates a new workflow
         this.currentWorkflowId = null;
 
-        alert('Workflow saved successfully!');
-        location.hash = '#/wf/' + workflow.id;
+        // Show success message with View Review button
+        if (confirm('Workflow saved successfully! Would you like to view the Review screen?')) {
+          location.hash = '#/wf/' + workflow.id;
+        } else {
+          // Stay on build screen, ready for next workflow
+          this.clear();
+        }
       },
 
       saveDraft() {
@@ -1457,8 +1422,10 @@
         }
 
         try {
-          const url = await ShareLink.copyToClipboard(workflow, App.state.catalogs);
-          alert('Share link copied to clipboard!\n\n' + url);
+          // Copy deep link URL
+          const deepLink = location.origin + location.pathname + '#/wf/' + workflow.id;
+          await navigator.clipboard.writeText(deepLink);
+          alert('Share link copied to clipboard!\n\n' + deepLink);
         } catch (error) {
           console.error('Failed to copy link:', error);
           alert('Failed to copy link. Check console for details.');

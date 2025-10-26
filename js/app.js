@@ -374,15 +374,37 @@ const App = {
   },
 
   /**
+   * Get workflows from localStorage (fresh read)
+   */
+  getWorkflows() {
+    try {
+      const stored = localStorage.getItem('sla.workflows');
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error('Failed to get workflows:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Set workflows to localStorage
+   */
+  setWorkflows(list) {
+    try {
+      localStorage.setItem('sla.workflows', JSON.stringify(list));
+      console.log('Workflows saved to localStorage');
+    } catch (error) {
+      console.error('Failed to set workflows:', error);
+    }
+  },
+
+  /**
    * Load workflows from localStorage
    */
   loadWorkflows() {
     try {
-      const stored = localStorage.getItem('sla.workflows');
-      if (stored) {
-        this.state.workflows = JSON.parse(stored);
-        console.log(`Loaded ${this.state.workflows.length} workflows from localStorage`);
-      }
+      this.state.workflows = this.getWorkflows();
+      console.log(`Loaded ${this.state.workflows.length} workflows from localStorage`);
     } catch (error) {
       console.error('Failed to load workflows:', error);
       this.state.workflows = [];
@@ -393,12 +415,7 @@ const App = {
    * Save workflows to localStorage
    */
   saveWorkflows() {
-    try {
-      localStorage.setItem('sla.workflows', JSON.stringify(this.state.workflows));
-      console.log('Workflows saved to localStorage');
-    } catch (error) {
-      console.error('Failed to save workflows:', error);
-    }
+    this.setWorkflows(this.state.workflows);
   },
 
   /**
@@ -450,11 +467,20 @@ const App = {
    * Delete a workflow
    */
   deleteWorkflow(id) {
-    const idx = this.state.workflows.findIndex(w => w.id === id);
-    if (idx > -1) {
-      this.state.workflows.splice(idx, 1);
-      this.saveWorkflows();
-    }
+    const list = this.getWorkflows().filter(w => w.id !== id);
+    this.setWorkflows(list);
+    // Reload state
+    this.loadWorkflows();
+  },
+
+  /**
+   * Delete all workflows for a department
+   */
+  deleteAllWorkflowsForDepartment(deptId) {
+    const list = this.getWorkflows().filter(w => w.departmentId !== deptId);
+    this.setWorkflows(list);
+    // Reload state
+    this.loadWorkflows();
   },
 
   /**
@@ -745,6 +771,16 @@ const App = {
       feasiblePct: count > 0 ? Math.round((feasibleCount / count) * 100) : '—',
       avgDuration: count > 0 ? Math.round(totalDuration / count) : '—'
     };
+  },
+
+  /**
+   * Re-render current route (for refreshing after deletes)
+   */
+  renderCurrentRoute() {
+    // Reload workflows from storage
+    this.loadWorkflows();
+    // Re-run the router to refresh the current screen
+    this.router();
   }
 };
 

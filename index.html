@@ -306,8 +306,10 @@
         const container = document.getElementById('home-content');
         if (App.state.viewMode === 'cards') {
           container.innerHTML = this.renderCards();
+          this.attachCardEventListeners();
         } else {
           container.innerHTML = this.renderTable();
+          this.attachTableEventListeners();
         }
       },
 
@@ -317,7 +319,11 @@
 
         departments.forEach(dept => {
           const stats = App.getDepartmentStats(dept.id);
-          html += '<div class="dept-card" onclick="location.hash=\'#/dept/' + dept.id + '\'" style="cursor:pointer;">';
+          html += '<div class="dept-card" onclick="location.hash=\'#/dept/' + dept.id + '\'" style="cursor:pointer; position:relative;">';
+          // Delete all button
+          if (stats.count > 0) {
+            html += '<button class="card-delete-all" data-dept="' + dept.id + '" aria-label="Delete all workflows" title="Delete all workflows in ' + dept.name + '" style="position:absolute; top:0.5rem; right:0.5rem; background:none; border:none; font-size:1.5rem; cursor:pointer; color:#999; padding:0.25rem 0.5rem; line-height:1;" onclick="event.stopPropagation();">×</button>';
+          }
           html += '<h3>' + dept.name + '</h3>';
           html += '<div class="dept-card-stats">';
           html += '<div class="dept-card-stat"><span>Workflows:</span><strong>' + stats.count + '</strong></div>';
@@ -340,6 +346,29 @@
 
         html += '</div>';
         return html;
+      },
+
+      attachCardEventListeners() {
+        const cardsEl = document.querySelector('.dept-cards');
+        if (!cardsEl) return;
+
+        cardsEl.addEventListener('click', (e) => {
+          const btn = e.target.closest('.card-delete-all');
+          if (!btn) return;
+
+          e.stopPropagation();
+          const deptId = btn.dataset.dept;
+          const dept = App.state.catalogs.departments.find(d => d.id === deptId);
+          const deptName = dept ? dept.name : 'this department';
+          const count = App.getWorkflows().filter(w => w.departmentId === deptId).length;
+
+          if (count === 0) return;
+
+          if (confirm('Delete all workflows in "' + deptName + '" from this device?\n\n' + count + ' workflow(s) will be deleted. This cannot be undone.')) {
+            App.deleteAllWorkflowsForDepartment(deptId);
+            App.renderCurrentRoute();
+          }
+        });
       },
 
       renderTable() {
@@ -375,12 +404,13 @@
           return updatedB - updatedA;
         });
 
-        let html = '<table><thead><tr>';
+        let html = '<table id="home-table"><thead><tr>';
         html += '<th>Dept</th><th>Work Type</th><th>Owner</th><th>Steps</th>';
         html += '<th>Total mins</th>';
         html += '<th title="Computed using business-hours if enabled on each workflow">Resolve (Normal)</th>';
         html += '<th title="Computed using business-hours if enabled on each workflow">Feasible?</th>';
         html += '<th>Updated</th>';
+        html += '<th style="width:60px;"></th>';
         html += '</tr></thead><tbody>';
 
         workflows.forEach(wf => {
@@ -403,20 +433,57 @@
           const totalMins = feasibility ? feasibility.totalExpectedMins : 0;
           const updated = wf.updatedAt ? new Date(wf.updatedAt).toLocaleDateString() : 'Never';
 
-          html += '<tr onclick="location.hash=\'#/wf/' + wf.id + '\'" style="cursor:pointer;">';
-          html += '<td>' + (dept ? dept.name : 'Unknown') + '</td>';
-          html += '<td><strong>' + wf.workType + '</strong></td>';
-          html += '<td>' + (owner ? owner.name : 'Unknown') + '</td>';
-          html += '<td>' + stepCount + '</td>';
-          html += '<td>' + totalMins + '</td>';
-          html += '<td>' + slaResolveDisplay + '</td>';
-          html += '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
-          html += '<td>' + updated + '</td>';
+          html += '<tr data-wf-id="' + wf.id + '">';
+          html += '<td class="clickable-cell">' + (dept ? dept.name : 'Unknown') + '</td>';
+          html += '<td class="clickable-cell"><strong>' + wf.workType + '</strong></td>';
+          html += '<td class="clickable-cell">' + (owner ? owner.name : 'Unknown') + '</td>';
+          html += '<td class="clickable-cell">' + stepCount + '</td>';
+          html += '<td class="clickable-cell">' + totalMins + '</td>';
+          html += '<td class="clickable-cell">' + slaResolveDisplay + '</td>';
+          html += '<td class="clickable-cell"><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
+          html += '<td class="clickable-cell">' + updated + '</td>';
+          html += '<td><button class="btn-sm btn-ghost row-delete" data-id="' + wf.id + '" aria-label="Delete workflow" title="Delete workflow">🗑</button></td>';
           html += '</tr>';
         });
 
         html += '</tbody></table>';
         return html;
+      },
+
+      attachTableEventListeners() {
+        const tableEl = document.getElementById('home-table');
+        if (!tableEl) return;
+
+        // Handle row clicks (navigate to workflow)
+        tableEl.addEventListener('click', (e) => {
+          // Check if delete button was clicked
+          const deleteBtn = e.target.closest('.row-delete');
+          if (deleteBtn) {
+            e.stopPropagation();
+            const id = deleteBtn.dataset.id;
+            const wf = App.getWorkflows().find(x => x.id === id);
+            if (!wf) return;
+
+            const dept = App.state.catalogs.departments.find(d => d.id === wf.departmentId);
+            const deptName = dept ? dept.name : 'its department';
+
+            if (confirm('Delete workflow?\n\nThis will remove "' + wf.workType + '" from ' + deptName + '. This cannot be undone.')) {
+              App.deleteWorkflow(id);
+              App.renderCurrentRoute();
+            }
+            return;
+          }
+
+          // Handle clickable cell clicks (navigate to workflow)
+          const clickableCell = e.target.closest('.clickable-cell');
+          if (clickableCell) {
+            const row = clickableCell.closest('tr');
+            const wfId = row.dataset.wfId;
+            if (wfId) {
+              location.hash = '#/wf/' + wfId;
+            }
+          }
+        });
       }
     };
 
@@ -455,9 +522,10 @@
         if (workflows.length === 0) {
           html += '<p class="text-muted">No workflows yet for this department.</p>';
         } else {
-          html += '<table><thead><tr>';
+          html += '<table id="dept-table"><thead><tr>';
           html += '<th>Work Type</th><th>Owner</th><th>Steps</th><th>Total (mins)</th>';
           html += '<th>Resolve (Normal)</th><th>Feasible?</th><th>Updated</th>';
+          html += '<th style="width:60px;"></th>';
           html += '</tr></thead><tbody>';
 
           workflows.forEach(wf => {
@@ -474,14 +542,15 @@
 
             const updated = wf.updatedAt ? new Date(wf.updatedAt).toLocaleDateString() : 'Never';
 
-            html += '<tr onclick="location.hash=\'#/wf/' + wf.id + '\'" style="cursor:pointer;">';
-            html += '<td><strong><a href="#/wf/' + wf.id + '" onclick="event.stopPropagation();">' + wf.workType + '</a></strong></td>';
-            html += '<td>' + (owner ? owner.name : 'Unknown') + '</td>';
-            html += '<td>' + (wf.steps ? wf.steps.length : 0) + '</td>';
-            html += '<td>' + validation.summary.totalExpectedMins + '</td>';
-            html += '<td>' + slaResolveDisplay + '</td>';
-            html += '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
-            html += '<td>' + updated + '</td>';
+            html += '<tr data-wf-id="' + wf.id + '">';
+            html += '<td class="clickable-cell"><strong><a href="#/wf/' + wf.id + '" onclick="event.stopPropagation();">' + wf.workType + '</a></strong></td>';
+            html += '<td class="clickable-cell">' + (owner ? owner.name : 'Unknown') + '</td>';
+            html += '<td class="clickable-cell">' + (wf.steps ? wf.steps.length : 0) + '</td>';
+            html += '<td class="clickable-cell">' + validation.summary.totalExpectedMins + '</td>';
+            html += '<td class="clickable-cell">' + slaResolveDisplay + '</td>';
+            html += '<td class="clickable-cell"><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
+            html += '<td class="clickable-cell">' + updated + '</td>';
+            html += '<td><button class="btn-sm btn-ghost row-delete" data-id="' + wf.id + '" aria-label="Delete workflow" title="Delete workflow">🗑</button></td>';
             html += '</tr>';
           });
 
@@ -489,6 +558,42 @@
         }
 
         document.getElementById('dept-content').innerHTML = html;
+        this.attachTableEventListeners();
+      },
+
+      attachTableEventListeners() {
+        const tableEl = document.getElementById('dept-table');
+        if (!tableEl) return;
+
+        tableEl.addEventListener('click', (e) => {
+          // Check if delete button was clicked
+          const deleteBtn = e.target.closest('.row-delete');
+          if (deleteBtn) {
+            e.stopPropagation();
+            const id = deleteBtn.dataset.id;
+            const wf = App.getWorkflows().find(x => x.id === id);
+            if (!wf) return;
+
+            const dept = App.state.catalogs.departments.find(d => d.id === wf.departmentId);
+            const deptName = dept ? dept.name : 'its department';
+
+            if (confirm('Delete workflow?\n\nThis will remove "' + wf.workType + '" from ' + deptName + '. This cannot be undone.')) {
+              App.deleteWorkflow(id);
+              App.renderCurrentRoute();
+            }
+            return;
+          }
+
+          // Handle clickable cell clicks (navigate to workflow)
+          const clickableCell = e.target.closest('.clickable-cell');
+          if (clickableCell) {
+            const row = clickableCell.closest('tr');
+            const wfId = row.dataset.wfId;
+            if (wfId) {
+              location.hash = '#/wf/' + wfId;
+            }
+          }
+        });
       },
 
       newWorkflow(deptId) {

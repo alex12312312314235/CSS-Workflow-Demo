@@ -1,0 +1,124 @@
+{
+  "schemaVersion": "1.0.0",
+  "templates": {
+    "cd": [
+      {
+        "workType": "Menu Concept Proposal",
+        "ownerRoleId": "exec_sous",
+        "businessHoursId": "std",
+        "steps": [
+          {"title": "Brief Intake", "roleId": "s_s_lead", "expectedMins": 30},
+          {"title": "Concept Draft", "roleId": "exec_sous", "expectedMins": 240},
+          {"title": "Stakeholder Review", "roleId": "i_i_analyst", "expectedMins": 120}
+        ],
+        "slaPreset": "standard"
+      },
+      {
+        "workType": "Client Menu Change",
+        "ownerRoleId": "exec_sous",
+        "businessHoursId": "std",
+        "steps": [
+          {"title": "Impact Check", "roleId": "food_tech", "expectedMins": 90},
+          {"title": "Recipe Update", "roleId": "exec_sous", "expectedMins": 180},
+          {"title": "Spec & Label Update", "roleId": "s_s_lead", "expectedMins": 60}
+        ],
+        "slaPreset": "standard"
+      }
+    ],
+    "ss": [
+      {
+        "workType": "Allergen Update",
+        "ownerRoleId": "s_s_lead",
+        "businessHoursId": "std",
+        "steps": [
+          {"title": "Intake & Triage", "roleId": "s_s_lead", "expectedMins": 60},
+          {"title": "Verification", "roleId": "food_tech", "expectedMins": 240},
+          {"title": "Publish & Notify", "roleId": "exec_sous", "expectedMins": 60}
+        ],
+        "slaPreset": "standard"
+      },
+      {
+        "workType": "Recipe Verification",
+        "ownerRoleId": "s_s_lead",
+        "businessHoursId": "std",
+        "steps": [
+          {"title": "Receive Item", "roleId": "s_s_lead", "expectedMins": 60},
+          {"title": "Verify Item", "roleId": "i_i_analyst", "expectedMins": 180}
+        ],
+        "slaPreset": "standard"
+      }
+    ],
+    "ft": [
+      {
+        "workType": "Lab Analysis Request",
+        "ownerRoleId": "food_tech",
+        "businessHoursId": "std",
+        "steps": [
+          {"title": "Sample Intake", "roleId": "food_tech", "expectedMins": 45},
+          {"title": "Bench Test", "roleId": "food_tech", "expectedMins": 240},
+          {"title": "Report Draft", "roleId": "food_tech", "expectedMins": 90}
+        ],
+        "slaPreset": "standard"
+      },
+      {
+        "workType": "Ingredient Change Assessment",
+        "ownerRoleId": "food_tech",
+        "businessHoursId": "std",
+        "steps": [
+          {"title": "Risk Review", "roleId": "food_tech", "expectedMins": 120},
+          {"title": "Pilot Batch", "roleId": "food_tech", "expectedMins": 180},
+          {"title": "Stability Check", "roleId": "food_tech", "expectedMins": 60}
+        ],
+        "slaPreset": "conservative"
+      }
+    ],
+    "hd": [
+      {
+        "workType": "Nutritional Analysis",
+        "ownerRoleId": "h_d_lead",
+        "businessHoursId": "std",
+        "steps": [
+          {"title": "Data Collection", "roleId": "i_i_analyst", "expectedMins": 180},
+          {"title": "Dietary Assessment", "roleId": "h_d_lead", "expectedMins": 240},
+          {"title": "Label Update", "roleId": "h_d_lead", "expectedMins": 60}
+        ],
+        "slaPreset": "standard"
+      },
+      {
+        "workType": "Allergen Assessment (New Product)",
+        "ownerRoleId": "h_d_lead",
+        "businessHoursId": "std",
+        "steps": [
+          {"title": "Cross-contact Review", "roleId": "h_d_lead", "expectedMins": 120},
+          {"title": "Client Advisory", "roleId": "h_d_lead", "expectedMins": 60},
+          {"title": "Publish", "roleId": "s_s_lead", "expectedMins": 30}
+        ],
+        "slaPreset": "aggressive"
+      }
+    ],
+    "ii": [
+      {
+        "workType": "KPI Report Generation",
+        "ownerRoleId": "i_i_analyst",
+        "businessHoursId": "std",
+        "steps": [
+          {"title": "Dataset Prep", "roleId": "i_i_analyst", "expectedMins": 120},
+          {"title": "Report Build", "roleId": "i_i_analyst", "expectedMins": 180},
+          {"title": "QA & Publish", "roleId": "i_i_analyst", "expectedMins": 60}
+        ],
+        "slaPreset": "standard"
+      },
+      {
+        "workType": "Forecast Update",
+        "ownerRoleId": "i_i_analyst",
+        "businessHoursId": "std",
+        "steps": [
+          {"title": "Model Refresh", "roleId": "i_i_analyst", "expectedMins": 180},
+          {"title": "Sanity Checks", "roleId": "i_i_analyst", "expectedMins": 60},
+          {"title": "Stakeholder Notes", "roleId": "i_i_analyst", "expectedMins": 45}
+        ],
+        "slaPreset": "aggressive"
+      }
+    ]
+  }
+}

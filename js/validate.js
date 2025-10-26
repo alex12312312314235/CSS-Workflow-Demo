@@ -193,6 +193,45 @@ const Validator = {
     const totalStepMins = workflow.steps.reduce((sum, s) => sum + (s.expectedMins || 0), 0);
 
     return totalStepMins > sla.resolveMins;
+  },
+
+  /**
+   * Validate workflow and return detailed summary
+   * @param {object} workflow
+   * @param {object} catalogs
+   * @returns {object} {errors: [], summary: {totalExpectedMins, feasibleByPriority}}
+   */
+  validateWithSummary(workflow, catalogs) {
+    const errors = this.validateWorkflow(workflow, catalogs);
+    const totalExpectedMins = workflow.steps ? workflow.steps.reduce((sum, s) => sum + (s.expectedMins || 0), 0) : 0;
+
+    const feasibleByPriority = {};
+    if (workflow.slaByPriority && catalogs.priorities) {
+      catalogs.priorities.forEach(priority => {
+        const sla = workflow.slaByPriority[priority.id];
+        if (sla) {
+          const overrun = this.checkSLAOverrun(workflow, priority.id, catalogs);
+          const buffer = sla.resolveMins - totalExpectedMins;
+          const bufferPct = totalExpectedMins > 0 ? (buffer / totalExpectedMins) * 100 : 100;
+
+          feasibleByPriority[priority.id] = {
+            feasible: !overrun && bufferPct >= 0,
+            tight: !overrun && bufferPct < 20 && bufferPct >= 0,
+            overrun: overrun,
+            buffer: buffer,
+            bufferPct: bufferPct
+          };
+        }
+      });
+    }
+
+    return {
+      errors,
+      summary: {
+        totalExpectedMins,
+        feasibleByPriority
+      }
+    };
   }
 };
 

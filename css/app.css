@@ -464,3 +464,397 @@ tr:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* ========== NEW FEATURES ========== */
+
+/* Breadcrumbs */
+.breadcrumb {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: #7f8c8d;
+}
+
+.breadcrumb a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb span {
+  color: #7f8c8d;
+}
+
+/* Department Cards */
+.dept-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.dept-card {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  transition: box-shadow 0.2s, transform 0.2s;
+  cursor: pointer;
+}
+
+.dept-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+
+.dept-card h3 {
+  margin: 0 0 15px 0;
+  color: #2c3e50;
+  font-size: 18px;
+}
+
+.dept-card-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 15px;
+  font-size: 13px;
+  color: #555;
+}
+
+.dept-card-stat {
+  display: flex;
+  justify-content: space-between;
+}
+
+.dept-card-stat strong {
+  font-weight: 600;
+}
+
+.dept-card-action {
+  text-align: right;
+}
+
+.dept-card-action button {
+  font-size: 13px;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-feasible {
+  background: #d4edda;
+  color: #155724;
+}
+
+.badge-tight {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.badge-overrun {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.badge-draft {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+.badge-active {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+/* View Toggle */
+.view-toggle {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.view-toggle span {
+  font-weight: 500;
+  color: #555;
+}
+
+.toggle-btn {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  background: white;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.toggle-btn.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+.toggle-btn:first-of-type {
+  border-radius: 4px 0 0 4px;
+}
+
+.toggle-btn:last-of-type {
+  border-radius: 0 4px 4px 0;
+  border-left: none;
+}
+
+/* Filters */
+.filters {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.filter-group {
+  flex: 1;
+  min-width: 200px;
+}
+
+.filter-group label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.filter-group select,
+.filter-group input {
+  width: 100%;
+  font-size: 14px;
+}
+
+/* Two-column layout (Build screen) */
+.build-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 30px;
+}
+
+.build-form {
+  min-width: 0;
+}
+
+.help-panel {
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 20px;
+  position: sticky;
+  top: 30px;
+  align-self: start;
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
+}
+
+.help-panel h4 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  color: #2c3e50;
+}
+
+.help-panel p {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #555;
+}
+
+.help-panel .help-section {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #ddd;
+}
+
+.help-panel .help-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+/* SLA Presets */
+.sla-presets {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.preset-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+}
+
+.preset-btn:hover {
+  background: #f8f9fa;
+  border-color: #3498db;
+}
+
+.preset-btn.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+/* Template selector */
+.template-selector {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+.template-selector label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.template-selector select {
+  width: 100%;
+  font-size: 14px;
+}
+
+.template-selector .text-muted {
+  margin-top: 5px;
+}
+
+/* KPI Boxes */
+.kpi-boxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.kpi-box {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  text-align: center;
+}
+
+.kpi-value {
+  font-size: 32px;
+  font-weight: bold;
+  color: #2c3e50;
+  margin-bottom: 5px;
+}
+
+.kpi-label {
+  font-size: 13px;
+  color: #7f8c8d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Validation Strip */
+.validation-strip {
+  padding: 15px;
+  border-radius: 4px;
+  margin: 20px 0;
+  font-weight: 500;
+}
+
+.validation-strip.green {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.validation-strip.yellow {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.validation-strip.red {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Print improvements */
+@media print {
+  .help-panel {
+    display: none !important;
+  }
+
+  .build-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .breadcrumb {
+    font-size: 12px;
+  }
+
+  .kpi-boxes {
+    page-break-inside: avoid;
+  }
+
+  .dept-card {
+    page-break-inside: avoid;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .build-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .help-panel {
+    position: relative;
+    top: 0;
+    max-height: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .filters {
+    flex-direction: column;
+  }
+
+  .filter-group {
+    min-width: 100%;
+  }
+
+  .dept-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-boxes {
+    grid-template-columns: 1fr;
+  }
+
+  .sla-presets {
+    flex-direction: column;
+  }
+}

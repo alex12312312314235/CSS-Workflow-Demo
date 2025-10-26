@@ -1,0 +1,159 @@
+{
+  "schemaVersion": "1.0.0",
+  "workflows": [
+    {
+      "id": "allergen_update",
+      "departmentId": "ss",
+      "workType": "Allergen Update",
+      "businessHoursId": "std",
+      "ownerRoleId": "s_s_lead",
+      "steps": [
+        {
+          "id": "intake",
+          "title": "Intake & Ticket Triage",
+          "roleId": "s_s_lead",
+          "expectedMins": 60
+        },
+        {
+          "id": "verify",
+          "title": "Label & Spec Verification",
+          "roleId": "food_tech",
+          "expectedMins": 240
+        },
+        {
+          "id": "publish",
+          "title": "Publish to S&S + Notify Ops",
+          "roleId": "exec_sous",
+          "expectedMins": 60
+        }
+      ],
+      "slaByPriority": {
+        "p1": {
+          "ackMins": 30,
+          "startMins": 60,
+          "resolveMins": 480,
+          "escalate": {
+            "afterMins": 60,
+            "toRoleId": "exec_sous"
+          }
+        },
+        "p2": {
+          "ackMins": 120,
+          "startMins": 240,
+          "resolveMins": 1440,
+          "escalate": {
+            "afterMins": 240,
+            "toRoleId": "exec_sous"
+          }
+        },
+        "p3": {
+          "ackMins": 1440,
+          "startMins": 2880,
+          "resolveMins": 10080
+        }
+      }
+    },
+    {
+      "id": "recipe_dev",
+      "departmentId": "cd",
+      "workType": "Recipe Development",
+      "businessHoursId": "std",
+      "ownerRoleId": "exec_sous",
+      "steps": [
+        {
+          "id": "brief",
+          "title": "Client Brief Review",
+          "roleId": "i_i_analyst",
+          "expectedMins": 120
+        },
+        {
+          "id": "develop",
+          "title": "Recipe Development & Testing",
+          "roleId": "exec_sous",
+          "expectedMins": 960
+        },
+        {
+          "id": "nutrition",
+          "title": "Nutritional Analysis",
+          "roleId": "h_d_lead",
+          "expectedMins": 180
+        },
+        {
+          "id": "finalize",
+          "title": "Documentation & Sign-off",
+          "roleId": "s_s_lead",
+          "expectedMins": 120
+        }
+      ],
+      "slaByPriority": {
+        "p1": {
+          "ackMins": 30,
+          "startMins": 60,
+          "resolveMins": 2880,
+          "escalate": {
+            "afterMins": 480,
+            "toRoleId": "exec_sous"
+          }
+        },
+        "p2": {
+          "ackMins": 120,
+          "startMins": 240,
+          "resolveMins": 5760,
+          "escalate": {
+            "afterMins": 960,
+            "toRoleId": "exec_sous"
+          }
+        },
+        "p3": {
+          "ackMins": 1440,
+          "startMins": 2880,
+          "resolveMins": 14400
+        }
+      }
+    },
+    {
+      "id": "spec_update",
+      "departmentId": "ft",
+      "workType": "Specification Update",
+      "businessHoursId": "std",
+      "ownerRoleId": "food_tech",
+      "steps": [
+        {
+          "id": "request",
+          "title": "Update Request Review",
+          "roleId": "food_tech",
+          "expectedMins": 30
+        },
+        {
+          "id": "update",
+          "title": "Specification Update",
+          "roleId": "food_tech",
+          "expectedMins": 120
+        },
+        {
+          "id": "approve",
+          "title": "Manager Approval",
+          "roleId": "s_s_lead",
+          "expectedMins": 60
+        }
+      ],
+      "slaByPriority": {
+        "p1": {
+          "ackMins": 30,
+          "startMins": 60,
+          "resolveMins": 480
+        },
+        "p2": {
+          "ackMins": 120,
+          "startMins": 240,
+          "resolveMins": 960
+        },
+        "p3": {
+          "ackMins": 1440,
+          "startMins": 2880,
+          "resolveMins": 5760
+        }
+      }
+    }
+  ]
+}

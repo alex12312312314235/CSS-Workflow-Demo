@@ -3,21 +3,64 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SLA & Workflow Configurator</title>
+  <title>CSS SLA & Workflow Configurator</title>
   <link rel="stylesheet" href="./css/app.css">
 </head>
 <body>
   <div class="container">
     <!-- Left Navigation -->
     <nav class="sidebar">
-      <h1>SLA Config</h1>
+      <h1>CSS SLA</h1>
+      <a href="#/home" class="nav-link active" data-route="home">Home</a>
       <a href="#/catalog" class="nav-link" data-route="catalog">Catalog</a>
-      <a href="#/build" class="nav-link active" data-route="build">Build</a>
+      <a href="#/build" class="nav-link" data-route="build">Build</a>
       <a href="#/review" class="nav-link" data-route="review">Review</a>
     </nav>
 
     <!-- Main Content Area -->
     <main class="main-content">
+      
+      <!-- Home Screen -->
+      <div id="screen-home" class="screen">
+        <h2>CSS Workflows Overview</h2>
+        <p class="text-muted">All departments and workflows at a glance</p>
+
+        <!-- Filters -->
+        <div class="filters">
+          <div class="filter-group">
+            <label>Department</label>
+            <select id="filter-dept" onchange="HomeScreen.updateFilters()">
+              <option value="all">All Departments</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Owner Role</label>
+            <select id="filter-owner" onchange="HomeScreen.updateFilters()">
+              <option value="all">All Roles</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Search Work Type</label>
+            <input type="text" id="filter-search" placeholder="Type to search..." oninput="HomeScreen.updateFilters()">
+          </div>
+        </div>
+
+        <!-- View Toggle -->
+        <div class="view-toggle">
+          <span>View:</span>
+          <button class="toggle-btn active" data-view="cards" onclick="HomeScreen.setView('cards')">Cards</button>
+          <button class="toggle-btn" data-view="table" onclick="HomeScreen.setView('table')">Table</button>
+        </div>
+
+        <!-- Content will be rendered here -->
+        <div id="home-content"></div>
+      </div>
+
+      <!-- Department Screen -->
+      <div id="screen-dept" class="screen">
+        <div id="dept-content"></div>
+      </div>
+
       <!-- Catalog Screen -->
       <div id="screen-catalog" class="screen">
         <h2>Reference Data Catalog</h2>
@@ -35,76 +78,138 @@
         <h2>Workflow Builder</h2>
         <p class="text-muted">Create or edit a workflow with steps and SLA targets.</p>
 
-        <form id="workflow-form">
-          <!-- Workflow Header -->
-          <div class="workflow-header">
-            <div class="form-group">
-              <label for="wf-department">Department *</label>
-              <select id="wf-department" required></select>
+        <div class="build-layout">
+          <div class="build-form">
+            <!-- Template Selector -->
+            <div class="template-selector" id="template-selector-section">
+              <label>Start from Template (optional)</label>
+              <select id="template-select" onchange="BuildScreen.loadTemplate(this.value)">
+                <option value="">-- Select a template --</option>
+              </select>
+              <p class="text-muted">Choose a pre-configured workflow template to get started quickly</p>
             </div>
-            <div class="form-group">
-              <label for="wf-work-type">Work Type *</label>
-              <input type="text" id="wf-work-type" placeholder="e.g., Recipe Development" required>
-            </div>
-            <div class="form-group">
-              <label for="wf-business-hours">Business Hours *</label>
-              <select id="wf-business-hours" required></select>
-            </div>
-            <div class="form-group">
-              <label for="wf-owner">Owner Role *</label>
-              <select id="wf-owner" required></select>
-            </div>
+
+            <form id="workflow-form">
+              <!-- Workflow Header -->
+              <div class="workflow-header">
+                <div class="form-group">
+                  <label for="wf-department">Department *</label>
+                  <select id="wf-department" required onchange="BuildScreen.onDepartmentChange()"></select>
+                </div>
+                <div class="form-group">
+                  <label for="wf-work-type">Work Type *</label>
+                  <input type="text" id="wf-work-type" placeholder="e.g., Recipe Development" required>
+                </div>
+                <div class="form-group">
+                  <label for="wf-business-hours">Business Hours *</label>
+                  <select id="wf-business-hours" required></select>
+                </div>
+                <div class="form-group">
+                  <label for="wf-owner">Owner Role *</label>
+                  <select id="wf-owner" required></select>
+                </div>
+              </div>
+
+              <!-- Steps Section -->
+              <div class="steps-container">
+                <h3>Workflow Steps</h3>
+                <div id="steps-list"></div>
+                <button type="button" class="btn-primary" onclick="BuildScreen.addStep()">+ Add Step</button>
+              </div>
+
+              <!-- SLA Policy Section -->
+              <div class="sla-table">
+                <h3>SLA Targets by Priority</h3>
+                <div class="sla-presets">
+                  <button type="button" class="preset-btn" data-preset="conservative" onclick="BuildScreen.applySLAPreset('conservative')">Conservative</button>
+                  <button type="button" class="preset-btn" data-preset="standard" onclick="BuildScreen.applySLAPreset('standard')">Standard</button>
+                  <button type="button" class="preset-btn" data-preset="aggressive" onclick="BuildScreen.applySLAPreset('aggressive')">Aggressive</button>
+                </div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Priority</th>
+                      <th>Acknowledge (mins)</th>
+                      <th>Start Work (mins)</th>
+                      <th>Resolve (mins)</th>
+                      <th>Escalate After (mins)</th>
+                      <th>Escalate To Role</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sla-policy-rows"></tbody>
+                </table>
+              </div>
+
+              <!-- Validation Messages -->
+              <div id="validation-strip"></div>
+              <ul id="validation-messages" class="validation-messages" role="alert" aria-live="polite"></ul>
+
+              <!-- Actions -->
+              <div class="action-bar">
+                <button type="button" class="btn-primary" onclick="BuildScreen.validate()">Validate</button>
+                <button type="button" class="btn-success" onclick="BuildScreen.saveWorkflow()">Save Workflow</button>
+                <button type="button" class="btn-secondary" onclick="BuildScreen.saveDraft()">Save Draft</button>
+                <button type="button" class="btn-secondary" onclick="BuildScreen.clear()">Clear</button>
+              </div>
+            </form>
           </div>
 
-          <!-- Steps Section -->
-          <div class="steps-container">
-            <h3>Workflow Steps</h3>
-            <div id="steps-list"></div>
-            <button type="button" class="btn-primary" onclick="BuildScreen.addStep()">+ Add Step</button>
+          <!-- Help Panel -->
+          <div class="help-panel">
+            <h4>Contextual Help</h4>
+            <div id="help-content">
+              <div class="help-section">
+                <strong>Getting Started</strong>
+                <p>Fill in the workflow header fields, add steps, and configure SLA targets for each priority level.</p>
+              </div>
+              <div class="help-section">
+                <strong>Owner Role</strong>
+                <p>Receives escalations; pick the accountable senior role.</p>
+              </div>
+              <div class="help-section">
+                <strong>Responsible Role</strong>
+                <p>The step's doer, not the owner.</p>
+              </div>
+              <div class="help-section">
+                <strong>Expected Duration</strong>
+                <p>Working time to complete the step. Minutes, positive integers.</p>
+              </div>
+              <div class="help-section">
+                <strong>Acknowledge</strong>
+                <p>Time to confirm intake; not the start of work.</p>
+              </div>
+              <div class="help-section">
+                <strong>Start Work</strong>
+                <p>Time until the first step begins.</p>
+              </div>
+              <div class="help-section">
+                <strong>Resolve</strong>
+                <p>Complete + published/updated in systems.</p>
+              </div>
+              <div class="help-section">
+                <strong>Escalate After / To</strong>
+                <p>Safety net. After this time, responsibility passes to the selected role.</p>
+              </div>
+              <div class="help-section">
+                <strong>Business Hours</strong>
+                <p>Feasibility uses this coverage (days, start–end, timezone).</p>
+              </div>
+            </div>
           </div>
-
-          <!-- SLA Policy Section -->
-          <div class="sla-table">
-            <h3>SLA Targets by Priority</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Priority</th>
-                  <th>Acknowledge (mins)</th>
-                  <th>Start Work (mins)</th>
-                  <th>Resolve (mins)</th>
-                  <th>Escalate After (mins)</th>
-                  <th>Escalate To Role</th>
-                </tr>
-              </thead>
-              <tbody id="sla-policy-rows"></tbody>
-            </table>
-          </div>
-
-          <!-- Validation Messages -->
-          <ul id="validation-messages" class="validation-messages" role="alert" aria-live="polite"></ul>
-
-          <!-- Actions -->
-          <div class="action-bar">
-            <button type="button" class="btn-primary" onclick="BuildScreen.validate()">Validate</button>
-            <button type="button" class="btn-success" onclick="BuildScreen.saveDraft()">Save Draft</button>
-            <button type="button" class="btn-secondary" onclick="BuildScreen.clear()">Clear</button>
-          </div>
-        </form>
+        </div>
       </div>
 
       <!-- Review Screen -->
       <div id="screen-review" class="screen">
-        <h2>Workflow Summary</h2>
-
         <div id="review-content"></div>
 
         <div class="action-bar">
           <button class="btn-primary" onclick="ReviewScreen.exportJSON()">Export JSON</button>
           <button class="btn-secondary" onclick="ReviewScreen.importJSON()">Import JSON</button>
           <button class="btn-secondary" onclick="ReviewScreen.copyShareLink()">Copy Share Link</button>
+          <button class="btn-secondary" onclick="ReviewScreen.duplicate()">Duplicate</button>
           <button class="btn-secondary" onclick="window.print()">Print</button>
-          <button class="btn-secondary" onclick="location.hash='#/build'">Edit</button>
+          <button class="btn-secondary" onclick="ReviewScreen.edit()">Edit</button>
         </div>
 
         <!-- Hidden file input for import -->
@@ -118,8 +223,205 @@
   <script src="./js/sharelink.js"></script>
   <script src="./js/app.js"></script>
 
-  <!-- Screen-specific logic -->
+  <!-- Screen Implementations -->
   <script>
+    // ============================
+    // HOME SCREEN
+    // ============================
+    const HomeScreen = {
+      render() {
+        this.populateFilters();
+        this.renderContent();
+      },
+
+      populateFilters() {
+        const deptFilter = document.getElementById('filter-dept');
+        deptFilter.innerHTML = '<option value="all">All Departments</option>' +
+          App.state.catalogs.departments.map(d => '<option value="' + d.id + '">' + d.name + '</option>').join('');
+        deptFilter.value = App.state.filters.department;
+
+        const ownerFilter = document.getElementById('filter-owner');
+        ownerFilter.innerHTML = '<option value="all">All Roles</option>' +
+          App.state.catalogs.roles.map(r => '<option value="' + r.id + '">' + r.name + '</option>').join('');
+        ownerFilter.value = App.state.filters.owner;
+
+        document.getElementById('filter-search').value = App.state.filters.search;
+      },
+
+      updateFilters() {
+        App.state.filters.department = document.getElementById('filter-dept').value;
+        App.state.filters.owner = document.getElementById('filter-owner').value;
+        App.state.filters.search = document.getElementById('filter-search').value;
+        this.renderContent();
+      },
+
+      setView(mode) {
+        App.state.viewMode = mode;
+        document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('.toggle-btn[data-view="' + mode + '"]').classList.add('active');
+        this.renderContent();
+      },
+
+      renderContent() {
+        const container = document.getElementById('home-content');
+        if (App.state.viewMode === 'cards') {
+          container.innerHTML = this.renderCards();
+        } else {
+          container.innerHTML = this.renderTable();
+        }
+      },
+
+      renderCards() {
+        const departments = App.state.catalogs.departments;
+        let html = '<div class="dept-cards">';
+        
+        departments.forEach(dept => {
+          const stats = App.getDepartmentStats(dept.id);
+          html += '<div class="dept-card" onclick="location.hash=\'#/dept/' + dept.id + '\'">';
+          html += '<h3>' + dept.name + '</h3>';
+          html += '<div class="dept-card-stats">';
+          html += '<div class="dept-card-stat"><span>Workflows:</span><strong>' + stats.count + '</strong></div>';
+          html += '<div class="dept-card-stat"><span>Feasible (Normal):</span><strong>' + stats.feasiblePct + '%</strong></div>';
+          html += '<div class="dept-card-stat"><span>Avg Duration:</span><strong>' + stats.avgDuration + ' mins</strong></div>';
+          html += '</div>';
+          html += '<div class="dept-card-action">';
+          html += '<button class="btn-primary btn-sm" onclick="event.stopPropagation(); location.hash=\'#/dept/' + dept.id + '\'">View Workflows →</button>';
+          html += '</div>';
+          html += '</div>';
+        });
+        
+        html += '</div>';
+        return html;
+      },
+
+      renderTable() {
+        const workflows = App.getFilteredWorkflows();
+        if (workflows.length === 0) {
+          return '<p class="text-muted">No workflows found. Try adjusting your filters.</p>';
+        }
+
+        let html = '<table><thead><tr>';
+        html += '<th>Dept</th><th>Work Type</th><th>Owner</th><th>Total (mins)</th>';
+        html += '<th>Resolve (Normal)</th><th>Feasible?</th><th>Updated</th>';
+        html += '</tr></thead><tbody>';
+
+        workflows.forEach(wf => {
+          const dept = App.state.catalogs.departments.find(d => d.id === wf.departmentId);
+          const owner = App.state.catalogs.roles.find(r => r.id === wf.ownerRoleId);
+          const validation = Validator.validateWithSummary(wf, App.state.catalogs);
+          const p3 = validation.summary.feasibleByPriority.p3 || {};
+          const badgeClass = p3.overrun ? 'badge-overrun' : (p3.tight ? 'badge-tight' : 'badge-feasible');
+          const badgeText = p3.overrun ? 'Overrun' : (p3.tight ? 'Tight' : 'Feasible');
+          const slaResolve = wf.slaByPriority && wf.slaByPriority.p3 ? wf.slaByPriority.p3.resolveMins : 'N/A';
+          const updated = wf.updatedAt ? new Date(wf.updatedAt).toLocaleDateString() : 'Never';
+
+          html += '<tr onclick="location.hash=\'#/wf/' + wf.id + '\'" style="cursor:pointer;">';
+          html += '<td>' + (dept ? dept.name : 'Unknown') + '</td>';
+          html += '<td><strong>' + wf.workType + '</strong></td>';
+          html += '<td>' + (owner ? owner.name : 'Unknown') + '</td>';
+          html += '<td>' + validation.summary.totalExpectedMins + '</td>';
+          html += '<td>' + slaResolve + '</td>';
+          html += '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
+          html += '<td>' + updated + '</td>';
+          html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        return html;
+      }
+    };
+
+    // ============================
+    // DEPARTMENT SCREEN
+    // ============================
+    const DeptScreen = {
+      render(deptId) {
+        const dept = App.state.catalogs.departments.find(d => d.id === deptId);
+        if (!dept) {
+          document.getElementById('dept-content').innerHTML = '<p>Department not found</p>';
+          return;
+        }
+
+        const workflows = App.state.workflows.filter(w => w.departmentId === deptId);
+        const stats = App.getDepartmentStats(deptId);
+
+        let html = '<div class="breadcrumb">';
+        html += '<a href="#/home">Home</a><span>›</span><span>' + dept.name + '</span>';
+        html += '</div>';
+
+        html += '<h2>' + dept.name + '</h2>';
+
+        html += '<div class="kpi-boxes">';
+        html += '<div class="kpi-box"><div class="kpi-value">' + stats.count + '</div><div class="kpi-label">Workflows</div></div>';
+        html += '<div class="kpi-box"><div class="kpi-value">' + stats.feasiblePct + '%</div><div class="kpi-label">Feasible (Normal)</div></div>';
+        html += '<div class="kpi-box"><div class="kpi-value">' + stats.avgDuration + '</div><div class="kpi-label">Avg Cycle (mins)</div></div>';
+        html += '</div>';
+
+        html += '<div class="action-bar">';
+        html += '<button class="btn-primary" onclick="DeptScreen.newWorkflow(\'' + deptId + '\')">+ New Workflow</button>';
+        html += '<button class="btn-secondary" onclick="DeptScreen.exportDept(\'' + deptId + '\')">Export Dept JSON</button>';
+        html += '<button class="btn-secondary" onclick="DeptScreen.printDept(\'' + deptId + '\')">Print Dept Pack</button>';
+        html += '</div>';
+
+        if (workflows.length === 0) {
+          html += '<p class="text-muted">No workflows yet for this department.</p>';
+        } else {
+          html += '<table><thead><tr>';
+          html += '<th>Work Type</th><th>Owner</th><th>Steps</th><th>Total (mins)</th>';
+          html += '<th>Resolve (Normal)</th><th>Feasible?</th><th>Updated</th>';
+          html += '</tr></thead><tbody>';
+
+          workflows.forEach(wf => {
+            const owner = App.state.catalogs.roles.find(r => r.id === wf.ownerRoleId);
+            const validation = Validator.validateWithSummary(wf, App.state.catalogs);
+            const p3 = validation.summary.feasibleByPriority.p3 || {};
+            const badgeClass = p3.overrun ? 'badge-overrun' : (p3.tight ? 'badge-tight' : 'badge-feasible');
+            const badgeText = p3.overrun ? 'Overrun' : (p3.tight ? 'Tight' : 'Feasible');
+            const slaResolve = wf.slaByPriority && wf.slaByPriority.p3 ? wf.slaByPriority.p3.resolveMins : 'N/A';
+            const updated = wf.updatedAt ? new Date(wf.updatedAt).toLocaleDateString() : 'Never';
+
+            html += '<tr onclick="location.hash=\'#/wf/' + wf.id + '\'" style="cursor:pointer;">';
+            html += '<td><strong><a href="#/wf/' + wf.id + '" onclick="event.stopPropagation();">' + wf.workType + '</a></strong></td>';
+            html += '<td>' + (owner ? owner.name : 'Unknown') + '</td>';
+            html += '<td>' + (wf.steps ? wf.steps.length : 0) + '</td>';
+            html += '<td>' + validation.summary.totalExpectedMins + '</td>';
+            html += '<td>' + slaResolve + '</td>';
+            html += '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
+            html += '<td>' + updated + '</td>';
+            html += '</tr>';
+          });
+
+          html += '</tbody></table>';
+        }
+
+        document.getElementById('dept-content').innerHTML = html;
+      },
+
+      newWorkflow(deptId) {
+        App.state.draftWorkflow = {
+          id: 'workflow_' + Date.now(),
+          departmentId: deptId,
+          workType: '',
+          businessHoursId: 'std',
+          ownerRoleId: '',
+          steps: [],
+          slaByPriority: {}
+        };
+        App.saveDraft(App.state.draftWorkflow);
+        location.hash = '#/build';
+      },
+
+      exportDept(deptId) {
+        const workflows = App.state.workflows.filter(w => w.departmentId === deptId);
+        const data = App.exportJSON(workflows);
+        App.downloadJSON(data, 'sla-dept-' + deptId + '-' + Date.now() + '.json');
+      },
+
+      printDept(deptId) {
+        alert('Print Dept Pack: This would iterate through all workflows and print them. For now, navigate to each workflow and print individually.');
+      }
+    };
+
     // ============================
     // CATALOG SCREEN
     // ============================
@@ -128,163 +430,102 @@
         const container = document.getElementById('catalog-content');
         const catalogs = App.state.catalogs;
 
-        container.innerHTML = `
-          ${this.renderDepartmentsTable(catalogs.departments)}
-          ${this.renderRolesTable(catalogs.roles)}
-          ${this.renderBusinessHoursTable(catalogs.businessHours)}
-          ${this.renderPrioritiesTable(catalogs.priorities)}
-        `;
+        let html = '';
+        html += this.renderDepartmentsTable(catalogs.departments);
+        html += this.renderRolesTable(catalogs.roles);
+        html += this.renderBusinessHoursTable(catalogs.businessHours);
+        html += this.renderPrioritiesTable(catalogs.priorities);
+
+        container.innerHTML = html;
       },
 
       renderDepartmentsTable(departments) {
-        return `
-          <div class="catalog-section">
-            <h3>Departments</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${departments.map((d, i) => `
-                  <tr>
-                    <td><input type="text" value="${d.id}" onchange="CatalogScreen.updateDept(${i}, 'id', this.value)"></td>
-                    <td><input type="text" value="${d.name}" onchange="CatalogScreen.updateDept(${i}, 'name', this.value)"></td>
-                    <td><button class="btn-danger btn-sm" onclick="CatalogScreen.deleteDept(${i})">Delete</button></td>
-                  </tr>
-                `).join('')}
-                <tr>
-                  <td colspan="3">
-                    <button class="btn-secondary btn-sm" onclick="CatalogScreen.addDept()">+ Add Department</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        `;
+        let html = '<div class="catalog-section"><h3>Departments</h3><table><thead><tr>';
+        html += '<th>ID</th><th>Name</th><th>Actions</th>';
+        html += '</tr></thead><tbody>';
+
+        departments.forEach((d, i) => {
+          html += '<tr>';
+          html += '<td><input type="text" value="' + d.id + '" onchange="CatalogScreen.updateDept(' + i + ', \'id\', this.value)"></td>';
+          html += '<td><input type="text" value="' + d.name + '" onchange="CatalogScreen.updateDept(' + i + ', \'name\', this.value)"></td>';
+          html += '<td><button class="btn-danger btn-sm" onclick="CatalogScreen.deleteDept(' + i + ')">Delete</button></td>';
+          html += '</tr>';
+        });
+
+        html += '<tr><td colspan="3"><button class="btn-secondary btn-sm" onclick="CatalogScreen.addDept()">+ Add Department</button></td></tr>';
+        html += '</tbody></table></div>';
+        return html;
       },
 
       renderRolesTable(roles) {
-        return `
-          <div class="catalog-section">
-            <h3>Roles</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${roles.map((r, i) => `
-                  <tr>
-                    <td><input type="text" value="${r.id}" onchange="CatalogScreen.updateRole(${i}, 'id', this.value)"></td>
-                    <td><input type="text" value="${r.name}" onchange="CatalogScreen.updateRole(${i}, 'name', this.value)"></td>
-                    <td><button class="btn-danger btn-sm" onclick="CatalogScreen.deleteRole(${i})">Delete</button></td>
-                  </tr>
-                `).join('')}
-                <tr>
-                  <td colspan="3">
-                    <button class="btn-secondary btn-sm" onclick="CatalogScreen.addRole()">+ Add Role</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        `;
+        let html = '<div class="catalog-section"><h3>Roles</h3><table><thead><tr>';
+        html += '<th>ID</th><th>Name</th><th>Actions</th>';
+        html += '</tr></thead><tbody>';
+
+        roles.forEach((r, i) => {
+          html += '<tr>';
+          html += '<td><input type="text" value="' + r.id + '" onchange="CatalogScreen.updateRole(' + i + ', \'id\', this.value)"></td>';
+          html += '<td><input type="text" value="' + r.name + '" onchange="CatalogScreen.updateRole(' + i + ', \'name\', this.value)"></td>';
+          html += '<td><button class="btn-danger btn-sm" onclick="CatalogScreen.deleteRole(' + i + ')">Delete</button></td>';
+          html += '</tr>';
+        });
+
+        html += '<tr><td colspan="3"><button class="btn-secondary btn-sm" onclick="CatalogScreen.addRole()">+ Add Role</button></td></tr>';
+        html += '</tbody></table></div>';
+        return html;
       },
 
       renderBusinessHoursTable(businessHours) {
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        return `
-          <div class="catalog-section">
-            <h3>Business Hours</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Timezone</th>
-                  <th>Days</th>
-                  <th>Start</th>
-                  <th>End</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${businessHours.map((bh, i) => `
-                  <tr>
-                    <td><input type="text" value="${bh.id}" onchange="CatalogScreen.updateBH(${i}, 'id', this.value)"></td>
-                    <td><input type="text" value="${bh.name}" onchange="CatalogScreen.updateBH(${i}, 'name', this.value)"></td>
-                    <td><input type="text" value="${bh.tz}" onchange="CatalogScreen.updateBH(${i}, 'tz', this.value)"></td>
-                    <td>
-                      <div class="checkbox-group">
-                        ${dayNames.map((day, dayIdx) => `
-                          <label>
-                            <input type="checkbox" ${bh.days.includes(dayIdx) ? 'checked' : ''} onchange="CatalogScreen.toggleBHDay(${i}, ${dayIdx}, this.checked)">
-                            ${day}
-                          </label>
-                        `).join('')}
-                      </div>
-                    </td>
-                    <td><input type="time" value="${bh.start}" onchange="CatalogScreen.updateBH(${i}, 'start', this.value)"></td>
-                    <td><input type="time" value="${bh.end}" onchange="CatalogScreen.updateBH(${i}, 'end', this.value)"></td>
-                    <td><button class="btn-danger btn-sm" onclick="CatalogScreen.deleteBH(${i})">Delete</button></td>
-                  </tr>
-                `).join('')}
-                <tr>
-                  <td colspan="7">
-                    <button class="btn-secondary btn-sm" onclick="CatalogScreen.addBH()">+ Add Business Hours</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        `;
+        let html = '<div class="catalog-section"><h3>Business Hours</h3><table><thead><tr>';
+        html += '<th>ID</th><th>Name</th><th>Timezone</th><th>Days</th><th>Start</th><th>End</th><th>Actions</th>';
+        html += '</tr></thead><tbody>';
+
+        businessHours.forEach((bh, i) => {
+          html += '<tr>';
+          html += '<td><input type="text" value="' + bh.id + '" onchange="CatalogScreen.updateBH(' + i + ', \'id\', this.value)"></td>';
+          html += '<td><input type="text" value="' + bh.name + '" onchange="CatalogScreen.updateBH(' + i + ', \'name\', this.value)"></td>';
+          html += '<td><input type="text" value="' + bh.tz + '" onchange="CatalogScreen.updateBH(' + i + ', \'tz\', this.value)"></td>';
+          html += '<td><div class="checkbox-group">';
+
+          dayNames.forEach((day, dayIdx) => {
+            const checked = bh.days.includes(dayIdx) ? 'checked' : '';
+            html += '<label><input type="checkbox" ' + checked + ' onchange="CatalogScreen.toggleBHDay(' + i + ', ' + dayIdx + ', this.checked)">' + day + '</label>';
+          });
+
+          html += '</div></td>';
+          html += '<td><input type="time" value="' + bh.start + '" onchange="CatalogScreen.updateBH(' + i + ', \'start\', this.value)"></td>';
+          html += '<td><input type="time" value="' + bh.end + '" onchange="CatalogScreen.updateBH(' + i + ', \'end\', this.value)"></td>';
+          html += '<td><button class="btn-danger btn-sm" onclick="CatalogScreen.deleteBH(' + i + ')">Delete</button></td>';
+          html += '</tr>';
+        });
+
+        html += '<tr><td colspan="7"><button class="btn-secondary btn-sm" onclick="CatalogScreen.addBH()">+ Add Business Hours</button></td></tr>';
+        html += '</tbody></table></div>';
+        return html;
       },
 
       renderPrioritiesTable(priorities) {
-        return `
-          <div class="catalog-section">
-            <h3>Priorities</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Ack (mins)</th>
-                  <th>Start (mins)</th>
-                  <th>Resolve (mins)</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${priorities.map((p, i) => `
-                  <tr>
-                    <td><input type="text" value="${p.id}" onchange="CatalogScreen.updatePriority(${i}, 'id', this.value)"></td>
-                    <td><input type="text" value="${p.name}" onchange="CatalogScreen.updatePriority(${i}, 'name', this.value)"></td>
-                    <td><input type="number" value="${p.ackMins}" onchange="CatalogScreen.updatePriority(${i}, 'ackMins', parseInt(this.value))"></td>
-                    <td><input type="number" value="${p.startMins}" onchange="CatalogScreen.updatePriority(${i}, 'startMins', parseInt(this.value))"></td>
-                    <td><input type="number" value="${p.resolveMins}" onchange="CatalogScreen.updatePriority(${i}, 'resolveMins', parseInt(this.value))"></td>
-                    <td><button class="btn-danger btn-sm" onclick="CatalogScreen.deletePriority(${i})">Delete</button></td>
-                  </tr>
-                `).join('')}
-                <tr>
-                  <td colspan="6">
-                    <button class="btn-secondary btn-sm" onclick="CatalogScreen.addPriority()">+ Add Priority</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        `;
+        let html = '<div class="catalog-section"><h3>Priorities</h3><table><thead><tr>';
+        html += '<th>ID</th><th>Name</th><th>Ack (mins)</th><th>Start (mins)</th><th>Resolve (mins)</th><th>Actions</th>';
+        html += '</tr></thead><tbody>';
+
+        priorities.forEach((p, i) => {
+          html += '<tr>';
+          html += '<td><input type="text" value="' + p.id + '" onchange="CatalogScreen.updatePriority(' + i + ', \'id\', this.value)"></td>';
+          html += '<td><input type="text" value="' + p.name + '" onchange="CatalogScreen.updatePriority(' + i + ', \'name\', this.value)"></td>';
+          html += '<td><input type="number" value="' + p.ackMins + '" onchange="CatalogScreen.updatePriority(' + i + ', \'ackMins\', parseInt(this.value))"></td>';
+          html += '<td><input type="number" value="' + p.startMins + '" onchange="CatalogScreen.updatePriority(' + i + ', \'startMins\', parseInt(this.value))"></td>';
+          html += '<td><input type="number" value="' + p.resolveMins + '" onchange="CatalogScreen.updatePriority(' + i + ', \'resolveMins\', parseInt(this.value))"></td>';
+          html += '<td><button class="btn-danger btn-sm" onclick="CatalogScreen.deletePriority(' + i + ')">Delete</button></td>';
+          html += '</tr>';
+        });
+
+        html += '<tr><td colspan="6"><button class="btn-secondary btn-sm" onclick="CatalogScreen.addPriority()">+ Add Priority</button></td></tr>';
+        html += '</tbody></table></div>';
+        return html;
       },
 
-      // CRUD operations
       updateDept(idx, field, value) {
         App.state.catalogs.departments[idx][field] = value;
         App.saveCatalogs();
@@ -389,42 +630,99 @@
     // ============================
     const BuildScreen = {
       steps: [],
+      currentWorkflowId: null,
 
       render() {
-        // Populate dropdowns
+        this.populateTemplates();
         this.populateDropdowns();
 
-        // Load draft if exists
         if (App.state.draftWorkflow) {
           this.loadWorkflow(App.state.draftWorkflow);
         } else {
-          // Initialize with empty workflow
           this.steps = [];
           this.renderSteps();
           this.renderSLAPolicy();
         }
       },
 
-      populateDropdowns() {
-        const { departments, roles, businessHours } = App.state.catalogs;
+      populateTemplates() {
+        const select = document.getElementById('template-select');
+        const templates = App.state.templates.templates;
 
-        // Departments
+        let options = '<option value="">-- Select a template --</option>';
+        Object.keys(templates).forEach(deptId => {
+          const dept = App.state.catalogs.departments.find(d => d.id === deptId);
+          if (dept && templates[deptId].length > 0) {
+            options += '<optgroup label="' + dept.name + '">';
+            templates[deptId].forEach((tpl, idx) => {
+              options += '<option value="' + deptId + ':' + idx + '">' + tpl.workType + '</option>';
+            });
+            options += '</optgroup>';
+          }
+        });
+
+        select.innerHTML = options;
+      },
+
+      loadTemplate(value) {
+        if (!value) return;
+
+        const parts = value.split(':');
+        const deptId = parts[0];
+        const idx = parseInt(parts[1]);
+        const template = App.state.templates.templates[deptId][idx];
+
+        if (!template) return;
+
+        document.getElementById('wf-department').value = deptId;
+        document.getElementById('wf-work-type').value = template.workType;
+        document.getElementById('wf-business-hours').value = template.businessHoursId;
+        document.getElementById('wf-owner').value = template.ownerRoleId;
+
+        this.steps = template.steps.map((s, i) => ({
+          id: 'step_' + Date.now() + '_' + i,
+          title: s.title,
+          roleId: s.roleId,
+          expectedMins: s.expectedMins
+        }));
+
+        this.renderSteps();
+
+        if (template.slaPreset) {
+          this.applySLAPreset(template.slaPreset);
+        }
+
+        this.onDepartmentChange();
+        alert('Template "' + template.workType + '" loaded successfully!');
+      },
+
+      onDepartmentChange() {
+        const deptId = document.getElementById('wf-department').value;
+        if (deptId) {
+          this.populateTemplates();
+        }
+      },
+
+      populateDropdowns() {
+        const departments = App.state.catalogs.departments;
+        const roles = App.state.catalogs.roles;
+        const businessHours = App.state.catalogs.businessHours;
+
         const deptSelect = document.getElementById('wf-department');
         deptSelect.innerHTML = '<option value="">Select department...</option>' +
-          departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+          departments.map(d => '<option value="' + d.id + '">' + d.name + '</option>').join('');
 
-        // Business Hours
         const bhSelect = document.getElementById('wf-business-hours');
         bhSelect.innerHTML = '<option value="">Select business hours...</option>' +
-          businessHours.map(bh => `<option value="${bh.id}">${bh.name}</option>`).join('');
+          businessHours.map(bh => '<option value="' + bh.id + '">' + bh.name + '</option>').join('');
 
-        // Owner Role
         const ownerSelect = document.getElementById('wf-owner');
         ownerSelect.innerHTML = '<option value="">Select owner role...</option>' +
-          roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+          roles.map(r => '<option value="' + r.id + '">' + r.name + '</option>').join('');
       },
 
       loadWorkflow(workflow) {
+        this.currentWorkflowId = workflow.id;
         document.getElementById('wf-department').value = workflow.departmentId || '';
         document.getElementById('wf-work-type').value = workflow.workType || '';
         document.getElementById('wf-business-hours').value = workflow.businessHoursId || '';
@@ -437,44 +735,45 @@
 
       renderSteps() {
         const container = document.getElementById('steps-list');
-        const { roles } = App.state.catalogs;
+        const roles = App.state.catalogs.roles;
 
         if (this.steps.length === 0) {
           container.innerHTML = '<p class="text-muted">No steps yet. Click "+ Add Step" to begin.</p>';
           return;
         }
 
-        container.innerHTML = this.steps.map((step, idx) => `
-          <div class="step-item">
-            <div class="step-number">${idx + 1}</div>
-            <div>
-              <input type="text" placeholder="Step title *" value="${step.title || ''}"
-                onchange="BuildScreen.updateStep(${idx}, 'title', this.value)" required>
-            </div>
-            <div>
-              <select onchange="BuildScreen.updateStep(${idx}, 'roleId', this.value)" required>
-                <option value="">Select role...</option>
-                ${roles.map(r => `<option value="${r.id}" ${step.roleId === r.id ? 'selected' : ''}>${r.name}</option>`).join('')}
-              </select>
-            </div>
-            <div>
-              <input type="number" placeholder="Minutes *" value="${step.expectedMins || ''}" min="1"
-                onchange="BuildScreen.updateStep(${idx}, 'expectedMins', parseInt(this.value))" required>
-            </div>
-            <div class="step-controls">
-              <button type="button" class="btn-secondary btn-sm" onclick="BuildScreen.moveStep(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
-              <button type="button" class="btn-secondary btn-sm" onclick="BuildScreen.moveStep(${idx}, 1)" ${idx === this.steps.length - 1 ? 'disabled' : ''}>↓</button>
-              <button type="button" class="btn-danger btn-sm" onclick="BuildScreen.deleteStep(${idx})">Delete</button>
-            </div>
-          </div>
-        `).join('');
+        let html = '';
+        this.steps.forEach((step, idx) => {
+          html += '<div class="step-item">';
+          html += '<div class="step-number">' + (idx + 1) + '</div>';
+          html += '<div><input type="text" placeholder="Step title *" value="' + (step.title || '') + '" onchange="BuildScreen.updateStep(' + idx + ', \'title\', this.value)" required></div>';
+          html += '<div><select onchange="BuildScreen.updateStep(' + idx + ', \'roleId\', this.value)" required>';
+          html += '<option value="">Select role...</option>';
+          roles.forEach(r => {
+            const selected = step.roleId === r.id ? 'selected' : '';
+            html += '<option value="' + r.id + '" ' + selected + '>' + r.name + '</option>';
+          });
+          html += '</select></div>';
+          html += '<div><input type="number" placeholder="Minutes *" value="' + (step.expectedMins || '') + '" min="1" onchange="BuildScreen.updateStep(' + idx + ', \'expectedMins\', parseInt(this.value))" required></div>';
+          html += '<div class="step-controls">';
+          html += '<button type="button" class="btn-secondary btn-sm" onclick="BuildScreen.moveStep(' + idx + ', -1)" ' + (idx === 0 ? 'disabled' : '') + '>↑</button>';
+          html += '<button type="button" class="btn-secondary btn-sm" onclick="BuildScreen.moveStep(' + idx + ', 1)" ' + (idx === this.steps.length - 1 ? 'disabled' : '') + '>↓</button>';
+          html += '<button type="button" class="btn-danger btn-sm" onclick="BuildScreen.deleteStep(' + idx + ')">Delete</button>';
+          html += '</div>';
+          html += '</div>';
+        });
+
+        container.innerHTML = html;
       },
 
-      renderSLAPolicy(existingSLA = {}) {
+      renderSLAPolicy(existingSLA) {
+        existingSLA = existingSLA || {};
         const container = document.getElementById('sla-policy-rows');
-        const { priorities, roles } = App.state.catalogs;
+        const priorities = App.state.catalogs.priorities;
+        const roles = App.state.catalogs.roles;
 
-        container.innerHTML = priorities.map(p => {
+        let html = '';
+        priorities.forEach(p => {
           const sla = existingSLA[p.id] || {
             ackMins: p.ackMins,
             startMins: p.startMins,
@@ -482,22 +781,41 @@
             escalate: {}
           };
 
-          return `
-            <tr>
-              <td><strong>${p.name}</strong></td>
-              <td><input type="number" value="${sla.ackMins || ''}" data-priority="${p.id}" data-field="ackMins"></td>
-              <td><input type="number" value="${sla.startMins || ''}" data-priority="${p.id}" data-field="startMins"></td>
-              <td><input type="number" value="${sla.resolveMins || ''}" data-priority="${p.id}" data-field="resolveMins"></td>
-              <td><input type="number" value="${sla.escalate?.afterMins || ''}" data-priority="${p.id}" data-field="escalateAfterMins" placeholder="Optional"></td>
-              <td>
-                <select data-priority="${p.id}" data-field="escalateToRoleId">
-                  <option value="">None</option>
-                  ${roles.map(r => `<option value="${r.id}" ${sla.escalate?.toRoleId === r.id ? 'selected' : ''}>${r.name}</option>`).join('')}
-                </select>
-              </td>
-            </tr>
-          `;
-        }).join('');
+          html += '<tr>';
+          html += '<td><strong>' + p.name + '</strong></td>';
+          html += '<td><input type="number" value="' + (sla.ackMins || '') + '" data-priority="' + p.id + '" data-field="ackMins"></td>';
+          html += '<td><input type="number" value="' + (sla.startMins || '') + '" data-priority="' + p.id + '" data-field="startMins"></td>';
+          html += '<td><input type="number" value="' + (sla.resolveMins || '') + '" data-priority="' + p.id + '" data-field="resolveMins"></td>';
+          html += '<td><input type="number" value="' + (sla.escalate && sla.escalate.afterMins ? sla.escalate.afterMins : '') + '" data-priority="' + p.id + '" data-field="escalateAfterMins" placeholder="Optional"></td>';
+          html += '<td><select data-priority="' + p.id + '" data-field="escalateToRoleId"><option value="">None</option>';
+          roles.forEach(r => {
+            const selected = (sla.escalate && sla.escalate.toRoleId === r.id) ? 'selected' : '';
+            html += '<option value="' + r.id + '" ' + selected + '>' + r.name + '</option>';
+          });
+          html += '</select></td>';
+          html += '</tr>';
+        });
+
+        container.innerHTML = html;
+      },
+
+      applySLAPreset(presetName) {
+        const preset = App.SLA_PRESETS[presetName];
+        if (!preset) return;
+
+        document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('.preset-btn[data-preset="' + presetName + '"]').classList.add('active');
+
+        Object.keys(preset).forEach(priorityId => {
+          const values = preset[priorityId];
+          const ackInput = document.querySelector('input[data-priority="' + priorityId + '"][data-field="ackMins"]');
+          const startInput = document.querySelector('input[data-priority="' + priorityId + '"][data-field="startMins"]');
+          const resolveInput = document.querySelector('input[data-priority="' + priorityId + '"][data-field="resolveMins"]');
+
+          if (ackInput) ackInput.value = values.ackMins;
+          if (startInput) startInput.value = values.startMins;
+          if (resolveInput) resolveInput.value = values.resolveMins;
+        });
       },
 
       addStep() {
@@ -525,35 +843,61 @@
         const newIdx = idx + direction;
         if (newIdx < 0 || newIdx >= this.steps.length) return;
 
-        [this.steps[idx], this.steps[newIdx]] = [this.steps[newIdx], this.steps[idx]];
+        const temp = this.steps[idx];
+        this.steps[idx] = this.steps[newIdx];
+        this.steps[newIdx] = temp;
         this.renderSteps();
       },
 
       validate() {
         const workflow = this.captureWorkflow();
-        const errors = Validator.validateWorkflow(workflow, App.state.catalogs);
+        const result = Validator.validateWithSummary(workflow, App.state.catalogs);
 
         const msgContainer = document.getElementById('validation-messages');
-        if (errors.length === 0) {
-          msgContainer.innerHTML = '<li style="background:#d4edda;border-color:#28a745;color:#155724;padding:10px;">✓ Validation passed! No errors found.</li>';
+        const stripContainer = document.getElementById('validation-strip');
+
+        const errors = result.errors.filter(e => e.severity === 'error');
+        const warnings = result.errors.filter(e => e.severity === 'warning');
+
+        if (errors.length === 0 && warnings.length === 0) {
+          stripContainer.className = 'validation-strip green';
+          stripContainer.innerHTML = '✓ Validation passed! All checks successful. Workflow is ready to save.';
+        } else if (errors.length === 0) {
+          stripContainer.className = 'validation-strip yellow';
+          stripContainer.innerHTML = '⚠ ' + warnings.length + ' warning(s) found. You can save, but review the warnings below.';
         } else {
-          msgContainer.innerHTML = errors.map(err =>
-            `<li class="${err.severity}">${err.message}</li>`
+          stripContainer.className = 'validation-strip red';
+          stripContainer.innerHTML = '✗ ' + errors.length + ' error(s) found. Fix errors before saving.';
+        }
+
+        if (result.errors.length === 0) {
+          msgContainer.innerHTML = '';
+        } else {
+          msgContainer.innerHTML = result.errors.map(err =>
+            '<li class="' + err.severity + '">' + err.message + '</li>'
           ).join('');
         }
 
-        // Scroll to messages
-        msgContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        stripContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-        return errors.filter(e => e.severity === 'error').length === 0;
+        return errors.length === 0;
       },
 
-      saveDraft() {
+      saveWorkflow() {
         if (!this.validate()) {
           alert('Please fix validation errors before saving.');
           return;
         }
 
+        const workflow = this.captureWorkflow();
+        workflow.status = 'active';
+        App.saveWorkflow(workflow);
+        alert('Workflow saved successfully!');
+
+        location.hash = '#/wf/' + workflow.id;
+      },
+
+      saveDraft() {
         const workflow = this.captureWorkflow();
         App.saveDraft(workflow);
         alert('Draft saved successfully!');
@@ -563,9 +907,12 @@
         if (confirm('Clear the current workflow? Unsaved changes will be lost.')) {
           document.getElementById('workflow-form').reset();
           this.steps = [];
+          this.currentWorkflowId = null;
           this.renderSteps();
           this.renderSLAPolicy();
           document.getElementById('validation-messages').innerHTML = '';
+          document.getElementById('validation-strip').innerHTML = '';
+          document.getElementById('template-select').value = '';
         }
       },
 
@@ -573,7 +920,6 @@
         const slaByPriority = {};
         const priorities = App.state.catalogs.priorities;
 
-        // Capture SLA policy from table
         document.querySelectorAll('#sla-policy-rows tr').forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length === 0) return;
@@ -586,9 +932,9 @@
           const escalateToRoleId = inputs[4].value || null;
 
           slaByPriority[priorityId] = {
-            ackMins,
-            startMins,
-            resolveMins
+            ackMins: ackMins,
+            startMins: startMins,
+            resolveMins: resolveMins
           };
 
           if (escalateAfterMins && escalateToRoleId) {
@@ -600,13 +946,13 @@
         });
 
         return {
-          id: App.state.draftWorkflow?.id || 'workflow_' + Date.now(),
+          id: this.currentWorkflowId || (App.state.draftWorkflow ? App.state.draftWorkflow.id : null) || 'workflow_' + Date.now(),
           departmentId: document.getElementById('wf-department').value,
           workType: document.getElementById('wf-work-type').value,
           businessHoursId: document.getElementById('wf-business-hours').value,
           ownerRoleId: document.getElementById('wf-owner').value,
           steps: this.steps,
-          slaByPriority
+          slaByPriority: slaByPriority
         };
       }
     };
@@ -615,8 +961,15 @@
     // REVIEW SCREEN
     // ============================
     const ReviewScreen = {
-      render() {
-        const workflow = App.state.sharedWorkflow || App.state.draftWorkflow;
+      render(workflowId) {
+        let workflow = null;
+
+        if (App.state.sharedWorkflow && App.state.sharedWorkflow.id === workflowId) {
+          workflow = App.state.sharedWorkflow;
+        } else {
+          workflow = App.getWorkflow(workflowId) || App.state.draftWorkflow;
+        }
+
         if (!workflow) {
           document.getElementById('review-content').innerHTML = '<p class="text-muted">No workflow to review. Create one in the Build screen first.</p>';
           return;
@@ -629,95 +982,77 @@
 
         const totalMins = workflow.steps.reduce((sum, s) => sum + (s.expectedMins || 0), 0);
 
-        let html = `
-          <div class="summary-header">
-            <dl>
-              <dt>Department:</dt>
-              <dd>${dept?.name || 'Unknown'}</dd>
-              <dt>Work Type:</dt>
-              <dd>${workflow.workType}</dd>
-              <dt>Owner:</dt>
-              <dd>${owner?.name || 'Unknown'}</dd>
-              <dt>Business Hours:</dt>
-              <dd>${bh?.name || 'Unknown'} (${bh?.start} - ${bh?.end}, ${this.formatDays(bh?.days)})</dd>
-              <dt>Total Steps:</dt>
-              <dd>${workflow.steps.length}</dd>
-              <dt>Total Duration:</dt>
-              <dd>${totalMins} minutes (${(totalMins / 60).toFixed(1)} hours)</dd>
-            </dl>
-          </div>
+        let html = '<div class="breadcrumb">';
+        html += '<a href="#/home">Home</a>';
+        html += '<span>›</span>';
+        html += '<a href="#/dept/' + workflow.departmentId + '">' + (dept ? dept.name : 'Unknown') + '</a>';
+        html += '<span>›</span>';
+        html += '<span>' + workflow.workType + '</span>';
+        html += '</div>';
 
-          <div class="summary-steps">
-            <h3>Workflow Steps</h3>
-            ${workflow.steps.map((step, idx) => {
-              const role = catalogs.roles.find(r => r.id === step.roleId);
-              return `
-                <div class="summary-step">
-                  <div class="summary-step-title">${idx + 1}. ${step.title}</div>
-                  <div class="summary-step-meta">
-                    Responsible: ${role?.name || 'Unknown'} |
-                    Duration: ${step.expectedMins} minutes
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
+        html += '<h2>' + workflow.workType + '</h2>';
 
-          <div class="sla-matrix">
-            <h3>SLA Targets</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Priority</th>
-                  <th>Acknowledge</th>
-                  <th>Start Work</th>
-                  <th>Resolve</th>
-                  <th>Escalation</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${catalogs.priorities.map(p => {
-                  const sla = workflow.slaByPriority?.[p.id];
-                  if (!sla) return '';
+        html += '<div class="summary-header"><dl>';
+        html += '<dt>Department:</dt><dd>' + (dept ? dept.name : 'Unknown') + '</dd>';
+        html += '<dt>Owner:</dt><dd>' + (owner ? owner.name : 'Unknown') + '</dd>';
+        html += '<dt>Business Hours:</dt><dd>' + (bh ? bh.name : 'Unknown') + ' (' + (bh ? bh.start : '') + ' - ' + (bh ? bh.end : '') + ', ' + this.formatDays(bh ? bh.days : []) + ')</dd>';
+        html += '<dt>Total Steps:</dt><dd>' + workflow.steps.length + '</dd>';
+        html += '<dt>Total Duration:</dt><dd>' + totalMins + ' minutes (' + (totalMins / 60).toFixed(1) + ' hours)</dd>';
+        html += '<dt>Status:</dt><dd><span class="badge badge-' + (workflow.status || 'draft') + '">' + (workflow.status || 'draft') + '</span></dd>';
+        html += '</dl></div>';
 
-                  const overrun = Validator.checkSLAOverrun(workflow, p.id, catalogs);
-                  const escalation = sla.escalate
-                    ? `After ${sla.escalate.afterMins} mins → ${catalogs.roles.find(r => r.id === sla.escalate.toRoleId)?.name || 'Unknown'}`
-                    : 'None';
+        html += '<div class="summary-steps"><h3>Workflow Steps</h3>';
+        workflow.steps.forEach((step, idx) => {
+          const role = catalogs.roles.find(r => r.id === step.roleId);
+          html += '<div class="summary-step">';
+          html += '<div class="summary-step-title">' + (idx + 1) + '. ' + step.title + '</div>';
+          html += '<div class="summary-step-meta">Responsible: ' + (role ? role.name : 'Unknown') + ' | Duration: ' + step.expectedMins + ' minutes</div>';
+          html += '</div>';
+        });
+        html += '</div>';
 
-                  return `
-                    <tr>
-                      <td><strong>${p.name}</strong> ${overrun ? '<span class="overrun-badge">Potential SLA overrun</span>' : ''}</td>
-                      <td>${sla.ackMins} mins</td>
-                      <td>${sla.startMins} mins</td>
-                      <td>${sla.resolveMins} mins</td>
-                      <td>${escalation}</td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
-        `;
+        html += '<div class="sla-matrix"><h3>SLA Targets</h3><table><thead><tr>';
+        html += '<th>Priority</th><th>Acknowledge</th><th>Start Work</th><th>Resolve</th><th>Escalation</th>';
+        html += '</tr></thead><tbody>';
+
+        catalogs.priorities.forEach(p => {
+          const sla = workflow.slaByPriority ? workflow.slaByPriority[p.id] : null;
+          if (!sla) return;
+
+          const overrun = Validator.checkSLAOverrun(workflow, p.id, catalogs);
+          const escalation = (sla.escalate && sla.escalate.toRoleId)
+            ? 'After ' + sla.escalate.afterMins + ' mins → ' + (catalogs.roles.find(r => r.id === sla.escalate.toRoleId) ? catalogs.roles.find(r => r.id === sla.escalate.toRoleId).name : 'Unknown')
+            : 'None';
+
+          html += '<tr>';
+          html += '<td><strong>' + p.name + '</strong> ' + (overrun ? '<span class="overrun-badge">Potential SLA overrun</span>' : '') + '</td>';
+          html += '<td>' + sla.ackMins + ' mins</td>';
+          html += '<td>' + sla.startMins + ' mins</td>';
+          html += '<td>' + sla.resolveMins + ' mins</td>';
+          html += '<td>' + escalation + '</td>';
+          html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
 
         document.getElementById('review-content').innerHTML = html;
       },
 
       formatDays(days) {
-        if (!days) return 'N/A';
+        if (!days || days.length === 0) return 'N/A';
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         return days.map(d => dayNames[d]).join(', ');
       },
 
       exportJSON() {
-        const workflow = App.state.sharedWorkflow || App.state.draftWorkflow;
+        const workflow = App.state.sharedWorkflow || App.getWorkflow(App.state.currentWorkflowId) || App.state.draftWorkflow;
         if (!workflow) {
           alert('No workflow to export');
           return;
         }
 
         const data = App.exportJSON(workflow);
-        App.downloadJSON(data, `sla-workflow-${workflow.id}.json`);
+        App.downloadJSON(data, 'sla-workflow-' + workflow.id + '.json');
       },
 
       importJSON() {
@@ -729,12 +1064,12 @@
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = function(e) {
           try {
             const success = App.importJSON(e.target.result);
             if (success) {
-              alert('Import successful! Navigate to Build screen to see the imported workflow.');
-              App.router(); // Re-render
+              alert('Import successful! Workflows have been imported.');
+              location.hash = '#/home';
             } else {
               alert('Import failed. Please check the file format.');
             }
@@ -744,12 +1079,11 @@
         };
         reader.readAsText(file);
 
-        // Reset input
         event.target.value = '';
       },
 
       async copyShareLink() {
-        const workflow = App.state.sharedWorkflow || App.state.draftWorkflow;
+        const workflow = App.state.sharedWorkflow || App.getWorkflow(App.state.currentWorkflowId) || App.state.draftWorkflow;
         if (!workflow) {
           alert('No workflow to share');
           return;
@@ -762,6 +1096,37 @@
           console.error('Failed to copy link:', error);
           alert('Failed to copy link. Check console for details.');
         }
+      },
+
+      duplicate() {
+        const workflow = App.getWorkflow(App.state.currentWorkflowId) || App.state.draftWorkflow;
+        if (!workflow) {
+          alert('No workflow to duplicate');
+          return;
+        }
+
+        const duplicate = JSON.parse(JSON.stringify(workflow));
+        duplicate.id = 'workflow_' + Date.now();
+        duplicate.workType = workflow.workType + ' (Copy)';
+        duplicate.status = 'draft';
+        duplicate.updatedAt = new Date().toISOString();
+
+        App.state.draftWorkflow = duplicate;
+        App.saveDraft(duplicate);
+        alert('Workflow duplicated! Switching to Build screen...');
+        location.hash = '#/build';
+      },
+
+      edit() {
+        const workflow = App.getWorkflow(App.state.currentWorkflowId) || App.state.draftWorkflow;
+        if (!workflow) {
+          alert('No workflow to edit');
+          return;
+        }
+
+        App.state.draftWorkflow = workflow;
+        App.saveDraft(workflow);
+        location.hash = '#/build';
       }
     };
   </script>

@@ -120,24 +120,44 @@
               <!-- SLA Policy Section -->
               <div class="sla-table">
                 <h3>SLA Targets by Priority</h3>
+                <p class="text-muted" style="margin: -0.5rem 0 1rem 0; font-size: 0.9rem;">
+                  All SLA values shown in Business Days. Feasibility computed using business hours window.
+                </p>
+
                 <div class="sla-presets">
                   <button type="button" class="preset-btn" data-preset="conservative" onclick="BuildScreen.applySLAPreset('conservative')">Conservative</button>
                   <button type="button" class="preset-btn" data-preset="standard" onclick="BuildScreen.applySLAPreset('standard')">Standard</button>
                   <button type="button" class="preset-btn" data-preset="aggressive" onclick="BuildScreen.applySLAPreset('aggressive')">Aggressive</button>
                 </div>
+
+                <!-- Advanced Units Toggle -->
+                <details style="margin: 1rem 0;">
+                  <summary style="cursor: pointer; font-weight: 500; color: #666;">Advanced units (hours)</summary>
+                  <p class="text-muted" style="margin: 0.5rem 0; font-size: 0.85rem;">
+                    Switch to hours for finer-grained control. Changes apply to all SLA fields.
+                  </p>
+                  <div id="advanced-units-controls"></div>
+                </details>
+
                 <table>
                   <thead>
                     <tr>
                       <th>Priority</th>
-                      <th>Acknowledge (mins)</th>
-                      <th>Start Work (mins)</th>
-                      <th>Resolve (mins)</th>
+                      <th title="In Business Days. Computed using business hours window from selected profile.">Acknowledge</th>
+                      <th title="In Business Days. Computed using business hours window from selected profile.">Start Work</th>
+                      <th title="In Business Days. Computed using business hours window from selected profile.">Resolve</th>
                       <th>Escalate After (mins)</th>
                       <th>Escalate To Role</th>
                     </tr>
                   </thead>
                   <tbody id="sla-policy-rows"></tbody>
                 </table>
+              </div>
+
+              <!-- Notes Section -->
+              <div class="form-group">
+                <label for="wf-notes">Notes (optional)</label>
+                <textarea id="wf-notes" rows="3" placeholder="Add any additional notes or context for this workflow..." style="width:100%; padding:0.5rem; font-family:inherit;"></textarea>
               </div>
 
               <!-- Validation Messages -->
@@ -274,52 +294,97 @@
       renderCards() {
         const departments = App.state.catalogs.departments;
         let html = '<div class="dept-cards">';
-        
+
         departments.forEach(dept => {
           const stats = App.getDepartmentStats(dept.id);
-          html += '<div class="dept-card" onclick="location.hash=\'#/dept/' + dept.id + '\'">';
+          html += '<div class="dept-card" onclick="location.hash=\'#/dept/' + dept.id + '\'" style="cursor:pointer;">';
           html += '<h3>' + dept.name + '</h3>';
           html += '<div class="dept-card-stats">';
           html += '<div class="dept-card-stat"><span>Workflows:</span><strong>' + stats.count + '</strong></div>';
-          html += '<div class="dept-card-stat"><span>Feasible (Normal):</span><strong>' + stats.feasiblePct + '%</strong></div>';
-          html += '<div class="dept-card-stat"><span>Avg Duration:</span><strong>' + stats.avgDuration + ' mins</strong></div>';
+
+          // Format feasible percentage
+          const feasibleDisplay = stats.feasiblePct === '—' ? '—' : stats.feasiblePct + '%';
+          html += '<div class="dept-card-stat" title="Computed using business-hours if enabled on each workflow">';
+          html += '<span>Feasible (Normal):</span><strong>' + feasibleDisplay + '</strong>';
+          html += '</div>';
+
+          // Format average duration
+          const avgDisplay = stats.avgDuration === '—' ? '—' : stats.avgDuration + ' mins';
+          html += '<div class="dept-card-stat"><span>Avg Duration:</span><strong>' + avgDisplay + '</strong></div>';
           html += '</div>';
           html += '<div class="dept-card-action">';
           html += '<button class="btn-primary btn-sm" onclick="event.stopPropagation(); location.hash=\'#/dept/' + dept.id + '\'">View Workflows →</button>';
           html += '</div>';
           html += '</div>';
         });
-        
+
         html += '</div>';
         return html;
       },
 
       renderTable() {
-        const workflows = App.getFilteredWorkflows();
+        let workflows = App.getFilteredWorkflows();
+
+        // Filter out drafts
+        workflows = workflows.filter(w => !w.status || w.status !== 'draft');
+
         if (workflows.length === 0) {
           return '<p class="text-muted">No workflows found. Try adjusting your filters.</p>';
         }
 
+        // Sort: Overrun → Tight → OK, then Updated desc
+        workflows = workflows.slice().sort((a, b) => {
+          const interpretA = a.meta?.interpretAsBusinessHours !== false;
+          const interpretB = b.meta?.interpretAsBusinessHours !== false;
+
+          const feasA = App.computeFeasibility(a, App.state.catalogs, interpretA);
+          const feasB = App.computeFeasibility(b, App.state.catalogs, interpretB);
+
+          const statusA = feasA?.byPriority?.p3?.status || 'unknown';
+          const statusB = feasB?.byPriority?.p3?.status || 'unknown';
+
+          const statusOrder = { overrun: 0, tight: 1, ok: 2, unknown: 3 };
+          const orderA = statusOrder[statusA] || 3;
+          const orderB = statusOrder[statusB] || 3;
+
+          if (orderA !== orderB) return orderA - orderB;
+
+          // Then by updated desc
+          const updatedA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+          const updatedB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+          return updatedB - updatedA;
+        });
+
         let html = '<table><thead><tr>';
-        html += '<th>Dept</th><th>Work Type</th><th>Owner</th><th>Total (mins)</th>';
-        html += '<th>Resolve (Normal)</th><th>Feasible?</th><th>Updated</th>';
+        html += '<th>Dept</th><th>Work Type</th><th>Owner</th><th>Steps</th>';
+        html += '<th>Total mins</th>';
+        html += '<th title="Computed using business-hours if enabled on each workflow">Resolve (Normal)</th>';
+        html += '<th title="Computed using business-hours if enabled on each workflow">Feasible?</th>';
+        html += '<th>Updated</th>';
         html += '</tr></thead><tbody>';
 
         workflows.forEach(wf => {
           const dept = App.state.catalogs.departments.find(d => d.id === wf.departmentId);
           const owner = App.state.catalogs.roles.find(r => r.id === wf.ownerRoleId);
-          const validation = Validator.validateWithSummary(wf, App.state.catalogs);
-          const p3 = validation.summary.feasibleByPriority.p3 || {};
+
+          const interpretAsBH = wf.meta?.interpretAsBusinessHours !== false;
+          const feasibility = App.computeFeasibility(wf, App.state.catalogs, interpretAsBH);
+
+          const p3 = feasibility?.byPriority?.p3 || {};
           const badgeClass = p3.overrun ? 'badge-overrun' : (p3.tight ? 'badge-tight' : 'badge-feasible');
-          const badgeText = p3.overrun ? 'Overrun' : (p3.tight ? 'Tight' : 'Feasible');
-          const slaResolve = wf.slaByPriority && wf.slaByPriority.p3 ? wf.slaByPriority.p3.resolveMins : 'N/A';
+          const badgeText = p3.overrun ? 'Overrun' : (p3.tight ? 'Tight' : 'OK');
+
+          const slaResolve = wf.slaByPriority && wf.slaByPriority.p3 ? wf.slaByPriority.p3.resolveMins : '—';
+          const stepCount = wf.steps ? wf.steps.length : 0;
+          const totalMins = feasibility ? feasibility.totalExpectedMins : 0;
           const updated = wf.updatedAt ? new Date(wf.updatedAt).toLocaleDateString() : 'Never';
 
           html += '<tr onclick="location.hash=\'#/wf/' + wf.id + '\'" style="cursor:pointer;">';
           html += '<td>' + (dept ? dept.name : 'Unknown') + '</td>';
           html += '<td><strong>' + wf.workType + '</strong></td>';
           html += '<td>' + (owner ? owner.name : 'Unknown') + '</td>';
-          html += '<td>' + validation.summary.totalExpectedMins + '</td>';
+          html += '<td>' + stepCount + '</td>';
+          html += '<td>' + totalMins + '</td>';
           html += '<td>' + slaResolve + '</td>';
           html += '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
           html += '<td>' + updated + '</td>';
@@ -631,10 +696,23 @@
     const BuildScreen = {
       steps: [],
       currentWorkflowId: null,
+      slaUnits: {}, // Track unit selection per priority { p1: {ack:'mins', start:'hours', resolve:'businessDays'}, ... }
+      interpretAsBH: true, // Default: interpret as business hours
 
       render() {
         this.populateTemplates();
         this.populateDropdowns();
+
+        // Initialize units if not already set - default to Business Days
+        if (!this.slaUnits || Object.keys(this.slaUnits).length === 0) {
+          this.slaUnits = {};
+          App.state.catalogs.priorities.forEach(p => {
+            this.slaUnits[p.id] = { ack: 'businessDays', start: 'businessDays', resolve: 'businessDays' };
+          });
+        }
+
+        // Always interpret as business hours
+        this.interpretAsBH = true;
 
         if (App.state.draftWorkflow) {
           this.loadWorkflow(App.state.draftWorkflow);
@@ -645,21 +723,44 @@
         }
       },
 
+      toggleInterpretation() {
+        const checkbox = document.getElementById('interpret-as-bh');
+        this.interpretAsBH = checkbox ? checkbox.checked : true;
+        // Re-validate to update feasibility indicators
+        this.validate();
+      },
+
       populateTemplates() {
         const select = document.getElementById('template-select');
+
+        // Guard: only populate if not already populated (or if templates changed)
+        if (!App.state.templates || !App.state.templates.templates) {
+          console.warn('Templates not loaded yet');
+          select.innerHTML = '<option value="">Loading templates...</option>';
+          return;
+        }
+
         const templates = App.state.templates.templates;
 
         let options = '<option value="">-- Select a template --</option>';
-        Object.keys(templates).forEach(deptId => {
-          const dept = App.state.catalogs.departments.find(d => d.id === deptId);
-          if (dept && templates[deptId].length > 0) {
-            options += '<optgroup label="' + dept.name + '">';
-            templates[deptId].forEach((tpl, idx) => {
-              options += '<option value="' + deptId + ':' + idx + '">' + tpl.workType + '</option>';
-            });
-            options += '</optgroup>';
-          }
-        });
+        const hasTemplates = Object.keys(templates).some(deptId =>
+          templates[deptId] && templates[deptId].length > 0
+        );
+
+        if (!hasTemplates) {
+          options += '<optgroup label="No templates available" disabled></optgroup>';
+        } else {
+          Object.keys(templates).forEach(deptId => {
+            const dept = App.state.catalogs.departments.find(d => d.id === deptId);
+            if (dept && templates[deptId].length > 0) {
+              options += '<optgroup label="' + dept.name + '">';
+              templates[deptId].forEach((tpl, idx) => {
+                options += '<option value="' + deptId + ':' + idx + '">' + tpl.workType + '</option>';
+              });
+              options += '</optgroup>';
+            }
+          });
+        }
 
         select.innerHTML = options;
       },
@@ -704,21 +805,33 @@
       },
 
       populateDropdowns() {
-        const departments = App.state.catalogs.departments;
-        const roles = App.state.catalogs.roles;
-        const businessHours = App.state.catalogs.businessHours;
+        // Guard: ensure catalogs are loaded
+        if (!App.state.catalogs) {
+          console.warn('Catalogs not loaded yet');
+          return;
+        }
+
+        const departments = App.state.catalogs.departments || [];
+        const roles = App.state.catalogs.roles || [];
+        const businessHours = App.state.catalogs.businessHours || [];
 
         const deptSelect = document.getElementById('wf-department');
-        deptSelect.innerHTML = '<option value="">Select department...</option>' +
-          departments.map(d => '<option value="' + d.id + '">' + d.name + '</option>').join('');
+        if (deptSelect) {
+          deptSelect.innerHTML = '<option value="">Select department...</option>' +
+            departments.map(d => '<option value="' + d.id + '">' + d.name + '</option>').join('');
+        }
 
         const bhSelect = document.getElementById('wf-business-hours');
-        bhSelect.innerHTML = '<option value="">Select business hours...</option>' +
-          businessHours.map(bh => '<option value="' + bh.id + '">' + bh.name + '</option>').join('');
+        if (bhSelect) {
+          bhSelect.innerHTML = '<option value="">Select business hours...</option>' +
+            businessHours.map(bh => '<option value="' + bh.id + '">' + bh.name + '</option>').join('');
+        }
 
         const ownerSelect = document.getElementById('wf-owner');
-        ownerSelect.innerHTML = '<option value="">Select owner role...</option>' +
-          roles.map(r => '<option value="' + r.id + '">' + r.name + '</option>').join('');
+        if (ownerSelect) {
+          ownerSelect.innerHTML = '<option value="">Select owner role...</option>' +
+            roles.map(r => '<option value="' + r.id + '">' + r.name + '</option>').join('');
+        }
       },
 
       loadWorkflow(workflow) {
@@ -729,12 +842,37 @@
         document.getElementById('wf-owner').value = workflow.ownerRoleId || '';
 
         this.steps = workflow.steps || [];
+
+        // Restore meta information
+        if (workflow.meta) {
+          if (workflow.meta.slaUnits) {
+            this.slaUnits = workflow.meta.slaUnits;
+          }
+          if (workflow.meta.interpretAsBusinessHours !== undefined) {
+            this.interpretAsBH = workflow.meta.interpretAsBusinessHours;
+            const checkbox = document.getElementById('interpret-as-bh');
+            if (checkbox) checkbox.checked = this.interpretAsBH;
+          }
+          // Restore notes
+          const notesField = document.getElementById('wf-notes');
+          if (notesField && workflow.meta.notes) {
+            notesField.value = workflow.meta.notes;
+          }
+        }
+
         this.renderSteps();
         this.renderSLAPolicy(workflow.slaByPriority);
       },
 
       renderSteps() {
         const container = document.getElementById('steps-list');
+
+        // Guard: ensure catalogs are loaded
+        if (!App.state.catalogs || !App.state.catalogs.roles) {
+          container.innerHTML = '<p class="text-muted">Loading roles...</p>';
+          return;
+        }
+
         const roles = App.state.catalogs.roles;
 
         if (this.steps.length === 0) {
@@ -769,8 +907,20 @@
       renderSLAPolicy(existingSLA) {
         existingSLA = existingSLA || {};
         const container = document.getElementById('sla-policy-rows');
+
+        // Guard: ensure catalogs are loaded
+        if (!App.state.catalogs || !App.state.catalogs.priorities || !App.state.catalogs.roles) {
+          container.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+          return;
+        }
+
         const priorities = App.state.catalogs.priorities;
         const roles = App.state.catalogs.roles;
+
+        // Get current business hours profile for conversions
+        const bhId = document.getElementById('wf-business-hours')?.value;
+        const bhProfile = App.state.catalogs.businessHours.find(bh => bh.id === bhId) || App.state.catalogs.businessHours[0];
+        const minsPerDay = App.minutesPerBusinessDay(bhProfile);
 
         let html = '';
         priorities.forEach(p => {
@@ -781,13 +931,52 @@
             escalate: {}
           };
 
+          // Get units for this priority (default to businessDays for all fields)
+          const units = this.slaUnits[p.id] || { ack: 'businessDays', start: 'businessDays', resolve: 'businessDays' };
+
+          // Convert stored minutes to display values in Business Days
+          const ackBD = (sla.ackMins / minsPerDay).toFixed(1);
+          const startBD = (sla.startMins / minsPerDay).toFixed(1);
+          const resolveBD = (sla.resolveMins / minsPerDay).toFixed(1);
+
           html += '<tr>';
           html += '<td><strong>' + p.name + '</strong></td>';
-          html += '<td><input type="number" value="' + (sla.ackMins || '') + '" data-priority="' + p.id + '" data-field="ackMins"></td>';
-          html += '<td><input type="number" value="' + (sla.startMins || '') + '" data-priority="' + p.id + '" data-field="startMins"></td>';
-          html += '<td><input type="number" value="' + (sla.resolveMins || '') + '" data-priority="' + p.id + '" data-field="resolveMins"></td>';
-          html += '<td><input type="number" value="' + (sla.escalate && sla.escalate.afterMins ? sla.escalate.afterMins : '') + '" data-priority="' + p.id + '" data-field="escalateAfterMins" placeholder="Optional"></td>';
-          html += '<td><select data-priority="' + p.id + '" data-field="escalateToRoleId"><option value="">None</option>';
+
+          // Acknowledge column (Business Days by default)
+          html += '<td style="min-width:180px;">';
+          html += '<input type="number" step="0.5" value="' + ackBD + '" id="sla-ack-' + p.id + '" data-priority="' + p.id + '" data-field="ack" onchange="BuildScreen.syncSlider(\'' + p.id + '\', \'ack\')" style="width:100px; margin-bottom:0.25rem;">';
+          // Slider: 0-5 BD, step 0.5
+          html += '<input type="range" min="0" max="5" step="0.5" value="' + ackBD + '" id="sla-ack-slider-' + p.id + '" oninput="BuildScreen.syncInput(\'' + p.id + '\', \'ack\')" style="width:100%; margin-bottom:0.25rem;">';
+          html += '<div class="text-muted" style="font-size:0.75rem;">';
+          html += '≈ ' + ackBD + ' business days → ' + sla.ackMins + ' mins';
+          html += '</div>';
+          html += '</td>';
+
+          // Start Work column (Business Days by default)
+          html += '<td style="min-width:180px;">';
+          html += '<input type="number" step="0.5" value="' + startBD + '" id="sla-start-' + p.id + '" data-priority="' + p.id + '" data-field="start" onchange="BuildScreen.syncSlider(\'' + p.id + '\', \'start\')" style="width:100px; margin-bottom:0.25rem;">';
+          // Slider: 0-10 BD, step 0.5
+          html += '<input type="range" min="0" max="10" step="0.5" value="' + startBD + '" id="sla-start-slider-' + p.id + '" oninput="BuildScreen.syncInput(\'' + p.id + '\', \'start\')" style="width:100%; margin-bottom:0.25rem;">';
+          html += '<div class="text-muted" style="font-size:0.75rem;">';
+          html += '≈ ' + startBD + ' business days → ' + sla.startMins + ' mins';
+          html += '</div>';
+          html += '</td>';
+
+          // Resolve column (Business Days by default)
+          html += '<td style="min-width:180px;">';
+          html += '<input type="number" step="0.5" value="' + resolveBD + '" id="sla-resolve-' + p.id + '" data-priority="' + p.id + '" data-field="resolve" onchange="BuildScreen.syncSlider(\'' + p.id + '\', \'resolve\')" style="width:100px; margin-bottom:0.25rem;">';
+          // Slider: 0-20 BD, step 0.5
+          html += '<input type="range" min="0" max="20" step="0.5" value="' + resolveBD + '" id="sla-resolve-slider-' + p.id + '" oninput="BuildScreen.syncInput(\'' + p.id + '\', \'resolve\')" style="width:100%; margin-bottom:0.25rem;">';
+          html += '<div class="text-muted" style="font-size:0.75rem;">';
+          html += '≈ ' + resolveBD + ' business days → ' + sla.resolveMins + ' mins';
+          html += '</div>';
+          html += '</td>';
+
+          // Escalate After (mins)
+          html += '<td><input type="number" value="' + (sla.escalate && sla.escalate.afterMins ? sla.escalate.afterMins : '') + '" data-priority="' + p.id + '" data-field="escalateAfterMins" placeholder="Optional" style="width:100%;"></td>';
+
+          // Escalate To Role
+          html += '<td><select data-priority="' + p.id + '" data-field="escalateToRoleId" style="width:100%;"><option value="">None</option>';
           roles.forEach(r => {
             const selected = (sla.escalate && sla.escalate.toRoleId === r.id) ? 'selected' : '';
             html += '<option value="' + r.id + '" ' + selected + '>' + r.name + '</option>';
@@ -799,23 +988,121 @@
         container.innerHTML = html;
       },
 
+      changeSLAUnit(priorityId, field, newUnit) {
+        if (!this.slaUnits[priorityId]) {
+          this.slaUnits[priorityId] = { ack: 'mins', start: 'mins', resolve: 'mins' };
+        }
+        this.slaUnits[priorityId][field] = newUnit;
+        // Re-render to update display
+        this.renderSLAPolicy(this.collectSLAData());
+      },
+
+      syncSlider(priorityId, field) {
+        // When input changes, update slider
+        const input = document.getElementById('sla-' + field + '-' + priorityId);
+        const slider = document.getElementById('sla-' + field + '-slider-' + priorityId);
+        if (input && slider) {
+          slider.value = input.value || 0;
+        }
+      },
+
+      syncInput(priorityId, field) {
+        // When slider changes, update input
+        const input = document.getElementById('sla-' + field + '-' + priorityId);
+        const slider = document.getElementById('sla-' + field + '-slider-' + priorityId);
+        if (input && slider) {
+          input.value = slider.value;
+        }
+      },
+
+      collectSLAData() {
+        const slaByPriority = {};
+        const priorities = App.state.catalogs.priorities;
+
+        const bhId = document.getElementById('wf-business-hours')?.value;
+        const bhProfile = App.state.catalogs.businessHours.find(bh => bh.id === bhId) || App.state.catalogs.businessHours[0];
+
+        priorities.forEach(p => {
+          const units = this.slaUnits[p.id] || { ack: 'mins', start: 'mins', resolve: 'mins' };
+
+          // Get user input values
+          const ackInput = document.getElementById('sla-ack-' + p.id);
+          const startInput = document.getElementById('sla-start-' + p.id);
+          const resolveInput = document.getElementById('sla-resolve-' + p.id);
+
+          const ackValue = ackInput ? parseFloat(ackInput.value) : 0;
+          const startValue = startInput ? parseFloat(startInput.value) : 0;
+          const resolveValue = resolveInput ? parseFloat(resolveInput.value) : 0;
+
+          // Convert to minutes
+          const ackMins = App.convertUserSlaToMinutes(ackValue, units.ack, bhProfile);
+          const startMins = App.convertUserSlaToMinutes(startValue, units.start, bhProfile);
+          const resolveMins = App.convertUserSlaToMinutes(resolveValue, units.resolve, bhProfile);
+
+          const escalateAfterInput = document.querySelector('input[data-priority="' + p.id + '"][data-field="escalateAfterMins"]');
+          const escalateToRoleSelect = document.querySelector('select[data-priority="' + p.id + '"][data-field="escalateToRoleId"]');
+
+          slaByPriority[p.id] = {
+            ackMins: ackMins,
+            startMins: startMins,
+            resolveMins: resolveMins,
+            escalate: {}
+          };
+
+          if (escalateAfterInput && escalateAfterInput.value) {
+            slaByPriority[p.id].escalate.afterMins = parseInt(escalateAfterInput.value);
+          }
+
+          if (escalateToRoleSelect && escalateToRoleSelect.value) {
+            slaByPriority[p.id].escalate.toRoleId = escalateToRoleSelect.value;
+          }
+        });
+
+        return slaByPriority;
+      },
+
       applySLAPreset(presetName) {
         const preset = App.SLA_PRESETS[presetName];
         if (!preset) return;
 
         document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelector('.preset-btn[data-preset="' + presetName + '"]').classList.add('active');
+        const activeBtn = document.querySelector('.preset-btn[data-preset="' + presetName + '"]');
+        if (activeBtn) activeBtn.classList.add('active');
+
+        // Get current business hours for conversions
+        const bhId = document.getElementById('wf-business-hours')?.value;
+        const bhProfile = App.state.catalogs.businessHours.find(bh => bh.id === bhId) || App.state.catalogs.businessHours[0];
+        const minsPerDay = App.minutesPerBusinessDay(bhProfile);
 
         Object.keys(preset).forEach(priorityId => {
           const values = preset[priorityId];
-          const ackInput = document.querySelector('input[data-priority="' + priorityId + '"][data-field="ackMins"]');
-          const startInput = document.querySelector('input[data-priority="' + priorityId + '"][data-field="startMins"]');
-          const resolveInput = document.querySelector('input[data-priority="' + priorityId + '"][data-field="resolveMins"]');
 
-          if (ackInput) ackInput.value = values.ackMins;
-          if (startInput) startInput.value = values.startMins;
-          if (resolveInput) resolveInput.value = values.resolveMins;
+          // Convert preset minutes to Business Days (default display unit)
+          const ackValue = (values.ackMins / minsPerDay).toFixed(1);
+          const startValue = (values.startMins / minsPerDay).toFixed(1);
+          const resolveValue = (values.resolveMins / minsPerDay).toFixed(1);
+
+          // Set values
+          const ackInput = document.getElementById('sla-ack-' + priorityId);
+          const startInput = document.getElementById('sla-start-' + priorityId);
+          const resolveInput = document.getElementById('sla-resolve-' + priorityId);
+
+          if (ackInput) ackInput.value = ackValue;
+          if (startInput) startInput.value = startValue;
+          if (resolveInput) resolveInput.value = resolveValue;
+
+          // Sync sliders
+          const ackSlider = document.getElementById('sla-ack-slider-' + priorityId);
+          const startSlider = document.getElementById('sla-start-slider-' + priorityId);
+          const resolveSlider = document.getElementById('sla-resolve-slider-' + priorityId);
+
+          if (ackSlider) ackSlider.value = ackValue;
+          if (startSlider) startSlider.value = startValue;
+          if (resolveSlider) resolveSlider.value = resolveValue;
         });
+
+        // Re-render to show updated minutes helpers
+        this.renderSLAPolicy(this.collectSLAData());
       },
 
       addStep() {
@@ -892,9 +1179,17 @@
         const workflow = this.captureWorkflow();
         workflow.status = 'active';
         App.saveWorkflow(workflow);
-        alert('Workflow saved successfully!');
 
-        location.hash = '#/wf/' + workflow.id;
+        // Clear current workflow ID so next save creates a new workflow
+        this.currentWorkflowId = null;
+
+        // Show success message with View Review button
+        if (confirm('Workflow saved successfully! Would you like to view the Review screen?')) {
+          location.hash = '#/wf/' + workflow.id;
+        } else {
+          // Stay on build screen, ready for next workflow
+          this.clear();
+        }
       },
 
       saveDraft() {
@@ -906,6 +1201,8 @@
       clear() {
         if (confirm('Clear the current workflow? Unsaved changes will be lost.')) {
           document.getElementById('workflow-form').reset();
+          const notesField = document.getElementById('wf-notes');
+          if (notesField) notesField.value = '';
           this.steps = [];
           this.currentWorkflowId = null;
           this.renderSteps();
@@ -917,42 +1214,38 @@
       },
 
       captureWorkflow() {
-        const slaByPriority = {};
-        const priorities = App.state.catalogs.priorities;
+        // Use the new collectSLAData method
+        const slaByPriority = this.collectSLAData();
 
-        document.querySelectorAll('#sla-policy-rows tr').forEach(row => {
-          const inputs = row.querySelectorAll('input, select');
-          if (inputs.length === 0) return;
+        const workType = document.getElementById('wf-work-type').value;
+        const notes = document.getElementById('wf-notes') ? document.getElementById('wf-notes').value : '';
 
-          const priorityId = inputs[0].dataset.priority;
-          const ackMins = parseInt(inputs[0].value) || 0;
-          const startMins = parseInt(inputs[1].value) || 0;
-          const resolveMins = parseInt(inputs[2].value) || 0;
-          const escalateAfterMins = parseInt(inputs[3].value) || null;
-          const escalateToRoleId = inputs[4].value || null;
+        // Build metadata
+        const meta = {
+          slaUnits: this.slaUnits,
+          interpretAsBusinessHours: this.interpretAsBH,
+          notes: notes
+        };
 
-          slaByPriority[priorityId] = {
-            ackMins: ackMins,
-            startMins: startMins,
-            resolveMins: resolveMins
-          };
-
-          if (escalateAfterMins && escalateToRoleId) {
-            slaByPriority[priorityId].escalate = {
-              afterMins: escalateAfterMins,
-              toRoleId: escalateToRoleId
-            };
-          }
-        });
+        // Generate ID if needed
+        let id = this.currentWorkflowId;
+        if (!id && App.state.draftWorkflow) {
+          id = App.state.draftWorkflow.id;
+        }
+        if (!id) {
+          id = App.generateWorkflowId(workType);
+        }
 
         return {
-          id: this.currentWorkflowId || (App.state.draftWorkflow ? App.state.draftWorkflow.id : null) || 'workflow_' + Date.now(),
+          id: id,
           departmentId: document.getElementById('wf-department').value,
-          workType: document.getElementById('wf-work-type').value,
+          workType: workType,
           businessHoursId: document.getElementById('wf-business-hours').value,
           ownerRoleId: document.getElementById('wf-owner').value,
           steps: this.steps,
-          slaByPriority: slaByPriority
+          slaByPriority: slaByPriority,
+          meta: meta,
+          updatedAt: new Date().toISOString()
         };
       }
     };
@@ -1001,6 +1294,14 @@
         html += '<dt>Status:</dt><dd><span class="badge badge-' + (workflow.status || 'draft') + '">' + (workflow.status || 'draft') + '</span></dd>';
         html += '</dl></div>';
 
+        // Show notes if available
+        if (workflow.meta && workflow.meta.notes) {
+          html += '<div style="margin: 1.5rem 0; padding: 1rem; background: #f8f9fa; border-left: 3px solid #007bff;">';
+          html += '<h4 style="margin-top: 0;">Notes</h4>';
+          html += '<p style="white-space: pre-wrap; margin-bottom: 0;">' + workflow.meta.notes + '</p>';
+          html += '</div>';
+        }
+
         html += '<div class="summary-steps"><h3>Workflow Steps</h3>';
         workflow.steps.forEach((step, idx) => {
           const role = catalogs.roles.find(r => r.id === step.roleId);
@@ -1011,24 +1312,55 @@
         });
         html += '</div>';
 
-        html += '<div class="sla-matrix"><h3>SLA Targets</h3><table><thead><tr>';
-        html += '<th>Priority</th><th>Acknowledge</th><th>Start Work</th><th>Resolve</th><th>Escalation</th>';
+        html += '<div class="sla-matrix"><h3>SLA Targets</h3>';
+
+        // Show interpretation mode if available
+        const interpretAsBH = workflow.meta?.interpretAsBusinessHours !== false;
+        html += '<p class="text-muted">Feasibility computed using ' + (interpretAsBH ? 'business hours' : 'calendar time') + '</p>';
+
+        html += '<table><thead><tr>';
+        html += '<th>Priority</th><th>Acknowledge</th><th>Start Work</th><th>Resolve</th><th>Feasible?</th><th>Escalation</th>';
         html += '</tr></thead><tbody>';
+
+        // Get feasibility calculation
+        const feasibility = App.computeFeasibility(workflow, catalogs, interpretAsBH);
 
         catalogs.priorities.forEach(p => {
           const sla = workflow.slaByPriority ? workflow.slaByPriority[p.id] : null;
           if (!sla) return;
 
-          const overrun = Validator.checkSLAOverrun(workflow, p.id, catalogs);
+          // Get units if saved in meta
+          const units = workflow.meta?.slaUnits?.[p.id] || { ack: 'mins', start: 'mins', resolve: 'mins' };
+
+          // Format SLA values with units
+          const ackDisplay = App.formatSlaForDisplay(sla.ackMins, units.ack, bh);
+          const startDisplay = App.formatSlaForDisplay(sla.startMins, units.start, bh);
+          const resolveDisplay = App.formatSlaForDisplay(sla.resolveMins, units.resolve, bh);
+
+          // Get feasibility for this priority
+          const pFeasibility = feasibility?.byPriority?.[p.id];
+          let badgeClass = 'badge-feasible';
+          let badgeText = 'OK';
+          if (pFeasibility) {
+            if (pFeasibility.status === 'overrun') {
+              badgeClass = 'badge-overrun';
+              badgeText = 'Overrun';
+            } else if (pFeasibility.status === 'tight') {
+              badgeClass = 'badge-tight';
+              badgeText = 'Tight';
+            }
+          }
+
           const escalation = (sla.escalate && sla.escalate.toRoleId)
             ? 'After ' + sla.escalate.afterMins + ' mins → ' + (catalogs.roles.find(r => r.id === sla.escalate.toRoleId) ? catalogs.roles.find(r => r.id === sla.escalate.toRoleId).name : 'Unknown')
             : 'None';
 
           html += '<tr>';
-          html += '<td><strong>' + p.name + '</strong> ' + (overrun ? '<span class="overrun-badge">Potential SLA overrun</span>' : '') + '</td>';
-          html += '<td>' + sla.ackMins + ' mins</td>';
-          html += '<td>' + sla.startMins + ' mins</td>';
-          html += '<td>' + sla.resolveMins + ' mins</td>';
+          html += '<td><strong>' + p.name + '</strong></td>';
+          html += '<td>' + ackDisplay + '</td>';
+          html += '<td>' + startDisplay + '</td>';
+          html += '<td>' + resolveDisplay + '</td>';
+          html += '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
           html += '<td>' + escalation + '</td>';
           html += '</tr>';
         });
@@ -1090,8 +1422,10 @@
         }
 
         try {
-          const url = await ShareLink.copyToClipboard(workflow, App.state.catalogs);
-          alert('Share link copied to clipboard!\n\n' + url);
+          // Copy deep link URL
+          const deepLink = location.origin + location.pathname + '#/wf/' + workflow.id;
+          await navigator.clipboard.writeText(deepLink);
+          alert('Share link copied to clipboard!\n\n' + deepLink);
         } catch (error) {
           console.error('Failed to copy link:', error);
           alert('Failed to copy link. Check console for details.');

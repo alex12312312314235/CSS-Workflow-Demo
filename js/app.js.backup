@@ -2,19 +2,9 @@
 const App = {
   state: {
     catalogs: null,
-    templates: null,
-    workflows: [],
     draftWorkflow: null,
-    currentRoute: 'home',
-    currentWorkflowId: null,
-    currentDeptId: null,
-    sharedWorkflow: null,
-    filters: {
-      department: 'all',
-      owner: 'all',
-      search: ''
-    },
-    viewMode: 'cards' // 'cards' or 'table'
+    currentRoute: 'build',
+    sharedWorkflow: null
   },
 
   // Fallback roles in case catalog fails to load
@@ -26,39 +16,14 @@ const App = {
     { id: 'i_i_analyst', name: 'Insights & Intelligence Analyst' }
   ],
 
-  // SLA Presets
-  SLA_PRESETS: {
-    conservative: {
-      p1: { ackMins: 60, startMins: 120, resolveMins: 960 },
-      p2: { ackMins: 120, startMins: 480, resolveMins: 2880 },
-      p3: { ackMins: 1440, startMins: 4320, resolveMins: 15120 }
-    },
-    standard: {
-      p1: { ackMins: 30, startMins: 60, resolveMins: 480 },
-      p2: { ackMins: 120, startMins: 240, resolveMins: 1440 },
-      p3: { ackMins: 1440, startMins: 2880, resolveMins: 10080 }
-    },
-    aggressive: {
-      p1: { ackMins: 15, startMins: 30, resolveMins: 240 },
-      p2: { ackMins: 60, startMins: 120, resolveMins: 720 },
-      p3: { ackMins: 720, startMins: 1440, resolveMins: 5040 }
-    }
-  },
-
   /**
    * Initialize the application
    */
   async init() {
-    console.log('Initializing CSS SLA Configurator...');
+    console.log('Initializing SLA Configurator...');
 
     // Load catalogs
     await this.loadCatalogs();
-
-    // Load templates
-    await this.loadTemplates();
-
-    // Load workflows from localStorage
-    this.loadWorkflows();
 
     // Load draft workflow from localStorage
     this.loadDraft();
@@ -109,36 +74,14 @@ const App = {
       this.state.catalogs = {
         schemaVersion: '1.0.0',
         roles: this.FALLBACK_ROLES,
-        departments: [
-          { id: 'cd', name: 'Concept Dev' },
-          { id: 'ss', name: 'Standards & Specs' },
-          { id: 'ft', name: 'Food Tech' },
-          { id: 'hd', name: 'Health & Dietetics' },
-          { id: 'ii', name: 'Insights & Intelligence' }
-        ],
-        businessHours: [{ id: 'std', name: 'Standard CSS', tz: 'Asia/Dubai', days: [1,2,3,4,5], start: '08:00', end: '18:00' }],
+        departments: [{ id: 'css', name: 'Culinary Support Services' }],
+        businessHours: [{ id: 'std', name: 'Standard', tz: 'Asia/Dubai', days: [1,2,3,4,5], start: '08:00', end: '18:00' }],
         priorities: [
           { id: 'p1', name: 'Critical', ackMins: 30, startMins: 60, resolveMins: 480 },
           { id: 'p2', name: 'High', ackMins: 120, startMins: 240, resolveMins: 1440 },
           { id: 'p3', name: 'Normal', ackMins: 1440, startMins: 2880, resolveMins: 10080 }
         ]
       };
-    }
-  },
-
-  /**
-   * Load templates
-   */
-  async loadTemplates() {
-    try {
-      const response = await fetch('./data/templates.json');
-      if (!response.ok) throw new Error('Failed to load templates');
-
-      this.state.templates = await response.json();
-      console.log('Loaded templates from file');
-    } catch (error) {
-      console.error('Failed to load templates:', error);
-      this.state.templates = { schemaVersion: '1.0.0', templates: {} };
     }
   },
 
@@ -173,34 +116,6 @@ const App = {
   },
 
   /**
-   * Load workflows from localStorage
-   */
-  loadWorkflows() {
-    try {
-      const stored = localStorage.getItem('sla.workflows');
-      if (stored) {
-        this.state.workflows = JSON.parse(stored);
-        console.log(`Loaded ${this.state.workflows.length} workflows from localStorage`);
-      }
-    } catch (error) {
-      console.error('Failed to load workflows:', error);
-      this.state.workflows = [];
-    }
-  },
-
-  /**
-   * Save workflows to localStorage
-   */
-  saveWorkflows() {
-    try {
-      localStorage.setItem('sla.workflows', JSON.stringify(this.state.workflows));
-      console.log('Workflows saved to localStorage');
-    } catch (error) {
-      console.error('Failed to save workflows:', error);
-    }
-  },
-
-  /**
    * Load draft workflow from localStorage
    */
   loadDraft() {
@@ -229,41 +144,6 @@ const App = {
   },
 
   /**
-   * Save a workflow (update or create)
-   */
-  saveWorkflow(workflow) {
-    workflow.updatedAt = new Date().toISOString();
-    if (!workflow.status) workflow.status = 'draft';
-
-    const idx = this.state.workflows.findIndex(w => w.id === workflow.id);
-    if (idx > -1) {
-      this.state.workflows[idx] = workflow;
-    } else {
-      this.state.workflows.push(workflow);
-    }
-
-    this.saveWorkflows();
-  },
-
-  /**
-   * Delete a workflow
-   */
-  deleteWorkflow(id) {
-    const idx = this.state.workflows.findIndex(w => w.id === id);
-    if (idx > -1) {
-      this.state.workflows.splice(idx, 1);
-      this.saveWorkflows();
-    }
-  },
-
-  /**
-   * Get workflow by ID
-   */
-  getWorkflow(id) {
-    return this.state.workflows.find(w => w.id === id);
-  },
-
-  /**
    * Check for share link in URL hash
    */
   checkShareLink() {
@@ -277,9 +157,8 @@ const App = {
           this.mergeCatalogs(decoded.catalogs);
         }
         console.log('Loaded workflow from share link');
-        // Set current workflow ID and navigate to review
-        this.state.currentWorkflowId = decoded.workflow.id;
-        window.location.hash = `#/wf/${decoded.workflow.id}`;
+        // Navigate to review
+        window.location.hash = '#/review';
       }
     }
   },
@@ -311,35 +190,21 @@ const App = {
    * Router - handle navigation
    */
   router() {
-    let hash = window.location.hash || '#/home';
+    let hash = window.location.hash || '#/build';
 
     // Handle share link
     if (hash.startsWith('#wf=')) {
-      return; // Already handled in checkShareLink
+      hash = '#/review';
     }
 
-    // Parse route
-    const match = hash.match(/#\/(home|catalog|build|dept\/([^/]+)|wf\/([^/]+))/);
-    if (!match) {
-      window.location.hash = '#/home';
-      return;
-    }
-
-    const route = match[1];
+    // Extract route
+    const route = hash.replace(/^#\//, '') || 'build';
     this.state.currentRoute = route;
-
-    // Extract params
-    if (route.startsWith('dept/')) {
-      this.state.currentDeptId = match[2];
-    } else if (route.startsWith('wf/')) {
-      this.state.currentWorkflowId = match[3];
-    }
 
     // Update nav active state
     document.querySelectorAll('.nav-link').forEach(link => {
       link.classList.remove('active');
-      const linkRoute = link.dataset.route;
-      if (linkRoute === route || route.startsWith(linkRoute + '/')) {
+      if (link.dataset.route === route) {
         link.classList.add('active');
       }
     });
@@ -349,22 +214,19 @@ const App = {
       screen.style.display = 'none';
     });
 
-    // Show and render active screen
-    if (route === 'home') {
-      document.getElementById('screen-home').style.display = 'block';
-      HomeScreen.render();
-    } else if (route === 'catalog') {
-      document.getElementById('screen-catalog').style.display = 'block';
-      CatalogScreen.render();
-    } else if (route === 'build') {
-      document.getElementById('screen-build').style.display = 'block';
-      BuildScreen.render();
-    } else if (route.startsWith('dept/')) {
-      document.getElementById('screen-dept').style.display = 'block';
-      DeptScreen.render(this.state.currentDeptId);
-    } else if (route.startsWith('wf/')) {
-      document.getElementById('screen-review').style.display = 'block';
-      ReviewScreen.render(this.state.currentWorkflowId);
+    // Show active screen
+    const activeScreen = document.getElementById(`screen-${route}`);
+    if (activeScreen) {
+      activeScreen.style.display = 'block';
+
+      // Render screen content
+      if (route === 'catalog') {
+        CatalogScreen.render();
+      } else if (route === 'build') {
+        BuildScreen.render();
+      } else if (route === 'review') {
+        ReviewScreen.render();
+      }
     }
   },
 
@@ -384,7 +246,7 @@ const App = {
   /**
    * Export full schema with workflows
    */
-  exportJSON(includeWorkflows = null) {
+  exportJSON(includeWorkflow = null) {
     const data = {
       schemaVersion: '1.0.0',
       generatedAt: new Date().toISOString(),
@@ -395,8 +257,8 @@ const App = {
       workflows: []
     };
 
-    if (includeWorkflows) {
-      data.workflows = Array.isArray(includeWorkflows) ? includeWorkflows : [includeWorkflows];
+    if (includeWorkflow) {
+      data.workflows = [includeWorkflow];
     }
 
     return data;
@@ -422,11 +284,10 @@ const App = {
 
       this.saveCatalogs();
 
-      // Import workflows if present
+      // Import workflow if present
       if (data.workflows && data.workflows.length > 0) {
-        data.workflows.forEach(wf => {
-          this.saveWorkflow(wf);
-        });
+        this.state.draftWorkflow = data.workflows[0];
+        this.saveDraft(this.state.draftWorkflow);
       }
 
       return true;
@@ -451,61 +312,6 @@ const App = {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  },
-
-  /**
-   * Get filtered workflows
-   */
-  getFilteredWorkflows() {
-    let filtered = this.state.workflows;
-
-    // Department filter
-    if (this.state.filters.department !== 'all') {
-      filtered = filtered.filter(w => w.departmentId === this.state.filters.department);
-    }
-
-    // Owner filter
-    if (this.state.filters.owner !== 'all') {
-      filtered = filtered.filter(w => w.ownerRoleId === this.state.filters.owner);
-    }
-
-    // Search filter
-    if (this.state.filters.search) {
-      const search = this.state.filters.search.toLowerCase();
-      filtered = filtered.filter(w =>
-        w.workType.toLowerCase().includes(search)
-      );
-    }
-
-    return filtered;
-  },
-
-  /**
-   * Calculate department stats
-   */
-  getDepartmentStats(deptId) {
-    const workflows = this.state.workflows.filter(w => w.departmentId === deptId);
-    const count = workflows.length;
-
-    if (count === 0) {
-      return { count: 0, feasiblePct: 0, avgDuration: 0 };
-    }
-
-    let feasibleCount = 0;
-    let totalDuration = 0;
-
-    workflows.forEach(wf => {
-      const validation = Validator.validateWithSummary(wf, this.state.catalogs);
-      const p3Feasible = validation.summary.feasibleByPriority.p3?.feasible || false;
-      if (p3Feasible) feasibleCount++;
-      totalDuration += validation.summary.totalExpectedMins;
-    });
-
-    return {
-      count,
-      feasiblePct: Math.round((feasibleCount / count) * 100),
-      avgDuration: Math.round(totalDuration / count)
-    };
   }
 };
 

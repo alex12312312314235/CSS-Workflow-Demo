@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SLA & Workflow Configurator</title>
+  <link rel="stylesheet" href="./css/app.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Left Navigation -->
+    <nav class="sidebar">
+      <h1>SLA Config</h1>
+      <a href="#/catalog" class="nav-link" data-route="catalog">Catalog</a>
+      <a href="#/build" class="nav-link active" data-route="build">Build</a>
+      <a href="#/review" class="nav-link" data-route="review">Review</a>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Catalog Screen -->
+      <div id="screen-catalog" class="screen">
+        <h2>Reference Data Catalog</h2>
+        <p class="text-muted">Manage departments, roles, business hours, and priorities. Changes persist locally.</p>
+
+        <div class="action-bar">
+          <button class="btn-secondary" onclick="CatalogScreen.resetToDefaults()">Reset to Defaults</button>
+        </div>
+
+        <div id="catalog-content"></div>
+      </div>
+
+      <!-- Build Screen -->
+      <div id="screen-build" class="screen">
+        <h2>Workflow Builder</h2>
+        <p class="text-muted">Create or edit a workflow with steps and SLA targets.</p>
+
+        <form id="workflow-form">
+          <!-- Workflow Header -->
+          <div class="workflow-header">
+            <div class="form-group">
+              <label for="wf-department">Department *</label>
+              <select id="wf-department" required></select>
+            </div>
+            <div class="form-group">
+              <label for="wf-work-type">Work Type *</label>
+              <input type="text" id="wf-work-type" placeholder="e.g., Recipe Development" required>
+            </div>
+            <div class="form-group">
+              <label for="wf-business-hours">Business Hours *</label>
+              <select id="wf-business-hours" required></select>
+            </div>
+            <div class="form-group">
+              <label for="wf-owner">Owner Role *</label>
+              <select id="wf-owner" required></select>
+            </div>
+          </div>
+
+          <!-- Steps Section -->
+          <div class="steps-container">
+            <h3>Workflow Steps</h3>
+            <div id="steps-list"></div>
+            <button type="button" class="btn-primary" onclick="BuildScreen.addStep()">+ Add Step</button>
+          </div>
+
+          <!-- SLA Policy Section -->
+          <div class="sla-table">
+            <h3>SLA Targets by Priority</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Priority</th>
+                  <th>Acknowledge (mins)</th>
+                  <th>Start Work (mins)</th>
+                  <th>Resolve (mins)</th>
+                  <th>Escalate After (mins)</th>
+                  <th>Escalate To Role</th>
+                </tr>
+              </thead>
+              <tbody id="sla-policy-rows"></tbody>
+            </table>
+          </div>
+
+          <!-- Validation Messages -->
+          <ul id="validation-messages" class="validation-messages" role="alert" aria-live="polite"></ul>
+
+          <!-- Actions -->
+          <div class="action-bar">
+            <button type="button" class="btn-primary" onclick="BuildScreen.validate()">Validate</button>
+            <button type="button" class="btn-success" onclick="BuildScreen.saveDraft()">Save Draft</button>
+            <button type="button" class="btn-secondary" onclick="BuildScreen.clear()">Clear</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Review Screen -->
+      <div id="screen-review" class="screen">
+        <h2>Workflow Summary</h2>
+
+        <div id="review-content"></div>
+
+        <div class="action-bar">
+          <button class="btn-primary" onclick="ReviewScreen.exportJSON()">Export JSON</button>
+          <button class="btn-secondary" onclick="ReviewScreen.importJSON()">Import JSON</button>
+          <button class="btn-secondary" onclick="ReviewScreen.copyShareLink()">Copy Share Link</button>
+          <button class="btn-secondary" onclick="window.print()">Print</button>
+          <button class="btn-secondary" onclick="location.hash='#/build'">Edit</button>
+        </div>
+
+        <!-- Hidden file input for import -->
+        <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="ReviewScreen.handleFileImport(event)">
+      </div>
+    </main>
+  </div>
+
+  <!-- Load JavaScript modules -->
+  <script src="./js/validate.js"></script>
+  <script src="./js/sharelink.js"></script>
+  <script src="./js/app.js"></script>
+
+  <!-- Screen-specific logic -->
+  <script>
+    // ============================
+    // CATALOG SCREEN
+    // ============================
+    const CatalogScreen = {
+      render() {
+        const container = document.getElementById('catalog-content');
+        const catalogs = App.state.catalogs;
+
+        container.innerHTML = `
+          ${this.renderDepartmentsTable(catalogs.departments)}
+          ${this.renderRolesTable(catalogs.roles)}
+          ${this.renderBusinessHoursTable(catalogs.businessHours)}
+          ${this.renderPrioritiesTable(catalogs.priorities)}
+        `;
+      },
+
+      renderDepartmentsTable(departments) {
+        return `
+          <div class="catalog-section">
+            <h3>Departments</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${departments.map((d, i) => `
+                  <tr>
+                    <td><input type="text" value="${d.id}" onchange="CatalogScreen.updateDept(${i}, 'id', this.value)"></td>
+                    <td><input type="text" value="${d.name}" onchange="CatalogScreen.updateDept(${i}, 'name', this.value)"></td>
+                    <td><button class="btn-danger btn-sm" onclick="CatalogScreen.deleteDept(${i})">Delete</button></td>
+                  </tr>
+                `).join('')}
+                <tr>
+                  <td colspan="3">
+                    <button class="btn-secondary btn-sm" onclick="CatalogScreen.addDept()">+ Add Department</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      },
+
+      renderRolesTable(roles) {
+        return `
+          <div class="catalog-section">
+            <h3>Roles</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${roles.map((r, i) => `
+                  <tr>
+                    <td><input type="text" value="${r.id}" onchange="CatalogScreen.updateRole(${i}, 'id', this.value)"></td>
+                    <td><input type="text" value="${r.name}" onchange="CatalogScreen.updateRole(${i}, 'name', this.value)"></td>
+                    <td><button class="btn-danger btn-sm" onclick="CatalogScreen.deleteRole(${i})">Delete</button></td>
+                  </tr>
+                `).join('')}
+                <tr>
+                  <td colspan="3">
+                    <button class="btn-secondary btn-sm" onclick="CatalogScreen.addRole()">+ Add Role</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      },
+
+      renderBusinessHoursTable(businessHours) {
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        return `
+          <div class="catalog-section">
+            <h3>Business Hours</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Timezone</th>
+                  <th>Days</th>
+                  <th>Start</th>
+                  <th>End</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${businessHours.map((bh, i) => `
+                  <tr>
+                    <td><input type="text" value="${bh.id}" onchange="CatalogScreen.updateBH(${i}, 'id', this.value)"></td>
+                    <td><input type="text" value="${bh.name}" onchange="CatalogScreen.updateBH(${i}, 'name', this.value)"></td>
+                    <td><input type="text" value="${bh.tz}" onchange="CatalogScreen.updateBH(${i}, 'tz', this.value)"></td>
+                    <td>
+                      <div class="checkbox-group">
+                        ${dayNames.map((day, dayIdx) => `
+                          <label>
+                            <input type="checkbox" ${bh.days.includes(dayIdx) ? 'checked' : ''} onchange="CatalogScreen.toggleBHDay(${i}, ${dayIdx}, this.checked)">
+                            ${day}
+                          </label>
+                        `).join('')}
+                      </div>
+                    </td>
+                    <td><input type="time" value="${bh.start}" onchange="CatalogScreen.updateBH(${i}, 'start', this.value)"></td>
+                    <td><input type="time" value="${bh.end}" onchange="CatalogScreen.updateBH(${i}, 'end', this.value)"></td>
+                    <td><button class="btn-danger btn-sm" onclick="CatalogScreen.deleteBH(${i})">Delete</button></td>
+                  </tr>
+                `).join('')}
+                <tr>
+                  <td colspan="7">
+                    <button class="btn-secondary btn-sm" onclick="CatalogScreen.addBH()">+ Add Business Hours</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      },
+
+      renderPrioritiesTable(priorities) {
+        return `
+          <div class="catalog-section">
+            <h3>Priorities</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Ack (mins)</th>
+                  <th>Start (mins)</th>
+                  <th>Resolve (mins)</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${priorities.map((p, i) => `
+                  <tr>
+                    <td><input type="text" value="${p.id}" onchange="CatalogScreen.updatePriority(${i}, 'id', this.value)"></td>
+                    <td><input type="text" value="${p.name}" onchange="CatalogScreen.updatePriority(${i}, 'name', this.value)"></td>
+                    <td><input type="number" value="${p.ackMins}" onchange="CatalogScreen.updatePriority(${i}, 'ackMins', parseInt(this.value))"></td>
+                    <td><input type="number" value="${p.startMins}" onchange="CatalogScreen.updatePriority(${i}, 'startMins', parseInt(this.value))"></td>
+                    <td><input type="number" value="${p.resolveMins}" onchange="CatalogScreen.updatePriority(${i}, 'resolveMins', parseInt(this.value))"></td>
+                    <td><button class="btn-danger btn-sm" onclick="CatalogScreen.deletePriority(${i})">Delete</button></td>
+                  </tr>
+                `).join('')}
+                <tr>
+                  <td colspan="6">
+                    <button class="btn-secondary btn-sm" onclick="CatalogScreen.addPriority()">+ Add Priority</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      },
+
+      // CRUD operations
+      updateDept(idx, field, value) {
+        App.state.catalogs.departments[idx][field] = value;
+        App.saveCatalogs();
+      },
+      addDept() {
+        App.state.catalogs.departments.push({ id: 'new_dept', name: 'New Department' });
+        App.saveCatalogs();
+        this.render();
+      },
+      deleteDept(idx) {
+        if (confirm('Delete this department?')) {
+          App.state.catalogs.departments.splice(idx, 1);
+          App.saveCatalogs();
+          this.render();
+        }
+      },
+
+      updateRole(idx, field, value) {
+        App.state.catalogs.roles[idx][field] = value;
+        App.saveCatalogs();
+      },
+      addRole() {
+        App.state.catalogs.roles.push({ id: 'new_role', name: 'New Role' });
+        App.saveCatalogs();
+        this.render();
+      },
+      deleteRole(idx) {
+        if (confirm('Delete this role?')) {
+          App.state.catalogs.roles.splice(idx, 1);
+          App.saveCatalogs();
+          this.render();
+        }
+      },
+
+      updateBH(idx, field, value) {
+        App.state.catalogs.businessHours[idx][field] = value;
+        App.saveCatalogs();
+      },
+      toggleBHDay(idx, day, checked) {
+        const days = App.state.catalogs.businessHours[idx].days;
+        if (checked && !days.includes(day)) {
+          days.push(day);
+          days.sort((a, b) => a - b);
+        } else if (!checked) {
+          const i = days.indexOf(day);
+          if (i > -1) days.splice(i, 1);
+        }
+        App.saveCatalogs();
+      },
+      addBH() {
+        App.state.catalogs.businessHours.push({
+          id: 'new_bh',
+          name: 'New Profile',
+          tz: 'Asia/Dubai',
+          days: [1, 2, 3, 4, 5],
+          start: '08:00',
+          end: '18:00'
+        });
+        App.saveCatalogs();
+        this.render();
+      },
+      deleteBH(idx) {
+        if (confirm('Delete this business hours profile?')) {
+          App.state.catalogs.businessHours.splice(idx, 1);
+          App.saveCatalogs();
+          this.render();
+        }
+      },
+
+      updatePriority(idx, field, value) {
+        App.state.catalogs.priorities[idx][field] = value;
+        App.saveCatalogs();
+      },
+      addPriority() {
+        App.state.catalogs.priorities.push({
+          id: 'new_priority',
+          name: 'New Priority',
+          ackMins: 60,
+          startMins: 120,
+          resolveMins: 480
+        });
+        App.saveCatalogs();
+        this.render();
+      },
+      deletePriority(idx) {
+        if (confirm('Delete this priority?')) {
+          App.state.catalogs.priorities.splice(idx, 1);
+          App.saveCatalogs();
+          this.render();
+        }
+      },
+
+      resetToDefaults() {
+        if (confirm('Reset all catalog data to defaults? This will overwrite your changes.')) {
+          App.resetCatalogs();
+        }
+      }
+    };
+
+    // ============================
+    // BUILD SCREEN
+    // ============================
+    const BuildScreen = {
+      steps: [],
+
+      render() {
+        // Populate dropdowns
+        this.populateDropdowns();
+
+        // Load draft if exists
+        if (App.state.draftWorkflow) {
+          this.loadWorkflow(App.state.draftWorkflow);
+        } else {
+          // Initialize with empty workflow
+          this.steps = [];
+          this.renderSteps();
+          this.renderSLAPolicy();
+        }
+      },
+
+      populateDropdowns() {
+        const { departments, roles, businessHours } = App.state.catalogs;
+
+        // Departments
+        const deptSelect = document.getElementById('wf-department');
+        deptSelect.innerHTML = '<option value="">Select department...</option>' +
+          departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+
+        // Business Hours
+        const bhSelect = document.getElementById('wf-business-hours');
+        bhSelect.innerHTML = '<option value="">Select business hours...</option>' +
+          businessHours.map(bh => `<option value="${bh.id}">${bh.name}</option>`).join('');
+
+        // Owner Role
+        const ownerSelect = document.getElementById('wf-owner');
+        ownerSelect.innerHTML = '<option value="">Select owner role...</option>' +
+          roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+      },
+
+      loadWorkflow(workflow) {
+        document.getElementById('wf-department').value = workflow.departmentId || '';
+        document.getElementById('wf-work-type').value = workflow.workType || '';
+        document.getElementById('wf-business-hours').value = workflow.businessHoursId || '';
+        document.getElementById('wf-owner').value = workflow.ownerRoleId || '';
+
+        this.steps = workflow.steps || [];
+        this.renderSteps();
+        this.renderSLAPolicy(workflow.slaByPriority);
+      },
+
+      renderSteps() {
+        const container = document.getElementById('steps-list');
+        const { roles } = App.state.catalogs;
+
+        if (this.steps.length === 0) {
+          container.innerHTML = '<p class="text-muted">No steps yet. Click "+ Add Step" to begin.</p>';
+          return;
+        }
+
+        container.innerHTML = this.steps.map((step, idx) => `
+          <div class="step-item">
+            <div class="step-number">${idx + 1}</div>
+            <div>
+              <input type="text" placeholder="Step title *" value="${step.title || ''}"
+                onchange="BuildScreen.updateStep(${idx}, 'title', this.value)" required>
+            </div>
+            <div>
+              <select onchange="BuildScreen.updateStep(${idx}, 'roleId', this.value)" required>
+                <option value="">Select role...</option>
+                ${roles.map(r => `<option value="${r.id}" ${step.roleId === r.id ? 'selected' : ''}>${r.name}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <input type="number" placeholder="Minutes *" value="${step.expectedMins || ''}" min="1"
+                onchange="BuildScreen.updateStep(${idx}, 'expectedMins', parseInt(this.value))" required>
+            </div>
+            <div class="step-controls">
+              <button type="button" class="btn-secondary btn-sm" onclick="BuildScreen.moveStep(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
+              <button type="button" class="btn-secondary btn-sm" onclick="BuildScreen.moveStep(${idx}, 1)" ${idx === this.steps.length - 1 ? 'disabled' : ''}>↓</button>
+              <button type="button" class="btn-danger btn-sm" onclick="BuildScreen.deleteStep(${idx})">Delete</button>
+            </div>
+          </div>
+        `).join('');
+      },
+
+      renderSLAPolicy(existingSLA = {}) {
+        const container = document.getElementById('sla-policy-rows');
+        const { priorities, roles } = App.state.catalogs;
+
+        container.innerHTML = priorities.map(p => {
+          const sla = existingSLA[p.id] || {
+            ackMins: p.ackMins,
+            startMins: p.startMins,
+            resolveMins: p.resolveMins,
+            escalate: {}
+          };
+
+          return `
+            <tr>
+              <td><strong>${p.name}</strong></td>
+              <td><input type="number" value="${sla.ackMins || ''}" data-priority="${p.id}" data-field="ackMins"></td>
+              <td><input type="number" value="${sla.startMins || ''}" data-priority="${p.id}" data-field="startMins"></td>
+              <td><input type="number" value="${sla.resolveMins || ''}" data-priority="${p.id}" data-field="resolveMins"></td>
+              <td><input type="number" value="${sla.escalate?.afterMins || ''}" data-priority="${p.id}" data-field="escalateAfterMins" placeholder="Optional"></td>
+              <td>
+                <select data-priority="${p.id}" data-field="escalateToRoleId">
+                  <option value="">None</option>
+                  ${roles.map(r => `<option value="${r.id}" ${sla.escalate?.toRoleId === r.id ? 'selected' : ''}>${r.name}</option>`).join('')}
+                </select>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      },
+
+      addStep() {
+        this.steps.push({
+          id: 'step_' + Date.now(),
+          title: '',
+          roleId: '',
+          expectedMins: null
+        });
+        this.renderSteps();
+      },
+
+      updateStep(idx, field, value) {
+        this.steps[idx][field] = value;
+      },
+
+      deleteStep(idx) {
+        if (confirm('Delete this step?')) {
+          this.steps.splice(idx, 1);
+          this.renderSteps();
+        }
+      },
+
+      moveStep(idx, direction) {
+        const newIdx = idx + direction;
+        if (newIdx < 0 || newIdx >= this.steps.length) return;
+
+        [this.steps[idx], this.steps[newIdx]] = [this.steps[newIdx], this.steps[idx]];
+        this.renderSteps();
+      },
+
+      validate() {
+        const workflow = this.captureWorkflow();
+        const errors = Validator.validateWorkflow(workflow, App.state.catalogs);
+
+        const msgContainer = document.getElementById('validation-messages');
+        if (errors.length === 0) {
+          msgContainer.innerHTML = '<li style="background:#d4edda;border-color:#28a745;color:#155724;padding:10px;">✓ Validation passed! No errors found.</li>';
+        } else {
+          msgContainer.innerHTML = errors.map(err =>
+            `<li class="${err.severity}">${err.message}</li>`
+          ).join('');
+        }
+
+        // Scroll to messages
+        msgContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        return errors.filter(e => e.severity === 'error').length === 0;
+      },
+
+      saveDraft() {
+        if (!this.validate()) {
+          alert('Please fix validation errors before saving.');
+          return;
+        }
+
+        const workflow = this.captureWorkflow();
+        App.saveDraft(workflow);
+        alert('Draft saved successfully!');
+      },
+
+      clear() {
+        if (confirm('Clear the current workflow? Unsaved changes will be lost.')) {
+          document.getElementById('workflow-form').reset();
+          this.steps = [];
+          this.renderSteps();
+          this.renderSLAPolicy();
+          document.getElementById('validation-messages').innerHTML = '';
+        }
+      },
+
+      captureWorkflow() {
+        const slaByPriority = {};
+        const priorities = App.state.catalogs.priorities;
+
+        // Capture SLA policy from table
+        document.querySelectorAll('#sla-policy-rows tr').forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length === 0) return;
+
+          const priorityId = inputs[0].dataset.priority;
+          const ackMins = parseInt(inputs[0].value) || 0;
+          const startMins = parseInt(inputs[1].value) || 0;
+          const resolveMins = parseInt(inputs[2].value) || 0;
+          const escalateAfterMins = parseInt(inputs[3].value) || null;
+          const escalateToRoleId = inputs[4].value || null;
+
+          slaByPriority[priorityId] = {
+            ackMins,
+            startMins,
+            resolveMins
+          };
+
+          if (escalateAfterMins && escalateToRoleId) {
+            slaByPriority[priorityId].escalate = {
+              afterMins: escalateAfterMins,
+              toRoleId: escalateToRoleId
+            };
+          }
+        });
+
+        return {
+          id: App.state.draftWorkflow?.id || 'workflow_' + Date.now(),
+          departmentId: document.getElementById('wf-department').value,
+          workType: document.getElementById('wf-work-type').value,
+          businessHoursId: document.getElementById('wf-business-hours').value,
+          ownerRoleId: document.getElementById('wf-owner').value,
+          steps: this.steps,
+          slaByPriority
+        };
+      }
+    };
+
+    // ============================
+    // REVIEW SCREEN
+    // ============================
+    const ReviewScreen = {
+      render() {
+        const workflow = App.state.sharedWorkflow || App.state.draftWorkflow;
+        if (!workflow) {
+          document.getElementById('review-content').innerHTML = '<p class="text-muted">No workflow to review. Create one in the Build screen first.</p>';
+          return;
+        }
+
+        const catalogs = App.state.catalogs;
+        const dept = catalogs.departments.find(d => d.id === workflow.departmentId);
+        const owner = catalogs.roles.find(r => r.id === workflow.ownerRoleId);
+        const bh = catalogs.businessHours.find(b => b.id === workflow.businessHoursId);
+
+        const totalMins = workflow.steps.reduce((sum, s) => sum + (s.expectedMins || 0), 0);
+
+        let html = `
+          <div class="summary-header">
+            <dl>
+              <dt>Department:</dt>
+              <dd>${dept?.name || 'Unknown'}</dd>
+              <dt>Work Type:</dt>
+              <dd>${workflow.workType}</dd>
+              <dt>Owner:</dt>
+              <dd>${owner?.name || 'Unknown'}</dd>
+              <dt>Business Hours:</dt>
+              <dd>${bh?.name || 'Unknown'} (${bh?.start} - ${bh?.end}, ${this.formatDays(bh?.days)})</dd>
+              <dt>Total Steps:</dt>
+              <dd>${workflow.steps.length}</dd>
+              <dt>Total Duration:</dt>
+              <dd>${totalMins} minutes (${(totalMins / 60).toFixed(1)} hours)</dd>
+            </dl>
+          </div>
+
+          <div class="summary-steps">
+            <h3>Workflow Steps</h3>
+            ${workflow.steps.map((step, idx) => {
+              const role = catalogs.roles.find(r => r.id === step.roleId);
+              return `
+                <div class="summary-step">
+                  <div class="summary-step-title">${idx + 1}. ${step.title}</div>
+                  <div class="summary-step-meta">
+                    Responsible: ${role?.name || 'Unknown'} |
+                    Duration: ${step.expectedMins} minutes
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <div class="sla-matrix">
+            <h3>SLA Targets</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Priority</th>
+                  <th>Acknowledge</th>
+                  <th>Start Work</th>
+                  <th>Resolve</th>
+                  <th>Escalation</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${catalogs.priorities.map(p => {
+                  const sla = workflow.slaByPriority?.[p.id];
+                  if (!sla) return '';
+
+                  const overrun = Validator.checkSLAOverrun(workflow, p.id, catalogs);
+                  const escalation = sla.escalate
+                    ? `After ${sla.escalate.afterMins} mins → ${catalogs.roles.find(r => r.id === sla.escalate.toRoleId)?.name || 'Unknown'}`
+                    : 'None';
+
+                  return `
+                    <tr>
+                      <td><strong>${p.name}</strong> ${overrun ? '<span class="overrun-badge">Potential SLA overrun</span>' : ''}</td>
+                      <td>${sla.ackMins} mins</td>
+                      <td>${sla.startMins} mins</td>
+                      <td>${sla.resolveMins} mins</td>
+                      <td>${escalation}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        document.getElementById('review-content').innerHTML = html;
+      },
+
+      formatDays(days) {
+        if (!days) return 'N/A';
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        return days.map(d => dayNames[d]).join(', ');
+      },
+
+      exportJSON() {
+        const workflow = App.state.sharedWorkflow || App.state.draftWorkflow;
+        if (!workflow) {
+          alert('No workflow to export');
+          return;
+        }
+
+        const data = App.exportJSON(workflow);
+        App.downloadJSON(data, `sla-workflow-${workflow.id}.json`);
+      },
+
+      importJSON() {
+        document.getElementById('import-file-input').click();
+      },
+
+      handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const success = App.importJSON(e.target.result);
+            if (success) {
+              alert('Import successful! Navigate to Build screen to see the imported workflow.');
+              App.router(); // Re-render
+            } else {
+              alert('Import failed. Please check the file format.');
+            }
+          } catch (error) {
+            alert('Import failed: ' + error.message);
+          }
+        };
+        reader.readAsText(file);
+
+        // Reset input
+        event.target.value = '';
+      },
+
+      async copyShareLink() {
+        const workflow = App.state.sharedWorkflow || App.state.draftWorkflow;
+        if (!workflow) {
+          alert('No workflow to share');
+          return;
+        }
+
+        try {
+          const url = await ShareLink.copyToClipboard(workflow, App.state.catalogs);
+          alert('Share link copied to clipboard!\n\n' + url);
+        } catch (error) {
+          console.error('Failed to copy link:', error);
+          alert('Failed to copy link. Check console for details.');
+        }
+      }
+    };
+  </script>
+</body>
+</html>

@@ -647,19 +647,35 @@
 
       populateTemplates() {
         const select = document.getElementById('template-select');
+
+        // Guard: only populate if not already populated (or if templates changed)
+        if (!App.state.templates || !App.state.templates.templates) {
+          console.warn('Templates not loaded yet');
+          select.innerHTML = '<option value="">Loading templates...</option>';
+          return;
+        }
+
         const templates = App.state.templates.templates;
 
         let options = '<option value="">-- Select a template --</option>';
-        Object.keys(templates).forEach(deptId => {
-          const dept = App.state.catalogs.departments.find(d => d.id === deptId);
-          if (dept && templates[deptId].length > 0) {
-            options += '<optgroup label="' + dept.name + '">';
-            templates[deptId].forEach((tpl, idx) => {
-              options += '<option value="' + deptId + ':' + idx + '">' + tpl.workType + '</option>';
-            });
-            options += '</optgroup>';
-          }
-        });
+        const hasTemplates = Object.keys(templates).some(deptId =>
+          templates[deptId] && templates[deptId].length > 0
+        );
+
+        if (!hasTemplates) {
+          options += '<optgroup label="No templates available" disabled></optgroup>';
+        } else {
+          Object.keys(templates).forEach(deptId => {
+            const dept = App.state.catalogs.departments.find(d => d.id === deptId);
+            if (dept && templates[deptId].length > 0) {
+              options += '<optgroup label="' + dept.name + '">';
+              templates[deptId].forEach((tpl, idx) => {
+                options += '<option value="' + deptId + ':' + idx + '">' + tpl.workType + '</option>';
+              });
+              options += '</optgroup>';
+            }
+          });
+        }
 
         select.innerHTML = options;
       },
@@ -704,21 +720,33 @@
       },
 
       populateDropdowns() {
-        const departments = App.state.catalogs.departments;
-        const roles = App.state.catalogs.roles;
-        const businessHours = App.state.catalogs.businessHours;
+        // Guard: ensure catalogs are loaded
+        if (!App.state.catalogs) {
+          console.warn('Catalogs not loaded yet');
+          return;
+        }
+
+        const departments = App.state.catalogs.departments || [];
+        const roles = App.state.catalogs.roles || [];
+        const businessHours = App.state.catalogs.businessHours || [];
 
         const deptSelect = document.getElementById('wf-department');
-        deptSelect.innerHTML = '<option value="">Select department...</option>' +
-          departments.map(d => '<option value="' + d.id + '">' + d.name + '</option>').join('');
+        if (deptSelect) {
+          deptSelect.innerHTML = '<option value="">Select department...</option>' +
+            departments.map(d => '<option value="' + d.id + '">' + d.name + '</option>').join('');
+        }
 
         const bhSelect = document.getElementById('wf-business-hours');
-        bhSelect.innerHTML = '<option value="">Select business hours...</option>' +
-          businessHours.map(bh => '<option value="' + bh.id + '">' + bh.name + '</option>').join('');
+        if (bhSelect) {
+          bhSelect.innerHTML = '<option value="">Select business hours...</option>' +
+            businessHours.map(bh => '<option value="' + bh.id + '">' + bh.name + '</option>').join('');
+        }
 
         const ownerSelect = document.getElementById('wf-owner');
-        ownerSelect.innerHTML = '<option value="">Select owner role...</option>' +
-          roles.map(r => '<option value="' + r.id + '">' + r.name + '</option>').join('');
+        if (ownerSelect) {
+          ownerSelect.innerHTML = '<option value="">Select owner role...</option>' +
+            roles.map(r => '<option value="' + r.id + '">' + r.name + '</option>').join('');
+        }
       },
 
       loadWorkflow(workflow) {
@@ -735,6 +763,13 @@
 
       renderSteps() {
         const container = document.getElementById('steps-list');
+
+        // Guard: ensure catalogs are loaded
+        if (!App.state.catalogs || !App.state.catalogs.roles) {
+          container.innerHTML = '<p class="text-muted">Loading roles...</p>';
+          return;
+        }
+
         const roles = App.state.catalogs.roles;
 
         if (this.steps.length === 0) {
@@ -769,6 +804,13 @@
       renderSLAPolicy(existingSLA) {
         existingSLA = existingSLA || {};
         const container = document.getElementById('sla-policy-rows');
+
+        // Guard: ensure catalogs are loaded
+        if (!App.state.catalogs || !App.state.catalogs.priorities || !App.state.catalogs.roles) {
+          container.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+          return;
+        }
+
         const priorities = App.state.catalogs.priorities;
         const roles = App.state.catalogs.roles;
 

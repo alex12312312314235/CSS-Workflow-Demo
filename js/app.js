@@ -17,14 +17,69 @@ const App = {
     viewMode: 'cards' // 'cards' or 'table'
   },
 
-  // Fallback roles in case catalog fails to load
-  FALLBACK_ROLES: [
-    { id: 'exec_sous', name: 'Executive Sous Chef' },
-    { id: 'food_tech', name: 'Food Technologist' },
-    { id: 's_s_lead', name: 'Standards & Specs Lead' },
-    { id: 'h_d_lead', name: 'Health & Dietetics Lead' },
-    { id: 'i_i_analyst', name: 'Insights & Intelligence Analyst' }
-  ],
+  // Default catalog data (fallback if files fail to load)
+  DEFAULT_CATALOG: {
+    schemaVersion: '1.0.0',
+    roles: [
+      { id: 'exec_sous', name: 'Executive Sous Chef' },
+      { id: 'food_tech', name: 'Food Technologist' },
+      { id: 's_s_lead', name: 'Standards & Specs Lead' },
+      { id: 'h_d_lead', name: 'Health & Dietetics Lead' },
+      { id: 'i_i_analyst', name: 'Insights & Intelligence Analyst' }
+    ],
+    departments: [
+      { id: 'cd', name: 'Concept Dev' },
+      { id: 'ss', name: 'Standards & Specs' },
+      { id: 'ft', name: 'Food Tech' },
+      { id: 'hd', name: 'Health & Dietetics' },
+      { id: 'ii', name: 'Insights & Intelligence' }
+    ],
+    businessHours: [
+      { id: 'std', name: 'Standard CSS', tz: 'Asia/Dubai', days: [1,2,3,4,5], start: '08:00', end: '18:00' }
+    ],
+    priorities: [
+      { id: 'p1', name: 'Critical', ackMins: 30, startMins: 60, resolveMins: 480 },
+      { id: 'p2', name: 'High', ackMins: 120, startMins: 240, resolveMins: 1440 },
+      { id: 'p3', name: 'Normal', ackMins: 1440, startMins: 2880, resolveMins: 10080 }
+    ]
+  },
+
+  // Default templates (fallback if file fails to load)
+  DEFAULT_TEMPLATES: {
+    schemaVersion: '1.0.0',
+    templates: {
+      hd: [
+        {
+          workType: 'Nutritional Analysis',
+          ownerRoleId: 'h_d_lead',
+          businessHoursId: 'std',
+          steps: [
+            { title: 'Intake triage', roleId: 'h_d_lead', expectedMins: 30 },
+            { title: 'Data collection', roleId: 'i_i_analyst', expectedMins: 180 },
+            { title: 'Lab analysis', roleId: 'food_tech', expectedMins: 240 },
+            { title: 'Label update', roleId: 'h_d_lead', expectedMins: 60 }
+          ],
+          slaPreset: 'standard'
+        }
+      ],
+      ss: [
+        {
+          workType: 'Allergen Update',
+          ownerRoleId: 's_s_lead',
+          businessHoursId: 'std',
+          steps: [
+            { title: 'Intake & triage', roleId: 's_s_lead', expectedMins: 60 },
+            { title: 'Verification', roleId: 'food_tech', expectedMins: 240 },
+            { title: 'Publish & notify', roleId: 'exec_sous', expectedMins: 60 }
+          ],
+          slaPreset: 'standard'
+        }
+      ],
+      ft: [],
+      cd: [],
+      ii: []
+    }
+  },
 
   // SLA Presets
   SLA_PRESETS: {
@@ -83,46 +138,35 @@ const App = {
    */
   async loadCatalogs() {
     try {
-      // Check localStorage first
+      // Check localStorage first (unless already loaded from file)
       const stored = localStorage.getItem('sla.catalog');
       if (stored) {
         this.state.catalogs = JSON.parse(stored);
         console.log('Loaded catalogs from localStorage');
+        window.catalog = this.state.catalogs; // Expose for debugging
         return;
       }
 
-      // Load from file
-      const response = await fetch('./data/catalog.json');
+      // Load from file with cache-busting
+      const cacheBust = '?v=' + Date.now();
+      const response = await fetch('./data/catalog.json' + cacheBust, { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to load catalog');
 
       this.state.catalogs = await response.json();
       console.log('Loaded catalogs from file');
+      window.catalog = this.state.catalogs; // Expose for debugging
 
       // Ensure roles are available
       if (!this.state.catalogs.roles || this.state.catalogs.roles.length === 0) {
-        console.warn('No roles in catalog, using fallback');
-        this.state.catalogs.roles = this.FALLBACK_ROLES;
+        console.warn('No roles in catalog, using defaults');
+        this.state.catalogs.roles = this.DEFAULT_CATALOG.roles;
       }
     } catch (error) {
       console.error('Failed to load catalogs:', error);
-      // Use fallback with minimal data
-      this.state.catalogs = {
-        schemaVersion: '1.0.0',
-        roles: this.FALLBACK_ROLES,
-        departments: [
-          { id: 'cd', name: 'Concept Dev' },
-          { id: 'ss', name: 'Standards & Specs' },
-          { id: 'ft', name: 'Food Tech' },
-          { id: 'hd', name: 'Health & Dietetics' },
-          { id: 'ii', name: 'Insights & Intelligence' }
-        ],
-        businessHours: [{ id: 'std', name: 'Standard CSS', tz: 'Asia/Dubai', days: [1,2,3,4,5], start: '08:00', end: '18:00' }],
-        priorities: [
-          { id: 'p1', name: 'Critical', ackMins: 30, startMins: 60, resolveMins: 480 },
-          { id: 'p2', name: 'High', ackMins: 120, startMins: 240, resolveMins: 1440 },
-          { id: 'p3', name: 'Normal', ackMins: 1440, startMins: 2880, resolveMins: 10080 }
-        ]
-      };
+      console.warn('Using default catalog data');
+      // Use default catalog
+      this.state.catalogs = JSON.parse(JSON.stringify(this.DEFAULT_CATALOG));
+      window.catalog = this.state.catalogs; // Expose for debugging
     }
   },
 
@@ -131,14 +175,20 @@ const App = {
    */
   async loadTemplates() {
     try {
-      const response = await fetch('./data/templates.json');
+      // Load from file with cache-busting
+      const cacheBust = '?v=' + Date.now();
+      const response = await fetch('./data/templates.json' + cacheBust, { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to load templates');
 
       this.state.templates = await response.json();
       console.log('Loaded templates from file');
+      window.templates = this.state.templates; // Expose for debugging
     } catch (error) {
       console.error('Failed to load templates:', error);
-      this.state.templates = { schemaVersion: '1.0.0', templates: {} };
+      console.warn('Using default template data');
+      // Use default templates
+      this.state.templates = JSON.parse(JSON.stringify(this.DEFAULT_TEMPLATES));
+      window.templates = this.state.templates; // Expose for debugging
     }
   },
 
@@ -159,10 +209,13 @@ const App = {
    */
   async resetCatalogs() {
     try {
-      const response = await fetch('./data/catalog.json');
+      // Load from file with cache-busting
+      const cacheBust = '?v=' + Date.now();
+      const response = await fetch('./data/catalog.json' + cacheBust, { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to load catalog');
 
       this.state.catalogs = await response.json();
+      window.catalog = this.state.catalogs; // Update debug reference
       this.saveCatalogs();
       alert('Catalogs reset to defaults');
       this.router(); // Re-render current screen

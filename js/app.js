@@ -519,8 +519,8 @@ const App = {
       return; // Already handled in checkShareLink
     }
 
-    // Parse route
-    const match = hash.match(/#\/(home|catalog|build|dept\/([^/]+)|wf\/([^/]+))/);
+    // Parse route - support both #/catalog and #/settings
+    const match = hash.match(/#\/(home|catalog|settings|build|dept\/([^/]+)|wf\/([^/]+))/);
 
     // Hide all screens first
     document.querySelectorAll('.screen').forEach(screen => {
@@ -533,8 +533,13 @@ const App = {
       return;
     }
 
-    const route = match[1];
+    let route = match[1];
     this.state.currentRoute = route;
+
+    // Alias: catalog → settings
+    if (route === 'catalog') {
+      route = 'settings';
+    }
 
     // Extract params
     if (route.startsWith('dept/')) {
@@ -547,7 +552,9 @@ const App = {
     document.querySelectorAll('.nav-link').forEach(link => {
       link.classList.remove('active');
       const linkRoute = link.dataset.route;
-      if (linkRoute === route || route.startsWith(linkRoute + '/')) {
+      // Handle settings/catalog alias
+      const effectiveRoute = linkRoute === 'catalog' ? 'settings' : linkRoute;
+      if (effectiveRoute === route || route.startsWith(effectiveRoute + '/')) {
         link.classList.add('active');
       }
     });
@@ -556,8 +563,8 @@ const App = {
     if (route === 'home') {
       document.getElementById('screen-home').style.display = 'block';
       HomeScreen.render();
-    } else if (route === 'catalog') {
-      document.getElementById('screen-catalog').style.display = 'block';
+    } else if (route === 'settings') {
+      document.getElementById('screen-settings').style.display = 'block';
       CatalogScreen.render();
     } else if (route === 'build') {
       document.getElementById('screen-build').style.display = 'block';

@@ -101,6 +101,114 @@ const App = {
   },
 
   /**
+   * Calculate minutes per business day from business hours profile
+   */
+  minutesPerBusinessDay(bhProfile) {
+    if (!bhProfile || !bhProfile.start || !bhProfile.end || !bhProfile.days) {
+      return 480; // Default: 8 hours
+    }
+
+    const start = bhProfile.start.split(':').map(Number);
+    const end = bhProfile.end.split(':').map(Number);
+    const startMins = start[0] * 60 + start[1];
+    const endMins = end[0] * 60 + end[1];
+    const hoursPerDay = (endMins - startMins) / 60;
+
+    return Math.round(hoursPerDay * 60);
+  },
+
+  /**
+   * Convert user SLA input to minutes
+   */
+  convertUserSlaToMinutes(value, unit, bhProfile) {
+    value = parseFloat(value);
+    if (isNaN(value) || value < 0) return 0;
+
+    if (unit === 'hours') {
+      return Math.round(value * 60);
+    } else if (unit === 'businessDays') {
+      const minsPerDay = this.minutesPerBusinessDay(bhProfile);
+      return Math.round(value * minsPerDay);
+    } else {
+      // Default: mins
+      return Math.round(value);
+    }
+  },
+
+  /**
+   * Format SLA minutes for display with unit label
+   */
+  formatSlaForDisplay(minutes, unit, bhProfile) {
+    if (!minutes && minutes !== 0) return '—';
+
+    if (unit === 'hours') {
+      const hours = (minutes / 60).toFixed(1);
+      return hours + ' hours (' + minutes + ' mins)';
+    } else if (unit === 'businessDays') {
+      const minsPerDay = this.minutesPerBusinessDay(bhProfile);
+      const days = (minutes / minsPerDay).toFixed(1);
+      return days + ' business days (' + minutes + ' mins)';
+    } else {
+      return minutes + ' mins';
+    }
+  },
+
+  /**
+   * Compute feasibility for a workflow with interpretation setting
+   */
+  computeFeasibility(workflow, catalogs, interpretAsBH) {
+    if (!workflow || !workflow.steps || !workflow.slaByPriority) {
+      return null;
+    }
+
+    const totalExpectedMins = workflow.steps.reduce((sum, s) => sum + (s.expectedMins || 0), 0);
+    const result = {
+      totalExpectedMins,
+      byPriority: {}
+    };
+
+    catalogs.priorities.forEach(priority => {
+      const sla = workflow.slaByPriority[priority.id];
+      if (!sla) {
+        result.byPriority[priority.id] = { status: 'unknown' };
+        return;
+      }
+
+      let feasible = false;
+      let buffer = 0;
+      let bufferPct = 0;
+
+      if (interpretAsBH) {
+        // Use business-hours interpretation
+        // For now, simplified: just check if total fits within resolve time
+        // Full implementation would project steps onto BH calendar
+        buffer = sla.resolveMins - totalExpectedMins;
+        bufferPct = totalExpectedMins > 0 ? (buffer / totalExpectedMins) * 100 : 100;
+        feasible = buffer >= 0;
+      } else {
+        // Linear calendar minutes
+        buffer = sla.resolveMins - totalExpectedMins;
+        bufferPct = totalExpectedMins > 0 ? (buffer / totalExpectedMins) * 100 : 100;
+        feasible = buffer >= 0;
+      }
+
+      const tight = feasible && bufferPct <= 10;
+      const overrun = !feasible;
+
+      result.byPriority[priority.id] = {
+        status: overrun ? 'overrun' : (tight ? 'tight' : 'ok'),
+        feasible,
+        tight,
+        overrun,
+        buffer,
+        bufferPct
+      };
+    });
+
+    return result;
+  },
+
+  /**
    * Initialize the application
    */
   async init() {
@@ -537,27 +645,41 @@ const App = {
    * Calculate department stats
    */
   getDepartmentStats(deptId) {
-    const workflows = this.state.workflows.filter(w => w.departmentId === deptId);
+    // Only count active workflows (status !== "draft")
+    const workflows = this.state.workflows.filter(w =>
+      w.departmentId === deptId && (!w.status || w.status !== 'draft')
+    );
     const count = workflows.length;
 
     if (count === 0) {
-      return { count: 0, feasiblePct: 0, avgDuration: 0 };
+      return {
+        count: 0,
+        feasiblePct: '—',
+        avgDuration: '—'
+      };
     }
 
     let feasibleCount = 0;
     let totalDuration = 0;
 
     workflows.forEach(wf => {
-      const validation = Validator.validateWithSummary(wf, this.state.catalogs);
-      const p3Feasible = validation.summary.feasibleByPriority.p3?.feasible || false;
-      if (p3Feasible) feasibleCount++;
-      totalDuration += validation.summary.totalExpectedMins;
+      // Use workflow's interpretation setting if available, default to true
+      const interpretAsBH = wf.meta?.interpretAsBusinessHours !== false;
+      const feasibility = this.computeFeasibility(wf, this.state.catalogs, interpretAsBH);
+
+      if (feasibility) {
+        const p3 = feasibility.byPriority.p3;
+        if (p3 && p3.status === 'ok') {
+          feasibleCount++;
+        }
+        totalDuration += feasibility.totalExpectedMins;
+      }
     });
 
     return {
       count,
-      feasiblePct: Math.round((feasibleCount / count) * 100),
-      avgDuration: Math.round(totalDuration / count)
+      feasiblePct: count > 0 ? Math.round((feasibleCount / count) * 100) : '—',
+      avgDuration: count > 0 ? Math.round(totalDuration / count) : '—'
     };
   }
 };

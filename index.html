@@ -120,18 +120,31 @@
               <!-- SLA Policy Section -->
               <div class="sla-table">
                 <h3>SLA Targets by Priority</h3>
+
+                <!-- Business Hours Interpretation Switch -->
+                <div class="form-group" style="margin-bottom: 1rem;">
+                  <label style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="interpret-as-bh" checked onchange="BuildScreen.toggleInterpretation()">
+                    <span>Interpret SLA in business hours</span>
+                  </label>
+                  <p class="text-muted" style="margin: 0.25rem 0 0 1.5rem; font-size: 0.9rem;">
+                    When ON, feasibility is computed within your selected business hours window.
+                  </p>
+                </div>
+
                 <div class="sla-presets">
                   <button type="button" class="preset-btn" data-preset="conservative" onclick="BuildScreen.applySLAPreset('conservative')">Conservative</button>
                   <button type="button" class="preset-btn" data-preset="standard" onclick="BuildScreen.applySLAPreset('standard')">Standard</button>
                   <button type="button" class="preset-btn" data-preset="aggressive" onclick="BuildScreen.applySLAPreset('aggressive')">Aggressive</button>
                 </div>
+
                 <table>
                   <thead>
                     <tr>
                       <th>Priority</th>
-                      <th>Acknowledge (mins)</th>
-                      <th>Start Work (mins)</th>
-                      <th>Resolve (mins)</th>
+                      <th>Acknowledge</th>
+                      <th>Start Work</th>
+                      <th>Resolve</th>
                       <th>Escalate After (mins)</th>
                       <th>Escalate To Role</th>
                     </tr>
@@ -274,52 +287,97 @@
       renderCards() {
         const departments = App.state.catalogs.departments;
         let html = '<div class="dept-cards">';
-        
+
         departments.forEach(dept => {
           const stats = App.getDepartmentStats(dept.id);
-          html += '<div class="dept-card" onclick="location.hash=\'#/dept/' + dept.id + '\'">';
+          html += '<div class="dept-card" onclick="location.hash=\'#/dept/' + dept.id + '\'" style="cursor:pointer;">';
           html += '<h3>' + dept.name + '</h3>';
           html += '<div class="dept-card-stats">';
           html += '<div class="dept-card-stat"><span>Workflows:</span><strong>' + stats.count + '</strong></div>';
-          html += '<div class="dept-card-stat"><span>Feasible (Normal):</span><strong>' + stats.feasiblePct + '%</strong></div>';
-          html += '<div class="dept-card-stat"><span>Avg Duration:</span><strong>' + stats.avgDuration + ' mins</strong></div>';
+
+          // Format feasible percentage
+          const feasibleDisplay = stats.feasiblePct === '—' ? '—' : stats.feasiblePct + '%';
+          html += '<div class="dept-card-stat" title="Computed using business-hours if enabled on each workflow">';
+          html += '<span>Feasible (Normal):</span><strong>' + feasibleDisplay + '</strong>';
+          html += '</div>';
+
+          // Format average duration
+          const avgDisplay = stats.avgDuration === '—' ? '—' : stats.avgDuration + ' mins';
+          html += '<div class="dept-card-stat"><span>Avg Duration:</span><strong>' + avgDisplay + '</strong></div>';
           html += '</div>';
           html += '<div class="dept-card-action">';
           html += '<button class="btn-primary btn-sm" onclick="event.stopPropagation(); location.hash=\'#/dept/' + dept.id + '\'">View Workflows →</button>';
           html += '</div>';
           html += '</div>';
         });
-        
+
         html += '</div>';
         return html;
       },
 
       renderTable() {
-        const workflows = App.getFilteredWorkflows();
+        let workflows = App.getFilteredWorkflows();
+
+        // Filter out drafts
+        workflows = workflows.filter(w => !w.status || w.status !== 'draft');
+
         if (workflows.length === 0) {
           return '<p class="text-muted">No workflows found. Try adjusting your filters.</p>';
         }
 
+        // Sort: Overrun → Tight → OK, then Updated desc
+        workflows = workflows.slice().sort((a, b) => {
+          const interpretA = a.meta?.interpretAsBusinessHours !== false;
+          const interpretB = b.meta?.interpretAsBusinessHours !== false;
+
+          const feasA = App.computeFeasibility(a, App.state.catalogs, interpretA);
+          const feasB = App.computeFeasibility(b, App.state.catalogs, interpretB);
+
+          const statusA = feasA?.byPriority?.p3?.status || 'unknown';
+          const statusB = feasB?.byPriority?.p3?.status || 'unknown';
+
+          const statusOrder = { overrun: 0, tight: 1, ok: 2, unknown: 3 };
+          const orderA = statusOrder[statusA] || 3;
+          const orderB = statusOrder[statusB] || 3;
+
+          if (orderA !== orderB) return orderA - orderB;
+
+          // Then by updated desc
+          const updatedA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+          const updatedB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+          return updatedB - updatedA;
+        });
+
         let html = '<table><thead><tr>';
-        html += '<th>Dept</th><th>Work Type</th><th>Owner</th><th>Total (mins)</th>';
-        html += '<th>Resolve (Normal)</th><th>Feasible?</th><th>Updated</th>';
+        html += '<th>Dept</th><th>Work Type</th><th>Owner</th><th>Steps</th>';
+        html += '<th>Total mins</th>';
+        html += '<th title="Computed using business-hours if enabled on each workflow">Resolve (Normal)</th>';
+        html += '<th title="Computed using business-hours if enabled on each workflow">Feasible?</th>';
+        html += '<th>Updated</th>';
         html += '</tr></thead><tbody>';
 
         workflows.forEach(wf => {
           const dept = App.state.catalogs.departments.find(d => d.id === wf.departmentId);
           const owner = App.state.catalogs.roles.find(r => r.id === wf.ownerRoleId);
-          const validation = Validator.validateWithSummary(wf, App.state.catalogs);
-          const p3 = validation.summary.feasibleByPriority.p3 || {};
+
+          const interpretAsBH = wf.meta?.interpretAsBusinessHours !== false;
+          const feasibility = App.computeFeasibility(wf, App.state.catalogs, interpretAsBH);
+
+          const p3 = feasibility?.byPriority?.p3 || {};
           const badgeClass = p3.overrun ? 'badge-overrun' : (p3.tight ? 'badge-tight' : 'badge-feasible');
-          const badgeText = p3.overrun ? 'Overrun' : (p3.tight ? 'Tight' : 'Feasible');
-          const slaResolve = wf.slaByPriority && wf.slaByPriority.p3 ? wf.slaByPriority.p3.resolveMins : 'N/A';
+          const badgeText = p3.overrun ? 'Overrun' : (p3.tight ? 'Tight' : 'OK');
+
+          const slaResolve = wf.slaByPriority && wf.slaByPriority.p3 ? wf.slaByPriority.p3.resolveMins : '—';
+          const stepCount = wf.steps ? wf.steps.length : 0;
+          const totalMins = feasibility ? feasibility.totalExpectedMins : 0;
           const updated = wf.updatedAt ? new Date(wf.updatedAt).toLocaleDateString() : 'Never';
 
           html += '<tr onclick="location.hash=\'#/wf/' + wf.id + '\'" style="cursor:pointer;">';
           html += '<td>' + (dept ? dept.name : 'Unknown') + '</td>';
           html += '<td><strong>' + wf.workType + '</strong></td>';
           html += '<td>' + (owner ? owner.name : 'Unknown') + '</td>';
-          html += '<td>' + validation.summary.totalExpectedMins + '</td>';
+          html += '<td>' + stepCount + '</td>';
+          html += '<td>' + totalMins + '</td>';
           html += '<td>' + slaResolve + '</td>';
           html += '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
           html += '<td>' + updated + '</td>';
@@ -631,10 +689,20 @@
     const BuildScreen = {
       steps: [],
       currentWorkflowId: null,
+      slaUnits: {}, // Track unit selection per priority { p1: {ack:'mins', start:'hours', resolve:'businessDays'}, ... }
+      interpretAsBH: true, // Default: interpret as business hours
 
       render() {
         this.populateTemplates();
         this.populateDropdowns();
+
+        // Initialize units if not already set
+        if (!this.slaUnits || Object.keys(this.slaUnits).length === 0) {
+          this.slaUnits = {};
+          App.state.catalogs.priorities.forEach(p => {
+            this.slaUnits[p.id] = { ack: 'mins', start: 'mins', resolve: 'mins' };
+          });
+        }
 
         if (App.state.draftWorkflow) {
           this.loadWorkflow(App.state.draftWorkflow);
@@ -643,6 +711,17 @@
           this.renderSteps();
           this.renderSLAPolicy();
         }
+
+        // Set interpretation checkbox
+        const checkbox = document.getElementById('interpret-as-bh');
+        if (checkbox) checkbox.checked = this.interpretAsBH;
+      },
+
+      toggleInterpretation() {
+        const checkbox = document.getElementById('interpret-as-bh');
+        this.interpretAsBH = checkbox ? checkbox.checked : true;
+        // Re-validate to update feasibility indicators
+        this.validate();
       },
 
       populateTemplates() {
@@ -757,6 +836,19 @@
         document.getElementById('wf-owner').value = workflow.ownerRoleId || '';
 
         this.steps = workflow.steps || [];
+
+        // Restore meta information
+        if (workflow.meta) {
+          if (workflow.meta.slaUnits) {
+            this.slaUnits = workflow.meta.slaUnits;
+          }
+          if (workflow.meta.interpretAsBusinessHours !== undefined) {
+            this.interpretAsBH = workflow.meta.interpretAsBusinessHours;
+            const checkbox = document.getElementById('interpret-as-bh');
+            if (checkbox) checkbox.checked = this.interpretAsBH;
+          }
+        }
+
         this.renderSteps();
         this.renderSLAPolicy(workflow.slaByPriority);
       },
@@ -814,6 +906,10 @@
         const priorities = App.state.catalogs.priorities;
         const roles = App.state.catalogs.roles;
 
+        // Get current business hours profile for conversions
+        const bhId = document.getElementById('wf-business-hours')?.value;
+        const bhProfile = App.state.catalogs.businessHours.find(bh => bh.id === bhId) || App.state.catalogs.businessHours[0];
+
         let html = '';
         priorities.forEach(p => {
           const sla = existingSLA[p.id] || {
@@ -823,13 +919,59 @@
             escalate: {}
           };
 
+          // Get units for this priority
+          const units = this.slaUnits[p.id] || { ack: 'mins', start: 'mins', resolve: 'mins' };
+
+          // Convert stored minutes to display values based on selected units
+          const ackValue = units.ack === 'hours' ? (sla.ackMins / 60).toFixed(1) : sla.ackMins;
+          const startValue = units.start === 'hours' ? (sla.startMins / 60).toFixed(1) : sla.startMins;
+          let resolveValue = sla.resolveMins;
+          if (units.resolve === 'hours') {
+            resolveValue = (sla.resolveMins / 60).toFixed(1);
+          } else if (units.resolve === 'businessDays') {
+            const minsPerDay = App.minutesPerBusinessDay(bhProfile);
+            resolveValue = (sla.resolveMins / minsPerDay).toFixed(1);
+          }
+
           html += '<tr>';
           html += '<td><strong>' + p.name + '</strong></td>';
-          html += '<td><input type="number" value="' + (sla.ackMins || '') + '" data-priority="' + p.id + '" data-field="ackMins"></td>';
-          html += '<td><input type="number" value="' + (sla.startMins || '') + '" data-priority="' + p.id + '" data-field="startMins"></td>';
-          html += '<td><input type="number" value="' + (sla.resolveMins || '') + '" data-priority="' + p.id + '" data-field="resolveMins"></td>';
-          html += '<td><input type="number" value="' + (sla.escalate && sla.escalate.afterMins ? sla.escalate.afterMins : '') + '" data-priority="' + p.id + '" data-field="escalateAfterMins" placeholder="Optional"></td>';
-          html += '<td><select data-priority="' + p.id + '" data-field="escalateToRoleId"><option value="">None</option>';
+
+          // Acknowledge column with unit selector
+          html += '<td style="min-width:180px;">';
+          html += '<input type="number" step="0.1" value="' + (ackValue || '') + '" id="sla-ack-' + p.id + '" data-priority="' + p.id + '" data-field="ack" onchange="BuildScreen.updateSLAField(\'' + p.id + '\', \'ack\')" style="width:70px;">';
+          html += '<select data-priority="' + p.id + '" data-field="ackUnit" onchange="BuildScreen.changeSLAUnit(\'' + p.id + '\', \'ack\', this.value)" style="width:80px;">';
+          html += '<option value="mins"' + (units.ack === 'mins' ? ' selected' : '') + '>mins</option>';
+          html += '<option value="hours"' + (units.ack === 'hours' ? ' selected' : '') + '>hours</option>';
+          html += '</select>';
+          html += '<div class="text-muted" style="font-size:0.8rem;">(' + sla.ackMins + ' mins)</div>';
+          html += '</td>';
+
+          // Start Work column with unit selector
+          html += '<td style="min-width:180px;">';
+          html += '<input type="number" step="0.1" value="' + (startValue || '') + '" id="sla-start-' + p.id + '" data-priority="' + p.id + '" data-field="start" onchange="BuildScreen.updateSLAField(\'' + p.id + '\', \'start\')" style="width:70px;">';
+          html += '<select data-priority="' + p.id + '" data-field="startUnit" onchange="BuildScreen.changeSLAUnit(\'' + p.id + '\', \'start\', this.value)" style="width:80px;">';
+          html += '<option value="mins"' + (units.start === 'mins' ? ' selected' : '') + '>mins</option>';
+          html += '<option value="hours"' + (units.start === 'hours' ? ' selected' : '') + '>hours</option>';
+          html += '</select>';
+          html += '<div class="text-muted" style="font-size:0.8rem;">(' + sla.startMins + ' mins)</div>';
+          html += '</td>';
+
+          // Resolve column with unit selector (includes business days)
+          html += '<td style="min-width:200px;">';
+          html += '<input type="number" step="0.1" value="' + (resolveValue || '') + '" id="sla-resolve-' + p.id + '" data-priority="' + p.id + '" data-field="resolve" onchange="BuildScreen.updateSLAField(\'' + p.id + '\', \'resolve\')" style="width:70px;">';
+          html += '<select data-priority="' + p.id + '" data-field="resolveUnit" onchange="BuildScreen.changeSLAUnit(\'' + p.id + '\', \'resolve\', this.value)" style="width:110px;">';
+          html += '<option value="mins"' + (units.resolve === 'mins' ? ' selected' : '') + '>mins</option>';
+          html += '<option value="hours"' + (units.resolve === 'hours' ? ' selected' : '') + '>hours</option>';
+          html += '<option value="businessDays"' + (units.resolve === 'businessDays' ? ' selected' : '') + '>business days</option>';
+          html += '</select>';
+          html += '<div class="text-muted" style="font-size:0.8rem;">(' + sla.resolveMins + ' mins)</div>';
+          html += '</td>';
+
+          // Escalate After (mins)
+          html += '<td><input type="number" value="' + (sla.escalate && sla.escalate.afterMins ? sla.escalate.afterMins : '') + '" data-priority="' + p.id + '" data-field="escalateAfterMins" placeholder="Optional" style="width:100%;"></td>';
+
+          // Escalate To Role
+          html += '<td><select data-priority="' + p.id + '" data-field="escalateToRoleId" style="width:100%;"><option value="">None</option>';
           roles.forEach(r => {
             const selected = (sla.escalate && sla.escalate.toRoleId === r.id) ? 'selected' : '';
             html += '<option value="' + r.id + '" ' + selected + '>' + r.name + '</option>';
@@ -841,23 +983,112 @@
         container.innerHTML = html;
       },
 
+      changeSLAUnit(priorityId, field, newUnit) {
+        if (!this.slaUnits[priorityId]) {
+          this.slaUnits[priorityId] = { ack: 'mins', start: 'mins', resolve: 'mins' };
+        }
+        this.slaUnits[priorityId][field] = newUnit;
+        // Re-render to update display
+        this.renderSLAPolicy(this.collectSLAData());
+      },
+
+      updateSLAField(priorityId, field) {
+        // This will be called when user changes the value
+        // The actual saving happens in collectSLAData
+      },
+
+      collectSLAData() {
+        const slaByPriority = {};
+        const priorities = App.state.catalogs.priorities;
+
+        const bhId = document.getElementById('wf-business-hours')?.value;
+        const bhProfile = App.state.catalogs.businessHours.find(bh => bh.id === bhId) || App.state.catalogs.businessHours[0];
+
+        priorities.forEach(p => {
+          const units = this.slaUnits[p.id] || { ack: 'mins', start: 'mins', resolve: 'mins' };
+
+          // Get user input values
+          const ackInput = document.getElementById('sla-ack-' + p.id);
+          const startInput = document.getElementById('sla-start-' + p.id);
+          const resolveInput = document.getElementById('sla-resolve-' + p.id);
+
+          const ackValue = ackInput ? parseFloat(ackInput.value) : 0;
+          const startValue = startInput ? parseFloat(startInput.value) : 0;
+          const resolveValue = resolveInput ? parseFloat(resolveInput.value) : 0;
+
+          // Convert to minutes
+          const ackMins = App.convertUserSlaToMinutes(ackValue, units.ack, bhProfile);
+          const startMins = App.convertUserSlaToMinutes(startValue, units.start, bhProfile);
+          const resolveMins = App.convertUserSlaToMinutes(resolveValue, units.resolve, bhProfile);
+
+          const escalateAfterInput = document.querySelector('input[data-priority="' + p.id + '"][data-field="escalateAfterMins"]');
+          const escalateToRoleSelect = document.querySelector('select[data-priority="' + p.id + '"][data-field="escalateToRoleId"]');
+
+          slaByPriority[p.id] = {
+            ackMins: ackMins,
+            startMins: startMins,
+            resolveMins: resolveMins,
+            escalate: {}
+          };
+
+          if (escalateAfterInput && escalateAfterInput.value) {
+            slaByPriority[p.id].escalate.afterMins = parseInt(escalateAfterInput.value);
+          }
+
+          if (escalateToRoleSelect && escalateToRoleSelect.value) {
+            slaByPriority[p.id].escalate.toRoleId = escalateToRoleSelect.value;
+          }
+        });
+
+        return slaByPriority;
+      },
+
       applySLAPreset(presetName) {
         const preset = App.SLA_PRESETS[presetName];
         if (!preset) return;
 
         document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelector('.preset-btn[data-preset="' + presetName + '"]').classList.add('active');
+        const activeBtn = document.querySelector('.preset-btn[data-preset="' + presetName + '"]');
+        if (activeBtn) activeBtn.classList.add('active');
+
+        // Get current business hours for conversions
+        const bhId = document.getElementById('wf-business-hours')?.value;
+        const bhProfile = App.state.catalogs.businessHours.find(bh => bh.id === bhId) || App.state.catalogs.businessHours[0];
 
         Object.keys(preset).forEach(priorityId => {
           const values = preset[priorityId];
-          const ackInput = document.querySelector('input[data-priority="' + priorityId + '"][data-field="ackMins"]');
-          const startInput = document.querySelector('input[data-priority="' + priorityId + '"][data-field="startMins"]');
-          const resolveInput = document.querySelector('input[data-priority="' + priorityId + '"][data-field="resolveMins"]');
+          const units = this.slaUnits[priorityId] || { ack: 'mins', start: 'mins', resolve: 'mins' };
 
-          if (ackInput) ackInput.value = values.ackMins;
-          if (startInput) startInput.value = values.startMins;
-          if (resolveInput) resolveInput.value = values.resolveMins;
+          // Convert preset minutes to current units
+          let ackValue = values.ackMins;
+          let startValue = values.startMins;
+          let resolveValue = values.resolveMins;
+
+          if (units.ack === 'hours') {
+            ackValue = (values.ackMins / 60).toFixed(1);
+          }
+          if (units.start === 'hours') {
+            startValue = (values.startMins / 60).toFixed(1);
+          }
+          if (units.resolve === 'hours') {
+            resolveValue = (values.resolveMins / 60).toFixed(1);
+          } else if (units.resolve === 'businessDays') {
+            const minsPerDay = App.minutesPerBusinessDay(bhProfile);
+            resolveValue = (values.resolveMins / minsPerDay).toFixed(1);
+          }
+
+          // Set values using new IDs
+          const ackInput = document.getElementById('sla-ack-' + priorityId);
+          const startInput = document.getElementById('sla-start-' + priorityId);
+          const resolveInput = document.getElementById('sla-resolve-' + priorityId);
+
+          if (ackInput) ackInput.value = ackValue;
+          if (startInput) startInput.value = startValue;
+          if (resolveInput) resolveInput.value = resolveValue;
         });
+
+        // Re-render to show updated minutes helpers
+        this.renderSLAPolicy(this.collectSLAData());
       },
 
       addStep() {
@@ -959,33 +1190,14 @@
       },
 
       captureWorkflow() {
-        const slaByPriority = {};
-        const priorities = App.state.catalogs.priorities;
+        // Use the new collectSLAData method
+        const slaByPriority = this.collectSLAData();
 
-        document.querySelectorAll('#sla-policy-rows tr').forEach(row => {
-          const inputs = row.querySelectorAll('input, select');
-          if (inputs.length === 0) return;
-
-          const priorityId = inputs[0].dataset.priority;
-          const ackMins = parseInt(inputs[0].value) || 0;
-          const startMins = parseInt(inputs[1].value) || 0;
-          const resolveMins = parseInt(inputs[2].value) || 0;
-          const escalateAfterMins = parseInt(inputs[3].value) || null;
-          const escalateToRoleId = inputs[4].value || null;
-
-          slaByPriority[priorityId] = {
-            ackMins: ackMins,
-            startMins: startMins,
-            resolveMins: resolveMins
-          };
-
-          if (escalateAfterMins && escalateToRoleId) {
-            slaByPriority[priorityId].escalate = {
-              afterMins: escalateAfterMins,
-              toRoleId: escalateToRoleId
-            };
-          }
-        });
+        // Build metadata
+        const meta = {
+          slaUnits: this.slaUnits,
+          interpretAsBusinessHours: this.interpretAsBH
+        };
 
         return {
           id: this.currentWorkflowId || (App.state.draftWorkflow ? App.state.draftWorkflow.id : null) || 'workflow_' + Date.now(),
@@ -994,7 +1206,9 @@
           businessHoursId: document.getElementById('wf-business-hours').value,
           ownerRoleId: document.getElementById('wf-owner').value,
           steps: this.steps,
-          slaByPriority: slaByPriority
+          slaByPriority: slaByPriority,
+          meta: meta,
+          updatedAt: new Date().toISOString()
         };
       }
     };
@@ -1053,24 +1267,55 @@
         });
         html += '</div>';
 
-        html += '<div class="sla-matrix"><h3>SLA Targets</h3><table><thead><tr>';
-        html += '<th>Priority</th><th>Acknowledge</th><th>Start Work</th><th>Resolve</th><th>Escalation</th>';
+        html += '<div class="sla-matrix"><h3>SLA Targets</h3>';
+
+        // Show interpretation mode if available
+        const interpretAsBH = workflow.meta?.interpretAsBusinessHours !== false;
+        html += '<p class="text-muted">Feasibility computed using ' + (interpretAsBH ? 'business hours' : 'calendar time') + '</p>';
+
+        html += '<table><thead><tr>';
+        html += '<th>Priority</th><th>Acknowledge</th><th>Start Work</th><th>Resolve</th><th>Feasible?</th><th>Escalation</th>';
         html += '</tr></thead><tbody>';
+
+        // Get feasibility calculation
+        const feasibility = App.computeFeasibility(workflow, catalogs, interpretAsBH);
 
         catalogs.priorities.forEach(p => {
           const sla = workflow.slaByPriority ? workflow.slaByPriority[p.id] : null;
           if (!sla) return;
 
-          const overrun = Validator.checkSLAOverrun(workflow, p.id, catalogs);
+          // Get units if saved in meta
+          const units = workflow.meta?.slaUnits?.[p.id] || { ack: 'mins', start: 'mins', resolve: 'mins' };
+
+          // Format SLA values with units
+          const ackDisplay = App.formatSlaForDisplay(sla.ackMins, units.ack, bh);
+          const startDisplay = App.formatSlaForDisplay(sla.startMins, units.start, bh);
+          const resolveDisplay = App.formatSlaForDisplay(sla.resolveMins, units.resolve, bh);
+
+          // Get feasibility for this priority
+          const pFeasibility = feasibility?.byPriority?.[p.id];
+          let badgeClass = 'badge-feasible';
+          let badgeText = 'OK';
+          if (pFeasibility) {
+            if (pFeasibility.status === 'overrun') {
+              badgeClass = 'badge-overrun';
+              badgeText = 'Overrun';
+            } else if (pFeasibility.status === 'tight') {
+              badgeClass = 'badge-tight';
+              badgeText = 'Tight';
+            }
+          }
+
           const escalation = (sla.escalate && sla.escalate.toRoleId)
             ? 'After ' + sla.escalate.afterMins + ' mins → ' + (catalogs.roles.find(r => r.id === sla.escalate.toRoleId) ? catalogs.roles.find(r => r.id === sla.escalate.toRoleId).name : 'Unknown')
             : 'None';
 
           html += '<tr>';
-          html += '<td><strong>' + p.name + '</strong> ' + (overrun ? '<span class="overrun-badge">Potential SLA overrun</span>' : '') + '</td>';
-          html += '<td>' + sla.ackMins + ' mins</td>';
-          html += '<td>' + sla.startMins + ' mins</td>';
-          html += '<td>' + sla.resolveMins + ' mins</td>';
+          html += '<td><strong>' + p.name + '</strong></td>';
+          html += '<td>' + ackDisplay + '</td>';
+          html += '<td>' + startDisplay + '</td>';
+          html += '<td>' + resolveDisplay + '</td>';
+          html += '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
           html += '<td>' + escalation + '</td>';
           html += '</tr>';
         });

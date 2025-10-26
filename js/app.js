@@ -454,7 +454,23 @@ const App = {
     if (idx > -1) {
       this.state.workflows.splice(idx, 1);
       this.saveWorkflows();
+      return true;
     }
+    return false;
+  },
+
+  /**
+   * Delete all workflows for a department
+   */
+  deleteAllWorkflowsForDepartment(deptId) {
+    const before = this.state.workflows.length;
+    this.state.workflows = this.state.workflows.filter(w => w.departmentId !== deptId);
+    const after = this.state.workflows.length;
+    if (before !== after) {
+      this.saveWorkflows();
+      return before - after;
+    }
+    return 0;
   },
 
   /**
@@ -520,7 +536,7 @@ const App = {
     }
 
     // Parse route
-    const match = hash.match(/#\/(home|catalog|build|dept\/([^/]+)|wf\/([^/]+))/);
+    const match = hash.match(/#\/(home|catalog|settings|build|review|dept\/([^/]+)|wf\/([^/]+))/);
 
     // Hide all screens first
     document.querySelectorAll('.screen').forEach(screen => {
@@ -550,18 +566,32 @@ const App = {
       if (linkRoute === route || route.startsWith(linkRoute + '/')) {
         link.classList.add('active');
       }
+      // Handle catalog → settings rename
+      if (linkRoute === 'settings' && route === 'catalog') {
+        link.classList.add('active');
+      }
+      if (linkRoute === 'catalog' && route === 'settings') {
+        link.classList.add('active');
+      }
+      // Handle review hub and individual reviews
+      if (linkRoute === 'review' && route.startsWith('wf/')) {
+        link.classList.add('active');
+      }
     });
 
     // Show and render active screen
     if (route === 'home') {
       document.getElementById('screen-home').style.display = 'block';
       HomeScreen.render();
-    } else if (route === 'catalog') {
+    } else if (route === 'catalog' || route === 'settings') {
       document.getElementById('screen-catalog').style.display = 'block';
       CatalogScreen.render();
     } else if (route === 'build') {
       document.getElementById('screen-build').style.display = 'block';
       BuildScreen.render();
+    } else if (route === 'review') {
+      document.getElementById('screen-review').style.display = 'block';
+      ReviewScreen.renderHub();
     } else if (route.startsWith('dept/')) {
       document.getElementById('screen-dept').style.display = 'block';
       DeptScreen.render(this.state.currentDeptId);

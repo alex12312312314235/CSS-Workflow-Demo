@@ -154,6 +154,15 @@ const App = {
   },
 
   /**
+   * Convert minutes to Business Days (1 decimal place)
+   */
+  formatMinutesAsBD(minutes, bhProfile) {
+    if (!minutes && minutes !== 0) return '0.0';
+    const minsPerDay = this.minutesPerBusinessDay(bhProfile);
+    return (minutes / minsPerDay).toFixed(1);
+  },
+
+  /**
    * Compute feasibility for a workflow with interpretation setting
    */
   computeFeasibility(workflow, catalogs, interpretAsBH) {

@@ -143,9 +143,9 @@
                   <thead>
                     <tr>
                       <th>Priority</th>
-                      <th title="In Business Days. Computed using business hours window from selected profile.">Acknowledge</th>
-                      <th title="In Business Days. Computed using business hours window from selected profile.">Start Work</th>
-                      <th title="In Business Days. Computed using business hours window from selected profile.">Resolve</th>
+                      <th title="Computed using business hours window from selected profile.">Acknowledge (Business Days)</th>
+                      <th title="Computed using business hours window from selected profile.">Start Work (Business Days)</th>
+                      <th title="Computed using business hours window from selected profile.">Resolve (Business Days)</th>
                       <th>Escalate After (mins)</th>
                       <th>Escalate To Role</th>
                     </tr>
@@ -374,7 +374,11 @@
           const badgeClass = p3.overrun ? 'badge-overrun' : (p3.tight ? 'badge-tight' : 'badge-feasible');
           const badgeText = p3.overrun ? 'Overrun' : (p3.tight ? 'Tight' : 'OK');
 
-          const slaResolve = wf.slaByPriority && wf.slaByPriority.p3 ? wf.slaByPriority.p3.resolveMins : '—';
+          const slaResolveMins = wf.slaByPriority && wf.slaByPriority.p3 ? wf.slaByPriority.p3.resolveMins : null;
+          const bhProfile = App.state.catalogs.businessHours.find(bh => bh.id === wf.businessHoursId) || App.state.catalogs.businessHours[0];
+          const resolveUnit = wf.meta?.slaUnits?.p3?.resolve || 'businessDays';
+          const slaResolveDisplay = slaResolveMins ? App.formatSlaForDisplay(slaResolveMins, resolveUnit, bhProfile) : '—';
+
           const stepCount = wf.steps ? wf.steps.length : 0;
           const totalMins = feasibility ? feasibility.totalExpectedMins : 0;
           const updated = wf.updatedAt ? new Date(wf.updatedAt).toLocaleDateString() : 'Never';
@@ -385,7 +389,7 @@
           html += '<td>' + (owner ? owner.name : 'Unknown') + '</td>';
           html += '<td>' + stepCount + '</td>';
           html += '<td>' + totalMins + '</td>';
-          html += '<td>' + slaResolve + '</td>';
+          html += '<td>' + slaResolveDisplay + '</td>';
           html += '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
           html += '<td>' + updated + '</td>';
           html += '</tr>';
@@ -442,7 +446,12 @@
             const p3 = validation.summary.feasibleByPriority.p3 || {};
             const badgeClass = p3.overrun ? 'badge-overrun' : (p3.tight ? 'badge-tight' : 'badge-feasible');
             const badgeText = p3.overrun ? 'Overrun' : (p3.tight ? 'Tight' : 'Feasible');
-            const slaResolve = wf.slaByPriority && wf.slaByPriority.p3 ? wf.slaByPriority.p3.resolveMins : 'N/A';
+
+            const slaResolveMins = wf.slaByPriority && wf.slaByPriority.p3 ? wf.slaByPriority.p3.resolveMins : null;
+            const bhProfile = App.state.catalogs.businessHours.find(bh => bh.id === wf.businessHoursId) || App.state.catalogs.businessHours[0];
+            const resolveUnit = wf.meta?.slaUnits?.p3?.resolve || 'businessDays';
+            const slaResolveDisplay = slaResolveMins ? App.formatSlaForDisplay(slaResolveMins, resolveUnit, bhProfile) : 'N/A';
+
             const updated = wf.updatedAt ? new Date(wf.updatedAt).toLocaleDateString() : 'Never';
 
             html += '<tr onclick="location.hash=\'#/wf/' + wf.id + '\'" style="cursor:pointer;">';
@@ -450,7 +459,7 @@
             html += '<td>' + (owner ? owner.name : 'Unknown') + '</td>';
             html += '<td>' + (wf.steps ? wf.steps.length : 0) + '</td>';
             html += '<td>' + validation.summary.totalExpectedMins + '</td>';
-            html += '<td>' + slaResolve + '</td>';
+            html += '<td>' + slaResolveDisplay + '</td>';
             html += '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
             html += '<td>' + updated + '</td>';
             html += '</tr>';
@@ -943,32 +952,35 @@
           html += '<td><strong>' + p.name + '</strong></td>';
 
           // Acknowledge column (Business Days by default)
-          html += '<td style="min-width:180px;">';
-          html += '<input type="number" step="0.5" value="' + ackBD + '" id="sla-ack-' + p.id + '" data-priority="' + p.id + '" data-field="ack" onchange="BuildScreen.syncSlider(\'' + p.id + '\', \'ack\')" style="width:100px; margin-bottom:0.25rem;">';
+          html += '<td style="min-width:200px;">';
+          html += '<input type="number" step="0.5" value="' + ackBD + '" id="sla-ack-' + p.id + '" data-priority="' + p.id + '" data-field="ack" onchange="BuildScreen.updateSLAHelper(\'' + p.id + '\', \'ack\')" style="width:100px; margin-bottom:0.25rem;">';
           // Slider: 0-5 BD, step 0.5
-          html += '<input type="range" min="0" max="5" step="0.5" value="' + ackBD + '" id="sla-ack-slider-' + p.id + '" oninput="BuildScreen.syncInput(\'' + p.id + '\', \'ack\')" style="width:100%; margin-bottom:0.25rem;">';
-          html += '<div class="text-muted" style="font-size:0.75rem;">';
-          html += '≈ ' + ackBD + ' business days → ' + sla.ackMins + ' mins';
+          html += '<input type="range" min="0" max="5" step="0.5" value="' + ackBD + '" id="sla-ack-slider-' + p.id + '" oninput="BuildScreen.syncInputAndHelper(\'' + p.id + '\', \'ack\')" style="width:100%; margin-bottom:0.25rem;">';
+          html += '<div class="text-muted" id="sla-ack-helper-' + p.id + '" style="font-size:0.75rem;">';
+          html += '≈ ' + sla.ackMins + ' mins';
+          html += '<br>1 BD = ' + minsPerDay + ' mins';
           html += '</div>';
           html += '</td>';
 
           // Start Work column (Business Days by default)
-          html += '<td style="min-width:180px;">';
-          html += '<input type="number" step="0.5" value="' + startBD + '" id="sla-start-' + p.id + '" data-priority="' + p.id + '" data-field="start" onchange="BuildScreen.syncSlider(\'' + p.id + '\', \'start\')" style="width:100px; margin-bottom:0.25rem;">';
+          html += '<td style="min-width:200px;">';
+          html += '<input type="number" step="0.5" value="' + startBD + '" id="sla-start-' + p.id + '" data-priority="' + p.id + '" data-field="start" onchange="BuildScreen.updateSLAHelper(\'' + p.id + '\', \'start\')" style="width:100px; margin-bottom:0.25rem;">';
           // Slider: 0-10 BD, step 0.5
-          html += '<input type="range" min="0" max="10" step="0.5" value="' + startBD + '" id="sla-start-slider-' + p.id + '" oninput="BuildScreen.syncInput(\'' + p.id + '\', \'start\')" style="width:100%; margin-bottom:0.25rem;">';
-          html += '<div class="text-muted" style="font-size:0.75rem;">';
-          html += '≈ ' + startBD + ' business days → ' + sla.startMins + ' mins';
+          html += '<input type="range" min="0" max="10" step="0.5" value="' + startBD + '" id="sla-start-slider-' + p.id + '" oninput="BuildScreen.syncInputAndHelper(\'' + p.id + '\', \'start\')" style="width:100%; margin-bottom:0.25rem;">';
+          html += '<div class="text-muted" id="sla-start-helper-' + p.id + '" style="font-size:0.75rem;">';
+          html += '≈ ' + sla.startMins + ' mins';
+          html += '<br>1 BD = ' + minsPerDay + ' mins';
           html += '</div>';
           html += '</td>';
 
           // Resolve column (Business Days by default)
-          html += '<td style="min-width:180px;">';
-          html += '<input type="number" step="0.5" value="' + resolveBD + '" id="sla-resolve-' + p.id + '" data-priority="' + p.id + '" data-field="resolve" onchange="BuildScreen.syncSlider(\'' + p.id + '\', \'resolve\')" style="width:100px; margin-bottom:0.25rem;">';
+          html += '<td style="min-width:200px;">';
+          html += '<input type="number" step="0.5" value="' + resolveBD + '" id="sla-resolve-' + p.id + '" data-priority="' + p.id + '" data-field="resolve" onchange="BuildScreen.updateSLAHelper(\'' + p.id + '\', \'resolve\')" style="width:100px; margin-bottom:0.25rem;">';
           // Slider: 0-20 BD, step 0.5
-          html += '<input type="range" min="0" max="20" step="0.5" value="' + resolveBD + '" id="sla-resolve-slider-' + p.id + '" oninput="BuildScreen.syncInput(\'' + p.id + '\', \'resolve\')" style="width:100%; margin-bottom:0.25rem;">';
-          html += '<div class="text-muted" style="font-size:0.75rem;">';
-          html += '≈ ' + resolveBD + ' business days → ' + sla.resolveMins + ' mins';
+          html += '<input type="range" min="0" max="20" step="0.5" value="' + resolveBD + '" id="sla-resolve-slider-' + p.id + '" oninput="BuildScreen.syncInputAndHelper(\'' + p.id + '\', \'resolve\')" style="width:100%; margin-bottom:0.25rem;">';
+          html += '<div class="text-muted" id="sla-resolve-helper-' + p.id + '" style="font-size:0.75rem;">';
+          html += '≈ ' + sla.resolveMins + ' mins';
+          html += '<br>1 BD = ' + minsPerDay + ' mins';
           html += '</div>';
           html += '</td>';
 
@@ -1013,6 +1025,46 @@
         if (input && slider) {
           input.value = slider.value;
         }
+      },
+
+      syncInputAndHelper(priorityId, field) {
+        // When slider changes, update input and helper text
+        const input = document.getElementById('sla-' + field + '-' + priorityId);
+        const slider = document.getElementById('sla-' + field + '-slider-' + priorityId);
+        if (input && slider) {
+          input.value = slider.value;
+        }
+        this.updateSLAHelper(priorityId, field);
+      },
+
+      updateSLAHelper(priorityId, field) {
+        // Update the helper text to show calculated minutes
+        const input = document.getElementById('sla-' + field + '-' + priorityId);
+        const helper = document.getElementById('sla-' + field + '-helper-' + priorityId);
+        const slider = document.getElementById('sla-' + field + '-slider-' + priorityId);
+
+        if (!input || !helper) return;
+
+        // Sync slider if needed
+        if (slider) {
+          slider.value = input.value || 0;
+        }
+
+        // Get current business hours profile
+        const bhId = document.getElementById('wf-business-hours')?.value;
+        const bhProfile = App.state.catalogs.businessHours.find(bh => bh.id === bhId) || App.state.catalogs.businessHours[0];
+        const minsPerDay = App.minutesPerBusinessDay(bhProfile);
+
+        // Get current unit for this field
+        const units = this.slaUnits[priorityId] || { ack: 'businessDays', start: 'businessDays', resolve: 'businessDays' };
+        const unit = units[field];
+
+        // Convert to minutes
+        const value = parseFloat(input.value) || 0;
+        const minutes = App.convertUserSlaToMinutes(value, unit, bhProfile);
+
+        // Update helper text
+        helper.innerHTML = '≈ ' + minutes + ' mins<br>1 BD = ' + minsPerDay + ' mins';
       },
 
       collectSLAData() {
@@ -1329,13 +1381,13 @@
           const sla = workflow.slaByPriority ? workflow.slaByPriority[p.id] : null;
           if (!sla) return;
 
-          // Get units if saved in meta
-          const units = workflow.meta?.slaUnits?.[p.id] || { ack: 'mins', start: 'mins', resolve: 'mins' };
+          // Get units if saved in meta, default to businessDays
+          const units = workflow.meta?.slaUnits?.[p.id] || { ack: 'businessDays', start: 'businessDays', resolve: 'businessDays' };
 
-          // Format SLA values with units
-          const ackDisplay = App.formatSlaForDisplay(sla.ackMins, units.ack, bh);
-          const startDisplay = App.formatSlaForDisplay(sla.startMins, units.start, bh);
-          const resolveDisplay = App.formatSlaForDisplay(sla.resolveMins, units.resolve, bh);
+          // Format SLA values with units (always show Business Days first)
+          const ackDisplay = App.formatSlaForDisplay(sla.ackMins, units.ack || 'businessDays', bh);
+          const startDisplay = App.formatSlaForDisplay(sla.startMins, units.start || 'businessDays', bh);
+          const resolveDisplay = App.formatSlaForDisplay(sla.resolveMins, units.resolve || 'businessDays', bh);
 
           // Get feasibility for this priority
           const pFeasibility = feasibility?.byPriority?.[p.id];

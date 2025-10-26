@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "1.0.0",
+  "businessHours": [
+    {
+      "id": "std",
+      "name": "Standard CSS",
+      "tz": "Asia/Dubai",
+      "days": [1, 2, 3, 4, 5],
+      "start": "08:00",
+      "end": "18:00"
+    }
+  ],
+  "roles": [
+    {
+      "id": "exec_sous",
+      "name": "Executive Sous Chef"
+    },
+    {
+      "id": "food_tech",
+      "name": "Food Technologist"
+    },
+    {
+      "id": "s_s_lead",
+      "name": "Standards & Specs Lead"
+    },
+    {
+      "id": "h_d_lead",
+      "name": "Health & Dietetics Lead"
+    },
+    {
+      "id": "i_i_analyst",
+      "name": "Insights & Intelligence Analyst"
+    }
+  ],
+  "departments": [
+    {
+      "id": "cd",
+      "name": "Concept Dev"
+    },
+    {
+      "id": "ss",
+      "name": "Standards & Specs"
+    },
+    {
+      "id": "ft",
+      "name": "Food Tech"
+    },
+    {
+      "id": "hd",
+      "name": "Health & Dietetics"
+    },
+    {
+      "id": "ii",
+      "name": "Insights & Intelligence"
+    }
+  ],
+  "priorities": [
+    {
+      "id": "p1",
+      "name": "Critical",
+      "ackMins": 30,
+      "startMins": 60,
+      "resolveMins": 480
+    },
+    {
+      "id": "p2",
+      "name": "High",
+      "ackMins": 120,
+      "startMins": 240,
+      "resolveMins": 1440
+    },
+    {
+      "id": "p3",
+      "name": "Normal",
+      "ackMins": 1440,
+      "startMins": 2880,
+      "resolveMins": 10080
+    }
+  ]
+}

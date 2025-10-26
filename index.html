@@ -1,1145 +1,769 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>CSS Workflow Integration Portal - EKFC</title>
-<style>
-  :root{
-    --ekfc-red:#C8102E; --ekfc-red-dark:#A00E24; --gold:#B8975F;
-    --text:#111; --muted:#666; --bg:#f5f5f5; --card:#fff; --line:#ddd; --soft:#f8f8f8;
-    --SS:#2f7ed8; --HD:#28a745; --FT:#7b61ff; --MD:#ff6b8b; --II:#0c5460; --intake:#ff9a2f;
-  }
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);min-height:100vh;color:var(--text)}
-  .header{background:var(--card);border-bottom:3px solid var(--ekfc-red);padding:15px 30px;box-shadow:0 2px 4px rgba(0,0,0,.08)}
-  .header-content{max-width:1400px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
-  .header-left{display:flex;align-items:center;gap:20px}
-  .logo-text{color:var(--ekfc-red);font-size:24px;font-weight:bold}
-  .header h1{font-size:20px;font-weight:normal}
-  .header-subtitle{color:var(--muted);font-size:14px}
-  .nav-tabs{display:flex;background:var(--card);border-radius:4px;overflow:hidden;border:1px solid var(--line)}
-  .nav-tab{background:var(--card);border:none;color:#666;padding:8px 18px;cursor:pointer;font-size:14px;transition:.2s;border-right:1px solid var(--line)}
-  .nav-tab:last-child{border-right:none}
-  .nav-tab:hover{background:var(--soft)}
-  .nav-tab.active{background:var(--ekfc-red);color:#fff}
-  .container{max-width:1400px;margin:20px auto;padding:0 20px}
-  .content-area{display:none}
-  .content-area.active{display:block}
-  .panel{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:20px;box-shadow:0 2px 4px rgba(0,0,0,.05)}
-  .panel-title{font-size:16px;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--gold);font-weight:600}
-
-  .workflow-container{display:grid;grid-template-columns:380px 1fr;gap:20px}
-  .form-group{margin-bottom:15px}
-  label{display:block;font-size:13px;font-weight:600;margin-bottom:5px}
-  input,select,textarea{width:100%;padding:8px;border:1px solid #ccc;border-radius:3px;font-size:13px}
-  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ekfc-red)}
-  .submit-btn{background:var(--ekfc-red);color:#fff;border:none;padding:10px 20px;border-radius:3px;font-size:14px;font-weight:600;cursor:pointer;width:100%;transition:.2s}
-  .submit-btn:hover{background:var(--ekfc-red-dark)}
-  .alert{background:#d4edda;border:1px solid #c3e6cb;color:#155724;padding:10px;margin-bottom:15px;border-radius:3px;font-size:13px;display:none}
-  .alert.show{display:block}
-  .ticket-info{background:#fff3cd;border:1px solid #ffeeba;color:#856404;padding:10px;margin-top:15px;border-radius:3px;font-size:13px;display:none}
-  .ticket-info.show{display:block}
-  .ticket-number{font-weight:bold;color:var(--ekfc-red)}
-
-  .resolution-banner{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #eee;border-left-width:4px;border-radius:6px;background:#fafafa;margin-bottom:12px;font-size:13px}
-  .res-standard{border-left-color:#28a745;background:#f3fbf4}
-  .res-high{border-left-color:#ff9a2f;background:#fff6ec}
-  .res-urgent{border-left-color:#dc3545;background:#fff1f3}
-  .resolution-banner .tag{font-weight:800}
-  .resolution-banner .eta{font-weight:700}
-  .resolution-banner .muted{color:#666}
-
-  .workflow-step{position:relative;display:flex;padding:15px;margin-bottom:15px;background:var(--soft);border:1px solid #e0e0e0;border-radius:3px;opacity:.5;transition:.3s}
-  .workflow-step.active{opacity:1;background:#fff;border-color:var(--ekfc-red);border-width:2px}
-  .workflow-step.completed{opacity:.95;background:#f0f8f0;border-color:#28a745}
-  .step-number{width:40px;height:40px;background:#ddd;color:#666;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;margin-right:15px;flex-shrink:0}
-  .workflow-step.active .step-number{background:var(--ekfc-red);color:#fff}
-  .workflow-step.completed .step-number{background:#28a745;color:#fff}
-  .step-content{flex:1}
-  .step-title{font-size:14px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .step-desc{font-size:12px;color:var(--muted)}
-  .step-details{margin-top:8px;padding-top:8px;border-top:1px solid #e0e0e0;font-size:11px;color:var(--muted);display:none}
-  .workflow-step.active .step-details,.workflow-step.completed .step-details{display:block}
-
-  .esc-pill{display:inline-flex;align-items:center;gap:6px;background:#fff1f3;border:1px solid #dc3545;color:#dc3545;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer}
-  .esc-dot{width:6px;height:6px;border-radius:50%;background:#dc3545;display:inline-block}
-  .esc-pop{position:absolute;right:16px;top:50px;z-index:5;max-width:380px;background:#fff;border:1px solid #f1b5bd;border-left:4px solid #dc3545;box-shadow:0 10px 24px rgba(0,0,0,.08);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.35;display:none}
-  .esc-pop .h{font-weight:800;margin-bottom:4px}.esc-pop .item{display:flex;gap:8px;margin:4px 0}.esc-pop .k{min-width:98px;color:#444}.esc-pop .v{font-weight:700}
-  .esc-close{position:absolute;top:6px;right:8px;border:none;background:transparent;color:#b13a46;cursor:pointer;font-weight:800}
-
-  .priority-ribbon{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
-  .step-urgent{border-color:#dc3545 !important;background:#fff}
-  .step-high{border-color:#ff9a2f !important;background:#fff}
-  .step-standard{border-color:#28a74522;background:#fff}
-  .exclaim{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:#dc3545;color:#fff;font-weight:800;margin-left:6px}
-
-  .since-reset{display:flex;gap:12px;align-items:center;margin:10px 0 16px 0;font-size:12px;color:#444}
-  .since-reset .dot{width:6px;height:6px;border-radius:50%;background:var(--ekfc-red)}
-  .since-reset .muted{color:#777}
-
-  .dashboard-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;margin-bottom:20px}
-  .metric-card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:15px;box-shadow:0 2px 4px rgba(0,0,0,.05)}
-  .metric-value{font-size:28px;font-weight:bold;color:var(--ekfc-red);margin-bottom:5px}
-  .metric-label{font-size:12px;color:var(--muted);text-transform:uppercase}
-  .metric-sub{font-size:11px;color:#555;margin-top:6px}
-  .metric-change{font-size:11px;margin-top:5px}
-  .positive{color:#28a745}.negative{color:#dc3545}
-  .dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-  .table{width:100%;border-collapse:collapse;font-size:12px}
-  .table th{background:var(--soft);padding:8px;text-align:left;font-weight:600;border-bottom:2px solid var(--gold)}
-  .table td{padding:8px;border-bottom:1px solid #e0e0e0;color:#555}
-  .priority-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}
-  .priority-urgent{background:#f8d7da;color:#721c24}
-  .priority-high{background:#fff3cd;color:#856404}
-  .priority-normal{background:#d1ecf1;color:#0c5460}
-
-  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-  .btn{background:#fff;border:1px solid var(--line);padding:8px 10px;border-radius:6px;cursor:pointer}
-  .btn:hover{background:#f9f9f9}
-  .live-wrap{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px;position:relative}
-  .svg-host{width:100%;height:620px;background:#fff;border:1px solid #eee;border-radius:4px;cursor:grab}
-  .svg-host.dragging{cursor:grabbing}
-  .lane{stroke:#e6e6e6;stroke-width:1}
-  .stage rect{fill:#ffffff;stroke:var(--ekfc-red);stroke-width:1.5}
-  .stage text{fill:#000;font-size:12px}
-  .edge{stroke:#c7c7c7;stroke-width:2;fill:none;marker-end:url(#arrow)}
-  .token{filter:drop-shadow(0 1px 4px rgba(0,0,0,.15))}
-  .token rect{stroke:#000;stroke-opacity:.15;rx:7;ry:7}
-  .token text{fill:#000;font-weight:800;font-size:10px}
-  .tip{position:absolute;pointer-events:none;background:#fff;border:1px solid #ddd;border-radius:6px;padding:8px 10px;font-size:12px;box-shadow:0 8px 18px rgba(0,0,0,.08);display:none}
-  .tip .t{font-weight:700;margin-bottom:6px}
-  .tip .row{display:flex;justify-content:space-between;gap:16px}
-  .tip .k{color:#777;text-transform:uppercase;font-size:11px}
-  .tip .v{font-weight:700}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SLA & Workflow Configurator</title>
+  <link rel="stylesheet" href="./css/app.css">
 </head>
 <body>
-  <div class="header">
-    <div class="header-content">
-      <div class="header-left">
-        <span class="logo-text">Emirates|Flight Catering</span>
-        <div>
-          <h1>CSS Workflow Integration Portal</h1>
-          <div class="header-subtitle">Culinary Shared Services</div>
-        </div>
-      </div>
-      <div class="nav-tabs">
-        <button class="nav-tab active" onclick="switchView('workflow',event)">Workflow (Simple)</button>
-        <button class="nav-tab" onclick="switchView('dashboard',event)">VP Dashboard</button>
-        <button class="nav-tab" onclick="switchView('live',event)">Workflow (Live)</button>
-      </div>
-    </div>
-  </div>
-
   <div class="container">
-    <!-- ===== Simple Workflow ===== -->
-    <div id="workflow-view" class="content-area active">
-      <div class="workflow-container">
-        <!-- Form -->
-        <div class="panel">
-          <h2 class="panel-title">Submit H&amp;D Request</h2>
-          <div id="alert" class="alert">Request submitted successfully. Processing ticket...</div>
+    <!-- Left Navigation -->
+    <nav class="sidebar">
+      <h1>SLA Config</h1>
+      <a href="#/catalog" class="nav-link" data-route="catalog">Catalog</a>
+      <a href="#/build" class="nav-link active" data-route="build">Build</a>
+      <a href="#/review" class="nav-link" data-route="review">Review</a>
+    </nav>
 
-          <div class="form-group"><label>Requester Name *</label><input type="text" value="Tobias Taubner"/></div>
-          <div class="form-group">
-            <label>Business Unit *</label>
-            <select id="buSelect">
-              <option>DIA Lounges</option><option>East Wing Production</option><option>West Wing Production</option><option>Commercial Kitchen</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Request Type *</label>
-            <select id="typeSelect">
-              <option>Health Claim Verification</option><option>Allergen Declaration Review</option>
-              <option>Nutritional Analysis</option><option>Special Diet Menu Development</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Priority *</label>
-            <select id="prioritySelect">
-              <option value="standard">Standard (≤120h, business)</option>
-              <option value="high">High (≤96h, business)</option>
-              <option value="urgent">Urgent (≤48h, business)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Description *</label>
-            <textarea rows="3">Need allergen review for new pasta dish containing nuts and dairy. Menu item planned for Q1 2025 launch.</textarea>
-          </div>
-          <button class="submit-btn" onclick="submitRequest()">Submit Request</button>
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Catalog Screen -->
+      <div id="screen-catalog" class="screen">
+        <h2>Reference Data Catalog</h2>
+        <p class="text-muted">Manage departments, roles, business hours, and priorities. Changes persist locally.</p>
 
-          <div id="ticketInfo" class="ticket-info">
-            <strong>Ticket Created</strong><br/><span class="ticket-number" id="ticketNum">HD-2025-0142</span><br/>Track your request using this number
-          </div>
+        <div class="action-bar">
+          <button class="btn-secondary" onclick="CatalogScreen.resetToDefaults()">Reset to Defaults</button>
         </div>
 
-        <!-- Steps -->
-        <div class="panel">
-          <h2 class="panel-title">Workflow Journey</h2>
-
-          <div id="resBanner" class="resolution-banner res-standard" style="display:none">
-            <span class="tag">Resolution target:</span>
-            <span id="resTarget" class="eta">≤ 120 hours</span>
-            <span class="muted"> (by <span id="resETA">—</span>, business hours)</span>
-          </div>
-
-          <div class="workflow-step" id="step1">
-            <div class="step-number">1</div>
-            <div class="step-content">
-              <div class="step-title">Request Submission</div>
-              <div class="step-desc">BU submits request through unified portal</div>
-              <div class="step-details"><strong>Submitted:</strong> <span id="time1">--</span><br/><strong>System:</strong> <b>CSS Workorder Portal</b></div>
-            </div>
-          </div>
-
-          <div class="workflow-step" id="step2">
-            <div class="step-number">2</div>
-            <div class="step-content">
-              <div class="step-title">CSS Admin Intake
-                <span id="esc2" class="esc-pill" style="display:none"><span class="esc-dot"></span>Escalation</span>
-              </div>
-              <div class="step-desc">Request routed to CSS Admin for initial processing</div>
-              <div class="step-details" id="sd2"></div>
-              <div id="pop2" class="esc-pop">
-                <button class="esc-close" data-close="#pop2">×</button>
-                <div class="h">Intake escalation</div>
-                <div class="item"><div class="k">Notifications</div><div class="v" id="esc2_notif">—</div></div>
-                <div class="item"><div class="k">Routing</div><div class="v" id="esc2_route">—</div></div>
-                <div class="item"><div class="k">SLA impact</div><div class="v" id="esc2_sla">—</div></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="workflow-step" id="step3">
-            <div class="step-number">3</div>
-            <div class="step-content">
-              <div class="step-title">H&amp;D Assignment
-                <span id="esc3" class="esc-pill" style="display:none"><span class="esc-dot"></span>Escalation</span>
-              </div>
-              <div class="step-desc" id="desc3">Ticket assigned to H&amp;D specialist based on expertise</div>
-              <div class="step-details" id="sd3"></div>
-              <div id="pop3" class="esc-pop">
-                <button class="esc-close" data-close="#pop3">×</button>
-                <div class="h">Assignment escalation</div>
-                <div class="item"><div class="k">Assignee</div><div class="v" id="esc3_assignee">—</div></div>
-                <div class="item"><div class="k">Signals</div><div class="v" id="esc3_signals">—</div></div>
-                <div class="item"><div class="k">Reminders</div><div class="v" id="esc3_rem">—</div></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="workflow-step" id="step4">
-            <div class="step-number">4</div>
-            <div class="step-content">
-              <div class="step-title">Technical Review
-                <span id="esc4" class="esc-pill" style="display:none"><span class="esc-dot"></span>Escalation</span>
-              </div>
-              <div class="step-desc">H&amp;D specialist performs allergen assessment</div>
-              <div class="step-details" id="sd4"></div>
-              <div id="pop4" class="esc-pop">
-                <button class="esc-close" data-close="#pop4">×</button>
-                <div class="h">Technical review escalation</div>
-                <div class="item"><div class="k">Priority</div><div class="v" id="esc4_pri">—</div></div>
-                <div class="item"><div class="k">Reminders</div><div class="v" id="esc4_rem">—</div></div>
-                <div class="item"><div class="k">Channels</div><div class="v" id="esc4_ch">—</div></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="workflow-step" id="step5">
-            <div class="step-number">5</div>
-            <div class="step-content">
-              <div class="step-title">Manager Approval &amp; Review
-                <span id="esc5" class="esc-pill" style="display:none"><span class="esc-dot"></span>Escalation</span>
-              </div>
-              <div class="step-desc">Manager review and approval</div>
-              <div class="step-details" id="sd5"></div>
-              <div id="pop5" class="esc-pop">
-                <button class="esc-close" data-close="#pop5">×</button>
-                <div class="h">Approval escalation</div>
-                <div class="item"><div class="k">Approver</div><div class="v" id="esc5_appr">—</div></div>
-                <div class="item"><div class="k">Notifications</div><div class="v" id="esc5_notif">—</div></div>
-                <div class="item"><div class="k">Deadline guards</div><div class="v" id="esc5_guard">—</div></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="workflow-step" id="step6">
-            <div class="step-number">6</div>
-            <div class="step-content">
-              <div class="step-title">Delivery</div>
-              <div class="step-desc">Results delivered to requester</div>
-              <div class="step-details"><strong>Format:</strong> <b>Email</b><br/><strong>Channel:</strong> <b>Outlook 365</b></div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== VP Dashboard ===== -->
-    <div id="dashboard-view" class="content-area">
-      <div class="since-reset">
-        <span class="dot"></span>
-        <div><strong>Since reset:</strong> <span id="sinceResetStamp">—</span> <span class="muted">•</span> Elapsed <span id="sinceResetElapsed">—</span></div>
-        <div class="muted">| Window:</div>
-        <div><strong id="windowLen">15</strong> <span class="muted">min</span></div>
-        <div class="muted">| Created:</div><div><strong id="sinceCreated">0</strong></div>
-        <div class="muted">| Completed:</div><div><strong id="sinceCompleted">0</strong></div>
+        <div id="catalog-content"></div>
       </div>
 
-      <div class="dashboard-metrics">
-        <div class="metric-card">
-          <div id="mActive" class="metric-value">—</div>
-          <div class="metric-label">TOTAL ACTIVE REQUESTS</div>
-          <div class="metric-sub">Live</div>
-        </div>
+      <!-- Build Screen -->
+      <div id="screen-build" class="screen">
+        <h2>Workflow Builder</h2>
+        <p class="text-muted">Create or edit a workflow with steps and SLA targets.</p>
 
-        <div class="metric-card">
-          <div id="mSla" class="metric-value">—</div>
-          <div class="metric-label">SLA COMPLIANCE</div>
-          <div class="metric-sub">Since reset</div>
-        </div>
+        <form id="workflow-form">
+          <!-- Workflow Header -->
+          <div class="workflow-header">
+            <div class="form-group">
+              <label for="wf-department">Department *</label>
+              <select id="wf-department" required></select>
+            </div>
+            <div class="form-group">
+              <label for="wf-work-type">Work Type *</label>
+              <input type="text" id="wf-work-type" placeholder="e.g., Recipe Development" required>
+            </div>
+            <div class="form-group">
+              <label for="wf-business-hours">Business Hours *</label>
+              <select id="wf-business-hours" required></select>
+            </div>
+            <div class="form-group">
+              <label for="wf-owner">Owner Role *</label>
+              <select id="wf-owner" required></select>
+            </div>
+          </div>
 
-        <div class="metric-card">
-          <div id="mAvgDays" class="metric-value">—</div>
-          <div class="metric-label">AVG DAYS TO COMPLETE</div>
-          <div class="metric-sub">Since reset</div>
-        </div>
+          <!-- Steps Section -->
+          <div class="steps-container">
+            <h3>Workflow Steps</h3>
+            <div id="steps-list"></div>
+            <button type="button" class="btn-primary" onclick="BuildScreen.addStep()">+ Add Step</button>
+          </div>
 
-        <div class="metric-card">
-          <div id="mSlaWin" class="metric-value">—</div>
-          <div class="metric-label">SLA COMPLIANCE</div>
-          <div class="metric-sub">Rolling window (<span id="winLenA">15</span> min)</div>
-        </div>
+          <!-- SLA Policy Section -->
+          <div class="sla-table">
+            <h3>SLA Targets by Priority</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Priority</th>
+                  <th>Acknowledge (mins)</th>
+                  <th>Start Work (mins)</th>
+                  <th>Resolve (mins)</th>
+                  <th>Escalate After (mins)</th>
+                  <th>Escalate To Role</th>
+                </tr>
+              </thead>
+              <tbody id="sla-policy-rows"></tbody>
+            </table>
+          </div>
 
-        <div class="metric-card">
-          <div id="mAvgDaysWin" class="metric-value">—</div>
-          <div class="metric-label">AVG DAYS TO COMPLETE</div>
-          <div class="metric-sub">Rolling window (<span id="winLenB">15</span> min)</div>
-        </div>
+          <!-- Validation Messages -->
+          <ul id="validation-messages" class="validation-messages" role="alert" aria-live="polite"></ul>
+
+          <!-- Actions -->
+          <div class="action-bar">
+            <button type="button" class="btn-primary" onclick="BuildScreen.validate()">Validate</button>
+            <button type="button" class="btn-success" onclick="BuildScreen.saveDraft()">Save Draft</button>
+            <button type="button" class="btn-secondary" onclick="BuildScreen.clear()">Clear</button>
+          </div>
+        </form>
       </div>
 
-      <div class="dashboard-grid">
-        <div class="panel">
-          <h3 class="panel-title">Department Workload &amp; Performance</h3>
-          <table class="table">
-            <thead><tr><th>Department</th><th>Open</th><th>Avg hrs/req (age)</th></tr></thead>
-            <tbody id="tbodyDeptWorkload">
-              <tr><td>S&amp;S</td><td>—</td><td>—</td></tr>
-            </tbody>
-          </table>
+      <!-- Review Screen -->
+      <div id="screen-review" class="screen">
+        <h2>Workflow Summary</h2>
+
+        <div id="review-content"></div>
+
+        <div class="action-bar">
+          <button class="btn-primary" onclick="ReviewScreen.exportJSON()">Export JSON</button>
+          <button class="btn-secondary" onclick="ReviewScreen.importJSON()">Import JSON</button>
+          <button class="btn-secondary" onclick="ReviewScreen.copyShareLink()">Copy Share Link</button>
+          <button class="btn-secondary" onclick="window.print()">Print</button>
+          <button class="btn-secondary" onclick="location.hash='#/build'">Edit</button>
         </div>
 
-        <div class="panel">
-          <h3 class="panel-title">Priority Queue Status</h3>
-          <table class="table">
-            <thead><tr><th>Ticket</th><th>Type</th><th>Priority</th><th>Age</th></tr></thead>
-            <tbody id="tbodyPriority">
-              <tr><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="panel">
-          <h3 class="panel-title">Departmental Overtime</h3>
-          <table class="table">
-            <thead><tr><th>Department</th><th>FTE</th><th>Utilization</th><th>Overtime</th></tr></thead>
-            <tbody id="tbodyOvertime">
-              <tr><td>S&amp;S</td><td>12</td><td>—</td><td>—</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="panel">
-          <h3 class="panel-title">Business Unit Request Analysis</h3>
-          <table class="table">
-            <thead><tr><th>Business Unit</th><th>Requests</th><th>Avg Time</th><th>SLA %</th></tr></thead>
-            <tbody id="tbodyBU">
-              <tr><td>East Wing</td><td>—</td><td>—</td><td>—</td></tr>
-            </tbody>
-          </table>
-        </div>
+        <!-- Hidden file input for import -->
+        <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="ReviewScreen.handleFileImport(event)">
       </div>
-    </div>
-
-    <!-- ===== Live Workflow ===== -->
-    <div id="live-view" class="content-area">
-      <div class="panel">
-        <h2 class="panel-title">Live Flow • CSS Journey</h2>
-        <div class="toolbar">
-          <button class="btn" id="btnPlay">Pause</button>
-          <button class="btn" id="btnZoomIn">Zoom +</button>
-          <button class="btn" id="btnZoomOut">Zoom −</button>
-          <button class="btn" id="btnReset">Reset</button>
-          <button class="btn" id="btnSubmitDemo">New Request (Demo)</button>
-          <select id="livePriority" class="btn" style="min-width:170px">
-            <option value="mix">Priority: Mix (auto)</option>
-            <option value="standard">Priority: Standard</option>
-            <option value="high">Priority: High</option>
-            <option value="urgent">Priority: Urgent</option>
-          </select>
-        </div>
-
-        <div class="live-wrap" id="liveWrap">
-          <div id="tip" class="tip"></div>
-          <svg id="svg" class="svg-host" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet">
-            <defs><marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0,0 10,4 0,8" fill="#c7c7c7"></polygon></marker></defs>
-            <g id="zoomRoot" transform="translate(0,0) scale(1)">
-              <g class="lane">
-                <line x1="80" y1="120" x2="1120" y2="120"/><line x1="80" y1="240" x2="1120" y2="240"/>
-                <line x1="80" y1="360" x2="1120" y2="360"/><line x1="80" y1="480" x2="1120" y2="480"/><line x1="80" y1="600" x2="1120" y2="600"/>
-              </g>
-              <g id="stages" class="stage">
-                <g data-key="INTAKE"><rect x="520" y="80" width="160" height="50" rx="8"/><text x="600" y="110" text-anchor="middle">Unified Intake • CSS Portal</text></g>
-                <g data-key="ROUTER"><rect x="520" y="200" width="160" height="50" rx="8"/><text x="600" y="230" text-anchor="middle">Router</text></g>
-
-                <g data-key="SS_COORD"><rect x="140" y="320" width="180" height="50" rx="8"/><text x="230" y="350" text-anchor="middle">S&amp;S Coordinator</text></g>
-                <g data-key="HD_COORD"><rect x="380" y="320" width="180" height="50" rx="8"/><text x="470" y="350" text-anchor="middle">H&amp;D Coordinator</text></g>
-                <g data-key="FT_COORD"><rect x="620" y="320" width="180" height="50" rx="8"/><text x="710" y="350" text-anchor="middle">FoodTech Coordinator</text></g>
-                <g data-key="MD_COORD"><rect x="860" y="320" width="180" height="50" rx="8"/><text x="950" y="350" text-anchor="middle">MenuDev Coordinator</text></g>
-
-                <g data-key="SS_A"><rect x="140" y="440" width="160" height="46" rx="8"/><text x="220" y="468" text-anchor="middle">S&amp;S • A</text></g>
-                <g data-key="SS_B"><rect x="200" y="520" width="160" height="46" rx="8"/><text x="280" y="548" text-anchor="middle">S&amp;S • B</text></g>
-                <g data-key="HD_A"><rect x="380" y="440" width="160" height="46" rx="8"/><text x="460" y="468" text-anchor="middle">H&amp;D • A</text></g>
-                <g data-key="HD_B"><rect x="440" y="520" width="160" height="46" rx="8"/><text x="520" y="548" text-anchor="middle">H&amp;D • B</text></g>
-                <g data-key="FT_A"><rect x="620" y="440" width="160" height="46" rx="8"/><text x="700" y="468" text-anchor="middle">FT • A</text></g>
-                <g data-key="FT_B"><rect x="680" y="520" width="160" height="46" rx="8"/><text x="760" y="548" text-anchor="middle">FT • B</text></g>
-                <g data-key="MD_A"><rect x="860" y="440" width="160" height="46" rx="8"/><text x="940" y="468" text-anchor="middle">MD • A</text></g>
-                <g data-key="MD_B"><rect x="920" y="520" width="160" height="46" rx="8"/><text x="1000" y="548" text-anchor="middle">MD • B</text></g>
-
-                <g data-key="DONE"><rect x="520" y="620" width="160" height="50" rx="8"/><text x="600" y="650" text-anchor="middle">Delivery &amp; Done</text></g>
-              </g>
-
-              <g class="edge">
-                <path d="M600,130 L600,200"/>
-                <path d="M600,250 L230,320"/><path d="M600,250 L470,320"/><path d="M600,250 L710,320"/><path d="M600,250 L950,320"/>
-                <path d="M230,370 L220,440"/><path d="M230,370 L280,520"/>
-                <path d="M470,370 L460,440"/><path d="M470,370 L520,520"/>
-                <path d="M710,370 L700,440"/><path d="M710,370 L760,520"/>
-                <path d="M950,370 L940,440"/><path d="M950,370 L1000,520"/>
-                <path d="M220,486 L600,620"/><path d="M280,566 L600,620"/>
-                <path d="M460,486 L600,620"/><path d="M520,566 L600,620"/>
-                <path d="M700,486 L600,620"/><path d="M760,566 L600,620"/>
-                <path d="M940,486 L600,620"/><path d="M1000,566 L600,620"/>
-              </g>
-
-              <g id="tokens"></g>
-              <g id="labels"></g>
-            </g>
-          </svg>
-        </div>
-      </div>
-    </div>
+    </main>
   </div>
 
-<script>
-/* ===== Tabs ===== */
-function switchView(view, event){
-  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
-  event.target.classList.add('active');
-  document.querySelectorAll('.content-area').forEach(a=>a.classList.remove('active'));
-  document.getElementById(view+'-view').classList.add('active');
-}
+  <!-- Load JavaScript modules -->
+  <script src="./js/validate.js"></script>
+  <script src="./js/sharelink.js"></script>
+  <script src="./js/app.js"></script>
 
-/* ===== Priority model ===== */
-const PRIORITY = {
-  standard: { name:'Standard', color:'#28a745', accent:'#f3fbf4', targetH:120, escalate:false, notifyMgr:false },
-  high:     { name:'High',     color:'#ff9a2f', accent:'#fff6ec', targetH:96,  escalate:true,  notifyMgr:true },
-  urgent:   { name:'Urgent',   color:'#dc3545', accent:'#fff1f3', targetH:48,  escalate:true,  notifyMgr:true, fastTrackFC09:true }
-};
-let currentPriority = PRIORITY.standard;
+  <!-- Screen-specific logic -->
+  <script>
+    // ============================
+    // CATALOG SCREEN
+    // ============================
+    const CatalogScreen = {
+      render() {
+        const container = document.getElementById('catalog-content');
+        const catalogs = App.state.catalogs;
 
-/* Baseline split (sums to 120h) */
-const BASE = { intake:24, assign:48, tech:24, mgr:24 };
+        container.innerHTML = `
+          ${this.renderDepartmentsTable(catalogs.departments)}
+          ${this.renderRolesTable(catalogs.roles)}
+          ${this.renderBusinessHoursTable(catalogs.businessHours)}
+          ${this.renderPrioritiesTable(catalogs.priorities)}
+        `;
+      },
 
-/* ===== Business-hours calendar ===== */
-const WORK = { startHour:9, endHour:18, weekdays:[1,2,3,4,5] };
-function isWorkday(d){ const wd = d.getDay()===0?7:d.getDay(); return WORK.weekdays.includes(wd); }
-function clampToStart(d){
-  const t = new Date(d);
-  if (!isWorkday(t)) return nextWorkdayStart(t);
-  if (t.getHours() < WORK.startHour) { t.setHours(WORK.startHour,0,0,0); }
-  if (t.getHours() >= WORK.endHour || (t.getHours()===WORK.endHour && (t.getMinutes()||t.getSeconds()))) { return nextWorkdayStart(t); }
-  return t;
-}
-function nextWorkdayStart(d){
-  const t = new Date(d); t.setDate(t.getDate()+1); t.setHours(WORK.startHour,0,0,0);
-  while(!isWorkday(t)){ t.setDate(t.getDate()+1); }
-  return t;
-}
-function addBusinessHours(start, hours){
-  let remaining = Math.max(0, Math.round(hours*60));
-  let cur = clampToStart(start);
-  while (remaining > 0){
-    if (!isWorkday(cur)){ cur = nextWorkdayStart(cur); continue; }
-    const endOfDay = new Date(cur); endOfDay.setHours(WORK.endHour,0,0,0);
-    const minutesAvail = Math.max(0, (endOfDay - cur) / 60000);
-    if (remaining <= minutesAvail){ cur = new Date(cur.getTime() + remaining*60000); return cur; }
-    remaining -= minutesAvail; cur = nextWorkdayStart(cur);
-  }
-  return cur;
-}
-function businessHoursBetween(start, end){
-  let cur = new Date(start), mins=0;
-  cur = clampToStart(cur);
-  while (cur < end){
-    if (!isWorkday(cur)){ cur = nextWorkdayStart(cur); continue; }
-    const eod = new Date(cur); eod.setHours(WORK.endHour,0,0,0);
-    const stepEnd = end < eod ? end : eod;
-    mins += Math.max(0, (stepEnd - cur)/60000);
-    cur = (stepEnd < eod) ? stepEnd : nextWorkdayStart(stepEnd);
-  }
-  return Math.round(mins/60);
-}
-function fmtDT(d){ return d.toLocaleString([], {hour12:false}); }
-function fmtElapsed(ms){
-  const s = Math.floor(ms/1000), h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
-  const d = Math.floor(h/24), hh = h%24;
-  return d ? `${d}d ${hh}h ${m}m` : (h ? `${h}h ${m}m` : `${m}m`);
-}
+      renderDepartmentsTable(departments) {
+        return `
+          <div class="catalog-section">
+            <h3>Departments</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${departments.map((d, i) => `
+                  <tr>
+                    <td><input type="text" value="${d.id}" onchange="CatalogScreen.updateDept(${i}, 'id', this.value)"></td>
+                    <td><input type="text" value="${d.name}" onchange="CatalogScreen.updateDept(${i}, 'name', this.value)"></td>
+                    <td><button class="btn-danger btn-sm" onclick="CatalogScreen.deleteDept(${i})">Delete</button></td>
+                  </tr>
+                `).join('')}
+                <tr>
+                  <td colspan="3">
+                    <button class="btn-secondary btn-sm" onclick="CatalogScreen.addDept()">+ Add Department</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      },
 
-/* ===== Simple Workflow ===== */
-function submitRequest(){
-  const sel = document.getElementById('prioritySelect').value;
-  currentPriority = PRIORITY[sel] || PRIORITY.standard;
-  document.getElementById('alert').classList.add('show');
-  const num = `${(document.getElementById('typeSelect').value.startsWith('Allergen')?'HD':'SS')}-${new Date().getFullYear()}-${String(Math.floor(Math.random()*9000)+1000).padStart(4,'0')}`;
-  document.getElementById('ticketNum').textContent = num;
-  setTimeout(()=>{ document.getElementById('ticketInfo').classList.add('show'); startWorkflow(currentPriority); }, 600);
-}
-function startWorkflow(p){
-  const steps = [...document.querySelectorAll('#workflow-view .workflow-step')];
-  steps.forEach(s => { s.classList.remove('active','completed','step-urgent','step-high','step-standard'); });
+      renderRolesTable(roles) {
+        return `
+          <div class="catalog-section">
+            <h3>Roles</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${roles.map((r, i) => `
+                  <tr>
+                    <td><input type="text" value="${r.id}" onchange="CatalogScreen.updateRole(${i}, 'id', this.value)"></td>
+                    <td><input type="text" value="${r.name}" onchange="CatalogScreen.updateRole(${i}, 'name', this.value)"></td>
+                    <td><button class="btn-danger btn-sm" onclick="CatalogScreen.deleteRole(${i})">Delete</button></td>
+                  </tr>
+                `).join('')}
+                <tr>
+                  <td colspan="3">
+                    <button class="btn-secondary btn-sm" onclick="CatalogScreen.addRole()">+ Add Role</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      },
 
-  const totalTarget = p.targetH;
-  const eta = fmtDT(addBusinessHours(new Date(), totalTarget));
-  const banner = document.getElementById('resBanner');
-  banner.style.display = 'flex';
-  banner.classList.remove('res-standard','res-high','res-urgent');
-  banner.classList.add(p===PRIORITY.urgent?'res-urgent':p===PRIORITY.high?'res-high':'res-standard');
-  document.getElementById('resTarget').textContent = `≤ ${totalTarget} hours`;
-  document.getElementById('resETA').textContent = eta;
+      renderBusinessHoursTable(businessHours) {
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        return `
+          <div class="catalog-section">
+            <h3>Business Hours</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Timezone</th>
+                  <th>Days</th>
+                  <th>Start</th>
+                  <th>End</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${businessHours.map((bh, i) => `
+                  <tr>
+                    <td><input type="text" value="${bh.id}" onchange="CatalogScreen.updateBH(${i}, 'id', this.value)"></td>
+                    <td><input type="text" value="${bh.name}" onchange="CatalogScreen.updateBH(${i}, 'name', this.value)"></td>
+                    <td><input type="text" value="${bh.tz}" onchange="CatalogScreen.updateBH(${i}, 'tz', this.value)"></td>
+                    <td>
+                      <div class="checkbox-group">
+                        ${dayNames.map((day, dayIdx) => `
+                          <label>
+                            <input type="checkbox" ${bh.days.includes(dayIdx) ? 'checked' : ''} onchange="CatalogScreen.toggleBHDay(${i}, ${dayIdx}, this.checked)">
+                            ${day}
+                          </label>
+                        `).join('')}
+                      </div>
+                    </td>
+                    <td><input type="time" value="${bh.start}" onchange="CatalogScreen.updateBH(${i}, 'start', this.value)"></td>
+                    <td><input type="time" value="${bh.end}" onchange="CatalogScreen.updateBH(${i}, 'end', this.value)"></td>
+                    <td><button class="btn-danger btn-sm" onclick="CatalogScreen.deleteBH(${i})">Delete</button></td>
+                  </tr>
+                `).join('')}
+                <tr>
+                  <td colspan="7">
+                    <button class="btn-secondary btn-sm" onclick="CatalogScreen.addBH()">+ Add Business Hours</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      },
 
-  const factor = totalTarget/120;
-  const s2 = Math.max(1, Math.round(BASE.intake*factor));
-  const s3 = Math.max(1, Math.round(BASE.assign*factor));
-  const s4 = Math.max(1, Math.round(BASE.tech*factor));
-  const s5 = Math.max(1, Math.round(BASE.mgr*factor));
+      renderPrioritiesTable(priorities) {
+        return `
+          <div class="catalog-section">
+            <h3>Priorities</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Ack (mins)</th>
+                  <th>Start (mins)</th>
+                  <th>Resolve (mins)</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${priorities.map((p, i) => `
+                  <tr>
+                    <td><input type="text" value="${p.id}" onchange="CatalogScreen.updatePriority(${i}, 'id', this.value)"></td>
+                    <td><input type="text" value="${p.name}" onchange="CatalogScreen.updatePriority(${i}, 'name', this.value)"></td>
+                    <td><input type="number" value="${p.ackMins}" onchange="CatalogScreen.updatePriority(${i}, 'ackMins', parseInt(this.value))"></td>
+                    <td><input type="number" value="${p.startMins}" onchange="CatalogScreen.updatePriority(${i}, 'startMins', parseInt(this.value))"></td>
+                    <td><input type="number" value="${p.resolveMins}" onchange="CatalogScreen.updatePriority(${i}, 'resolveMins', parseInt(this.value))"></td>
+                    <td><button class="btn-danger btn-sm" onclick="CatalogScreen.deletePriority(${i})">Delete</button></td>
+                  </tr>
+                `).join('')}
+                <tr>
+                  <td colspan="6">
+                    <button class="btn-secondary btn-sm" onclick="CatalogScreen.addPriority()">+ Add Priority</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      },
 
-  document.getElementById('sd2').innerHTML =
-    `<strong>SLA:</strong> <b>${s2} hours</b><br/><strong>Status:</strong> Processing` +
-    (p.notifyMgr ? ` <span class="priority-ribbon" style="background:${p.accent};color:${p.color}">Mgr notified</span>`:``);
+      // CRUD operations
+      updateDept(idx, field, value) {
+        App.state.catalogs.departments[idx][field] = value;
+        App.saveCatalogs();
+      },
+      addDept() {
+        App.state.catalogs.departments.push({ id: 'new_dept', name: 'New Department' });
+        App.saveCatalogs();
+        this.render();
+      },
+      deleteDept(idx) {
+        if (confirm('Delete this department?')) {
+          App.state.catalogs.departments.splice(idx, 1);
+          App.saveCatalogs();
+          this.render();
+        }
+      },
 
-  const desc3 = p === PRIORITY.urgent ? 'Escalated directly to Senior Manager • FC09 auto-assigned'
-               : p === PRIORITY.high ? 'Escalated via prioritized channel to Senior Manager for assignment'
-               : 'Ticket assigned to H&D specialist based on expertise';
-  document.getElementById('desc3').textContent = desc3;
+      updateRole(idx, field, value) {
+        App.state.catalogs.roles[idx][field] = value;
+        App.saveCatalogs();
+      },
+      addRole() {
+        App.state.catalogs.roles.push({ id: 'new_role', name: 'New Role' });
+        App.saveCatalogs();
+        this.render();
+      },
+      deleteRole(idx) {
+        if (confirm('Delete this role?')) {
+          App.state.catalogs.roles.splice(idx, 1);
+          App.saveCatalogs();
+          this.render();
+        }
+      },
 
-  document.getElementById('sd3').innerHTML =
-    `<strong>SLA:</strong> <b>Processing within ${s3} hours</b><br/>` +
-    `<strong>Assigned to:</strong> ${
-      p.fastTrackFC09 ? 'FC09 • Senior Specialist (Auto)'
-                      : (p===PRIORITY.high ? 'Senior Manager (delegates to suitable specialist)' : 'Sarah Johnson')
-    }`;
-
-  document.getElementById('sd4').innerHTML = `<strong>SLA:</strong> <b>${s4} hours</b><br/><strong>Compliance:</strong> EU & UAE standards`;
-  document.getElementById('sd5').innerHTML = `<strong>SLA:</strong> <b>${s5} hours</b><br/><strong>Checklist:</strong> Complete`;
-
-  const skin = p === PRIORITY.urgent ? 'step-urgent' : p === PRIORITY.high ? 'step-high' : 'step-standard';
-  steps.forEach(s => s.classList.add(skin));
-  const title2 = document.querySelector('#step2 .step-title');
-  title2.innerHTML = `CSS Admin Intake${
-    p.escalate ? ` <span class="priority-ribbon" style="background:${p.accent};color:${p.color}">${p.name}</span>` : ''
-  }${p === PRIORITY.urgent ? ` <span class="exclaim">!</span>`:''}
-  <span id="esc2" class="esc-pill" style="display:${(p===PRIORITY.high||p===PRIORITY.urgent)?'inline-flex':'none'}"><span class="esc-dot"></span>Escalation</span>`;
-
-  ['esc3','esc4','esc5'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=(p===PRIORITY.high||p===PRIORITY.urgent)?'inline-flex':'none'; });
-  updateEscalations(p);
-
-  const t=[0, 2000*factor, 4000*factor, 6000*factor, 8000*factor, 10000*factor];
-  if (p.fastTrackFC09){ t[1]=400*factor; t[2]=1200*factor; }
-
-  setTimeout(()=>{act(0); document.getElementById('time1').textContent=new Date().toLocaleTimeString();}, t[0]);
-  setTimeout(()=>{next(0,1);}, t[1]); setTimeout(()=>{next(1,2);}, t[2]);
-  setTimeout(()=>{next(2,3);}, t[3]); setTimeout(()=>{next(3,4);}, t[4]);
-  setTimeout(()=>{next(4,5); setTimeout(()=>done(5), 800*factor);}, t[5]);
-
-  function act(i){ steps[i].classList.add('active'); }
-  function next(i,j){ steps[i].classList.remove('active'); steps[i].classList.add('completed'); steps[j].classList.add('active'); }
-  function done(i){ steps[i].classList.remove('active'); steps[i].classList.add('completed'); }
-}
-
-/* Escalation popups */
-function updateEscalations(p){
-  const isEsc = (p===PRIORITY.high || p===PRIORITY.urgent);
-  document.getElementById('esc2_notif').textContent = p===PRIORITY.urgent ? 'Mgr + Senior Mgr (Email & MS Teams, immediate)' : 'Mgr (Email & MS Teams, immediate)';
-  document.getElementById('esc2_route').textContent = p===PRIORITY.urgent ? 'Fast route with priority flag' : 'Priority flag in queue';
-  document.getElementById('esc2_sla').textContent = `Step window: ${Math.max(1, Math.round(BASE.intake*(p.targetH/120)))}h`;
-
-  document.getElementById('esc3_assignee').textContent = p.fastTrackFC09 ? 'FC09 • Senior Specialist (auto-assigned)' : 'Senior Manager (delegates to suitable specialist)';
-  document.getElementById('esc3_signals').textContent = p.fastTrackFC09 ? 'Pager/Teams alert to FC09 + coordinator' : 'Teams alert to coordinator & senior pool';
-  document.getElementById('esc3_rem').textContent = p===PRIORITY.urgent ? 'Reminders every 60 min until accepted' : 'Reminders every 2 hours';
-
-  document.getElementById('esc4_pri').textContent = p===PRIORITY.urgent ? 'Marked URGENT in reviewer’s queue' : 'Marked HIGH in reviewer’s queue';
-  document.getElementById('esc4_rem').textContent = p===PRIORITY.urgent ? 'SLA guard: T-6h, T-3h, T-1h alerts' : 'SLA guard: T-12h, T-6h alerts';
-  document.getElementById('esc4_ch').textContent = 'Email + MS Teams (channel mention)';
-
-  document.getElementById('esc5_appr').textContent = p===PRIORITY.urgent ? 'Senior manager (auto-CC, can approve)' : 'Manager (auto-CC senior for visibility)';
-  document.getElementById('esc5_notif').textContent = p===PRIORITY.urgent ? 'Email + Teams + mobile push (if enabled)' : 'Email + Teams';
-  document.getElementById('esc5_guard').textContent = p===PRIORITY.urgent ? 'Deadline guards: T-4h, T-2h, T-30m' : 'Deadline guards: T-12h, T-4h';
-
-  [['esc2','pop2'],['esc3','pop3'],['esc4','pop4'],['esc5','pop5']].forEach(([pill,pop])=>{
-    const pillEl = document.getElementById(pill); const popEl  = document.getElementById(pop);
-    if (pillEl) pillEl.onclick = (e)=>{ if(!isEsc) return; e.stopPropagation(); closeAllPops(); popEl.style.display='block'; };
-  });
-  document.querySelectorAll('.esc-close').forEach(btn=>{
-    btn.onclick = (e)=>{ const id=e.target.getAttribute('data-close'); document.querySelector(id).style.display='none'; e.stopPropagation(); };
-  });
-  document.addEventListener('click', closeAllPops, { once:true });
-}
-function closeAllPops(){ document.querySelectorAll('.esc-pop').forEach(p=>p.style.display='none'); }
-
-/* ===== Live Workflow ===== */
-let playing = true, scale = 1, panX = 0, panY = 0;
-let svg, root, tokensLayer, labelsLayer, host;
-
-function wireLiveControls(){
-  document.getElementById('btnPlay').onclick = () => { playing = !playing; document.getElementById('btnPlay').textContent = playing ? 'Pause' : 'Play'; };
-  document.getElementById('btnZoomIn').onclick = () => { zoomAt(1.1); };
-  document.getElementById('btnZoomOut').onclick = () => { zoomAt(0.9); };
-  document.getElementById('btnReset').onclick = resetFlow;
-  document.getElementById('btnSubmitDemo').onclick = () => spawnManaged();
-  document.getElementById('livePriority').onchange = (e) => { manualPriorityMode = e.target.value; };
-}
-
-function cacheSVGRefs(){
-  svg = document.getElementById('svg');
-  root = document.getElementById('zoomRoot');
-  tokensLayer = document.getElementById('tokens');
-  labelsLayer = document.getElementById('labels');
-  host = document.getElementById('svg');
-}
-
-function applyTransform(){ root.setAttribute('transform',`translate(${panX},${panY}) scale(${scale})`); }
-function zoomAt(f){ scale=Math.min(1.8,Math.max(0.7,scale*f)); applyTransform(); }
-
-let dragging=false, lastX=0, lastY=0;
-function enablePanZoom(){
-  host.addEventListener('mousedown',e=>{dragging=true; lastX=e.clientX; lastY=e.clientY; host.classList.add('dragging');});
-  window.addEventListener('mouseup',()=>{dragging=false; host.classList.remove('dragging');});
-  window.addEventListener('mousemove',e=>{
-    if(!dragging) return;
-    const dx=e.clientX-lastX, dy=e.clientY-lastY; panX+=dx; panY+=dy; lastX=e.clientX; lastY=e.clientY; applyTransform();
-  });
-}
-
-/* Node map */
-const N = {
-  intake:{x:600,y:105}, router:{x:600,y:225},
-  SS:{coord:{x:230,y:345}, A:{x:220,y:463}, B:{x:280,y:543}, color:getCSS('--SS')},
-  HD:{coord:{x:470,y:345}, A:{x:460,y:463}, B:{x:520,y:543}, color:getCSS('--HD')},
-  FT:{coord:{x:710,y:345}, A:{x:700,y:463}, B:{x:760,y:543}, color:getCSS('--FT')},
-  MD:{coord:{x:950,y:345}, A:{x:940,y:463}, B:{x:1000,y:543}, color:getCSS('--MD')},
-  done:{x:600,y:645}
-};
-function getCSS(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
-
-/* Priority helpers */
-const PR = PRIORITY;
-function prColor(p){ return p.color; }
-function prAccent(p){ return p.accent; }
-
-/* Random helpers */
-const rnd = (a,b)=> Math.floor(Math.random()*(b-a+1))+a;
-const pick = (arr)=> arr[rnd(0,arr.length-1)];
-const rfloat = (a,b)=> Math.random()*(b-a)+a;
-
-/* Token management & scheduling */
-const branches=['SS','HD','FT','MD'];
-const tokens=[];
-
-/* Rolling window + since reset state */
-const WINDOW_MIN = 15;
-let resetStartedAt = new Date();
-let createdSinceReset = 0;
-let completedSinceReset = 0;
-const completedHistory = []; // { createdAt, completedAt, slaTargetH, branch, originBU, prio, reqType, simAgeH }
-
-let targetConcurrent = 12;
-let manualPriorityMode = 'mix';
-let waveSpawned = 0;
-let quotaUrgent = 1, usedUrgent = 0;
-let quotaHigh   = 2, usedHigh   = 0;
-let schedulerTimer = null;
-
-function resetWave(){
-  waveSpawned = 0;
-  quotaUrgent = rnd(1,2);
-  quotaHigh   = rnd(2,3);
-  usedUrgent = 0;
-  usedHigh   = 0;
-}
-function choosePriorityForSpawn(){
-  if (manualPriorityMode !== 'mix'){
-    return PR[manualPriorityMode] || PR.standard;
-  }
-  if (usedUrgent < quotaUrgent) { usedUrgent++; return PR.urgent; }
-  if (usedHigh   < quotaHigh  ) { usedHigh++  ; return PR.high;   }
-  return PR.standard;
-}
-function ensureBacklog(){
-  const alive = tokens.filter(t=>t.alive).length;
-  if (alive < targetConcurrent){ spawnManaged(); }
-  const nextIn = rnd(1200, 2800);
-  schedulerTimer = setTimeout(ensureBacklog, nextIn);
-}
-function randomReqType(branch){
-  const SS = ['Recipe Standard','Code Cleanup','Yield Update','Allergen Tag Fix'];
-  const HD = ['Allergen Review','Nutritional Analysis','Health Claim'];
-  const FT = ['Shelf Life','Spec Review','Packaging Test'];
-  const MD = ['Menu Costing','Cycle Update','Concept Sketch'];
-  const map={SS:SS,HD:HD,FT:FT,MD:MD};
-  return pick(map[branch]||['Request']);
-}
-const ORIGINS = ["East Wing","West Wing","DIA Louges","Commercial"];
-
-/* ===== Simulated time engine ===== */
-const AGE_RATE = 1/10; // 1s = 10m
-function simHoursSince(startMs){ return ((Date.now() - startMs) * AGE_RATE) / (1000*60); }
-
-function initialSimAgeHoursFor(prio){
-  if (prio === PRIORITY.urgent)   return rfloat(4,10);
-  if (prio === PRIORITY.high)     return rfloat(2,6);
-  return rfloat(0,4);
-}
-function bumpHoursForStage(prio, nextIdx){
-  const bump = (a,b)=> rfloat(a,b);
-  if (prio === PRIORITY.urgent){
-    if (nextIdx===2) return bump(3,5);
-    if (nextIdx===3) return bump(4,7);
-    if (nextIdx===4) return bump(5,10);
-  } else if (prio === PRIORITY.high){
-    if (nextIdx===2) return bump(1,3);
-    if (nextIdx===3) return bump(2,4);
-    if (nextIdx===4) return bump(3,6);
-  } else {
-    if (nextIdx===2) return bump(0.5,1.5);
-    if (nextIdx===3) return bump(1,2);
-    if (nextIdx===4) return bump(1,3);
-  }
-  return 0;
-}
-function tokenSimAgeH(tok){
-  return tok.simSeedH + (simHoursSince(tok.simStartMs)/60) + tok.simBumpH;
-}
-
-/* ===== Spawning ===== */
-function spawnManaged(){
-  if (waveSpawned >= targetConcurrent) resetWave();
-  const p = choosePriorityForSpawn(); waveSpawned++;
-  const b = pick(branches);
-  const id = b + '-' + (1000 + Math.floor(Math.random()*9000));
-  const type = randomReqType(b);
-  newToken(id, b, p, type);
-}
-
-/* Build a token */
-function newToken(id, branchKey, priority, reqType='Request'){
-  const g=doc('g'); g.classList.add('token'); g.setAttribute('data-id',id);
-  const r=doc('rect'); r.setAttribute('width',52); r.setAttribute('height',22);
-  const t=doc('text'); t.setAttribute('text-anchor','middle'); t.textContent=id.split('-')[0];
-
-  const badgeGroup = doc('g'); const circ = doc('circle'); const mark = doc('text');
-  const isUrgent = priority === PR.urgent; const isHigh = priority === PR.high; const showBadge = isUrgent || isHigh;
-  if (showBadge){
-    circ.setAttribute('r','6'); circ.setAttribute('fill', isUrgent ? '#dc3545' : '#ffd400');
-    circ.setAttribute('stroke', '#333'); circ.setAttribute('stroke-width','0.5');
-    mark.textContent = '!'; mark.setAttribute('font-size','9'); mark.setAttribute('font-weight','800');
-    mark.setAttribute('text-anchor','middle'); mark.setAttribute('fill', isUrgent ? '#fff' : '#333');
-    badgeGroup.append(circ, mark);
-  }
-  g.append(r,t,badgeGroup); tokensLayer.appendChild(g);
-
-  const tl=timeline(branchKey, priority);
-
-  const tok={
-    id, branch: branchKey, prio: priority,
-    color:N[branchKey].color,
-    node:{ g, rect:r, text:t, badge:badgeGroup, badgeCirc:circ, badgeMark:mark },
-    tl, idx:0, alive:true,
-    createdAt: new Date(),
-    completedAt: null,
-    originBU: pick(ORIGINS),
-    slaTargetH: priority.targetH,
-    reqType,
-
-    // simulated time state
-    simSeedH: initialSimAgeHoursFor(priority),
-    simStartMs: Date.now(),
-    simBumpH: 0
-  };
-  createdSinceReset++;
-
-  setPos(tok.node, tl[0].p.x, tl[0].p.y, tok.prio); setColor(tok.node,'intake',tok.color,tok.prio);
-
-  function layoutBadge(x,y){
-    if (!showBadge) return;
-    const bx = x + 20; const by = y - 10; tok.node.badge.setAttribute('transform', `translate(${bx},${by})`);
-  }
-  tok.layoutBadge = layoutBadge; layoutBadge(tl[0].p.x, tl[0].p.y);
-
-  label('New request', tl[0].p.x, tl[0].p.y, '#000', prAccent(priority), 900);
-  tokens.push(tok);
-  scheduleMetricsUpdate();
-  return tok;
-}
-function doc(tag){return document.createElementNS(svg.namespaceURI,tag);}
-function setPos(node,x,y,prio){
-  node.rect.setAttribute('x',x-26); node.rect.setAttribute('y',y-11);
-  node.text.setAttribute('x',x);    node.text.setAttribute('y',y+3);
-}
-function setColor(node,phase,branchColor,prio){
-  let fill = '#ffd400';
-  if(phase==='intake') fill = prAccent(prio);
-  if(phase==='branch') fill = branchColor;
-  if(prio === PR.high && phase!=='branch') fill = '#fff6ec';
-  if(prio === PR.urgent && phase!=='branch') fill = '#fff1f3';
-  node.rect.setAttribute('fill', fill);
-  node.rect.setAttribute('stroke', prColor(prio));
-  node.rect.setAttribute('stroke-width', 1.2);
-}
-
-/* Timeline */
-function timeline(branch, prio){
-  const SPEED = 2;
-  const f = ((prio?.targetH || 120) / 120) * SPEED;
-
-  const tl = [
-    {p:N.intake,  hold: 900*f, travel:   0,     phase:'intake', badge: prio.notifyMgr ? 'Senior mgr CC' : null},
-    {p:N.router,  hold: 700*f, travel:3200*f,   phase:'yellow', badge: prio.escalate ? 'Escalated' : null},
-    {p:N[branch].coord, hold: 800*f, travel:3800*f, phase:'branch'},
-    {p:N[branch].A,     hold:2400*f, travel:1800*f, phase:'branch', badge:'In progress'},
-    {p:N[branch].B,     hold:1200*f, travel:1600*f, phase:'branch'},
-    {p:N.done,          hold: 800*f, travel:2100*f, phase:'branch', complete:true}
-  ];
-
-  if (prio === PR.urgent) {
-    tl[0].hold = 300*f;
-    tl[1].travel = 900*f;
-    tl[2].hold = 400*f;
-    tl[3].badge = 'FC09 assigned';
-  }
-
-  return tl;
-}
-
-/* Animation loop — applies per-stage simulated bumps */
-function animate(ts){
-  requestAnimationFrame(animate);
-  if(!playing) return;
-  if(!animate.last) animate.last=ts;
-  const dt=ts-animate.last; animate.last=ts;
-
-  tokens.forEach(tok=>{
-    if(!tok.alive) return;
-    const seg=tok.tl[tok.idx], next=tok.tl[tok.idx+1];
-    if(seg.hold>0){ seg.hold-=dt; if(seg.hold<=0 && seg.badge){ label(seg.badge, seg.p.x, seg.p.y, '#fff', tok.color, 900); } return; }
-    seg.elapsed=(seg.elapsed||0)+dt;
-    const u=Math.min(1, seg.travel? seg.elapsed/seg.travel : 1);
-    const x=next ? seg.p.x + (next.p.x - seg.p.x)*u : seg.p.x;
-    const y=next ? seg.p.y + (next.p.y - seg.p.y)*u : seg.p.y;
-    setColor(tok.node, seg.phase==='branch'?'branch':(seg.phase==='intake'?'intake':'yellow'), tok.color, tok.prio);
-    setPos(tok.node,x,y,tok.prio);
-    if (tok.layoutBadge) tok.layoutBadge(x,y);
-    if(u>=1){
-      const nextIdx = tok.idx+1;
-      if (nextIdx===2 || nextIdx===3 || nextIdx===4){
-        tok.simBumpH += bumpHoursForStage(tok.prio, nextIdx);
-      }
-      tok.idx++;
-      if(tok.idx>=tok.tl.length-1){
-        label('✓ Complete', N.done.x, N.done.y, '#fff', '#28a745', 900);
-        tok.completedAt = new Date();
-        const simAgeAtComplete = tokenSimAgeH(tok);
-        tok.node.g.remove(); tok.alive=false;
-        completedSinceReset++;
-        completedHistory.push({
-          createdAt: tok.createdAt,
-          completedAt: tok.completedAt,
-          slaTargetH: tok.slaTargetH,
-          branch: tok.branch,
-          originBU: tok.originBU,
-          prio: tok.prio,
-          reqType: tok.reqType,
-          simAgeH: simAgeAtComplete
+      updateBH(idx, field, value) {
+        App.state.catalogs.businessHours[idx][field] = value;
+        App.saveCatalogs();
+      },
+      toggleBHDay(idx, day, checked) {
+        const days = App.state.catalogs.businessHours[idx].days;
+        if (checked && !days.includes(day)) {
+          days.push(day);
+          days.sort((a, b) => a - b);
+        } else if (!checked) {
+          const i = days.indexOf(day);
+          if (i > -1) days.splice(i, 1);
+        }
+        App.saveCatalogs();
+      },
+      addBH() {
+        App.state.catalogs.businessHours.push({
+          id: 'new_bh',
+          name: 'New Profile',
+          tz: 'Asia/Dubai',
+          days: [1, 2, 3, 4, 5],
+          start: '08:00',
+          end: '18:00'
         });
-        scheduleMetricsUpdate();
+        App.saveCatalogs();
+        this.render();
+      },
+      deleteBH(idx) {
+        if (confirm('Delete this business hours profile?')) {
+          App.state.catalogs.businessHours.splice(idx, 1);
+          App.saveCatalogs();
+          this.render();
+        }
+      },
+
+      updatePriority(idx, field, value) {
+        App.state.catalogs.priorities[idx][field] = value;
+        App.saveCatalogs();
+      },
+      addPriority() {
+        App.state.catalogs.priorities.push({
+          id: 'new_priority',
+          name: 'New Priority',
+          ackMins: 60,
+          startMins: 120,
+          resolveMins: 480
+        });
+        App.saveCatalogs();
+        this.render();
+      },
+      deletePriority(idx) {
+        if (confirm('Delete this priority?')) {
+          App.state.catalogs.priorities.splice(idx, 1);
+          App.saveCatalogs();
+          this.render();
+        }
+      },
+
+      resetToDefaults() {
+        if (confirm('Reset all catalog data to defaults? This will overwrite your changes.')) {
+          App.resetCatalogs();
+        }
       }
-    }
-  });
-}
-requestAnimationFrame(animate);
+    };
 
-/* Reset + scheduler bootstrap */
-function resetFlow(){
-  cacheSVGRefs();
-  wireLiveControls();
-  enablePanZoom();
-  wireStageTips(); // hover info boxes
+    // ============================
+    // BUILD SCREEN
+    // ============================
+    const BuildScreen = {
+      steps: [],
 
-  scale=1; panX=0; panY=0; applyTransform();
-  animate.last=null;
-  [...tokensLayer.children].forEach(n=>n.remove());
-  [...labelsLayer.children].forEach(n=>n.remove());
-  tokens.length=0;
+      render() {
+        // Populate dropdowns
+        this.populateDropdowns();
 
-  targetConcurrent = rnd(10,15);
-  resetWave();
+        // Load draft if exists
+        if (App.state.draftWorkflow) {
+          this.loadWorkflow(App.state.draftWorkflow);
+        } else {
+          // Initialize with empty workflow
+          this.steps = [];
+          this.renderSteps();
+          this.renderSLAPolicy();
+        }
+      },
 
-  resetStartedAt = new Date();
-  createdSinceReset = 0;
-  completedSinceReset = 0;
-  completedHistory.length = 0;
-  updateSinceResetBanner();
+      populateDropdowns() {
+        const { departments, roles, businessHours } = App.state.catalogs;
 
-  const seedCount = Math.min(8, targetConcurrent);
-  for (let i=0;i<Math.ceil(seedCount/2);i++) spawnManaged();
-  for (let i=0;i<Math.floor(seedCount/2);i++) setTimeout(spawnManaged, 400 + i*rnd(250,600));
+        // Departments
+        const deptSelect = document.getElementById('wf-department');
+        deptSelect.innerHTML = '<option value="">Select department...</option>' +
+          departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
 
-  if (schedulerTimer) clearTimeout(schedulerTimer);
-  ensureBacklog();
-}
-function updateSinceResetBanner(){
-  document.getElementById('sinceResetStamp').textContent = fmtDT(resetStartedAt);
-}
+        // Business Hours
+        const bhSelect = document.getElementById('wf-business-hours');
+        bhSelect.innerHTML = '<option value="">Select business hours...</option>' +
+          businessHours.map(bh => `<option value="${bh.id}">${bh.name}</option>`).join('');
 
-/* Small label helper */
-function label(text,x,y,fill='#fff',bg='#000',ms=900){
-  if (labelsLayer.childElementCount > 16) return;
-  const g=document.createElementNS(svg.namespaceURI,'g');
-  const r=document.createElementNS(svg.namespaceURI,'rect'), t=document.createElementNS(svg.namespaceURI,'text');
-  t.textContent=text; t.setAttribute('x',x); t.setAttribute('y',y-16); t.setAttribute('text-anchor','middle'); t.setAttribute('fill',fill);
-  t.setAttribute('font-size','11'); t.setAttribute('font-weight','700');
-  const w=Math.max(60,text.length*7+12), h=20;
-  r.setAttribute('x',x-w/2); r.setAttribute('y',y-16-h+6); r.setAttribute('width',w); r.setAttribute('height',h); r.setAttribute('rx','8'); r.setAttribute('fill',bg); r.setAttribute('opacity','0.92');
-  g.append(r,t); labelsLayer.appendChild(g); setTimeout(()=>g.remove(),ms);
-}
+        // Owner Role
+        const ownerSelect = document.getElementById('wf-owner');
+        ownerSelect.innerHTML = '<option value="">Select owner role...</option>' +
+          roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+      },
 
-/* ===== Metrics engine ===== */
-let metricsTimer = null;
-function scheduleMetricsUpdate(){
-  if (metricsTimer) return;
-  metricsTimer = setTimeout(()=>{ metricsTimer=null; updateMetrics(); }, 120);
-}
+      loadWorkflow(workflow) {
+        document.getElementById('wf-department').value = workflow.departmentId || '';
+        document.getElementById('wf-work-type').value = workflow.workType || '';
+        document.getElementById('wf-business-hours').value = workflow.businessHoursId || '';
+        document.getElementById('wf-owner').value = workflow.ownerRoleId || '';
 
-function updateMetrics(){
-  // window labels
-  document.getElementById('windowLen').textContent = WINDOW_MIN;
-  document.getElementById('winLenA').textContent = WINDOW_MIN;
-  document.getElementById('winLenB').textContent = WINDOW_MIN;
+        this.steps = workflow.steps || [];
+        this.renderSteps();
+        this.renderSLAPolicy(workflow.slaByPriority);
+      },
 
-  // since reset banner
-  const now = new Date();
-  document.getElementById('sinceResetElapsed').textContent = fmtElapsed(now - resetStartedAt);
-  document.getElementById('sinceCreated').textContent = createdSinceReset;
-  document.getElementById('sinceCompleted').textContent = completedSinceReset;
+      renderSteps() {
+        const container = document.getElementById('steps-list');
+        const { roles } = App.state.catalogs;
 
-  const active = tokens.filter(t => t.alive);
-  const done   = completedHistory.slice();
+        if (this.steps.length === 0) {
+          container.innerHTML = '<p class="text-muted">No steps yet. Click "+ Add Step" to begin.</p>';
+          return;
+        }
 
-  // Live counters
-  setText('mActive', String(active.length));
+        container.innerHTML = this.steps.map((step, idx) => `
+          <div class="step-item">
+            <div class="step-number">${idx + 1}</div>
+            <div>
+              <input type="text" placeholder="Step title *" value="${step.title || ''}"
+                onchange="BuildScreen.updateStep(${idx}, 'title', this.value)" required>
+            </div>
+            <div>
+              <select onchange="BuildScreen.updateStep(${idx}, 'roleId', this.value)" required>
+                <option value="">Select role...</option>
+                ${roles.map(r => `<option value="${r.id}" ${step.roleId === r.id ? 'selected' : ''}>${r.name}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <input type="number" placeholder="Minutes *" value="${step.expectedMins || ''}" min="1"
+                onchange="BuildScreen.updateStep(${idx}, 'expectedMins', parseInt(this.value))" required>
+            </div>
+            <div class="step-controls">
+              <button type="button" class="btn-secondary btn-sm" onclick="BuildScreen.moveStep(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
+              <button type="button" class="btn-secondary btn-sm" onclick="BuildScreen.moveStep(${idx}, 1)" ${idx === this.steps.length - 1 ? 'disabled' : ''}>↓</button>
+              <button type="button" class="btn-danger btn-sm" onclick="BuildScreen.deleteStep(${idx})">Delete</button>
+            </div>
+          </div>
+        `).join('');
+      },
 
-  // Since reset (REAL)
-  const avgDaysAll = done.length ? avg(done.map(t => (t.completedAt - t.createdAt)/(1000*60*60*24))) : null;
-  setText('mAvgDays', avgDaysAll==null ? '—' : avgDaysAll.toFixed(1));
-  const slaOkAll = done.filter(t => businessHoursBetween(t.createdAt, t.completedAt) <= t.slaTargetH).length;
-  const slaPctAll = done.length ? Math.round((slaOkAll/done.length)*100) : null;
-  setText('mSla', slaPctAll==null ? '—' : (slaPctAll + '%'));
+      renderSLAPolicy(existingSLA = {}) {
+        const container = document.getElementById('sla-policy-rows');
+        const { priorities, roles } = App.state.catalogs;
 
-  // Rolling window (REAL)
-  const windowStart = new Date(now.getTime() - WINDOW_MIN*60*1000);
-  const cutoff = new Date(now.getTime() - 12*60*60*1000);
-  while (completedHistory.length && completedHistory[0].completedAt < cutoff) completedHistory.shift();
+        container.innerHTML = priorities.map(p => {
+          const sla = existingSLA[p.id] || {
+            ackMins: p.ackMins,
+            startMins: p.startMins,
+            resolveMins: p.resolveMins,
+            escalate: {}
+          };
 
-  const winDone = done.filter(t => t.completedAt >= windowStart);
-  const avgDaysWin = winDone.length ? avg(winDone.map(t => (t.completedAt - t.createdAt)/(1000*60*60*24))) : null;
-  setText('mAvgDaysWin', avgDaysWin==null ? '—' : avgDaysWin.toFixed(1));
-  const slaOkWin = winDone.filter(t => businessHoursBetween(t.createdAt, t.completedAt) <= t.slaTargetH).length;
-  const slaPctWin = winDone.length ? Math.round((slaOkWin/winDone.length)*100) : null;
-  setText('mSlaWin', slaPctWin==null ? '—' : (slaPctWin + '%'));
+          return `
+            <tr>
+              <td><strong>${p.name}</strong></td>
+              <td><input type="number" value="${sla.ackMins || ''}" data-priority="${p.id}" data-field="ackMins"></td>
+              <td><input type="number" value="${sla.startMins || ''}" data-priority="${p.id}" data-field="startMins"></td>
+              <td><input type="number" value="${sla.resolveMins || ''}" data-priority="${p.id}" data-field="resolveMins"></td>
+              <td><input type="number" value="${sla.escalate?.afterMins || ''}" data-priority="${p.id}" data-field="escalateAfterMins" placeholder="Optional"></td>
+              <td>
+                <select data-priority="${p.id}" data-field="escalateToRoleId">
+                  <option value="">None</option>
+                  ${roles.map(r => `<option value="${r.id}" ${sla.escalate?.toRoleId === r.id ? 'selected' : ''}>${r.name}</option>`).join('')}
+                </select>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      },
 
-  // Priority Queue (SIMULATED AGE)
-  const prRank = p => p===PR.urgent?0 : p===PR.high?1 : 2;
-  const priorityRows = active
-    .slice()
-    .sort((a,b)=> prRank(a.prio)-prRank(b.prio) || (a.createdAt - b.createdAt))
-    .slice(0,8)
-    .map(t => row([
-      `<strong>${t.id}</strong>`,
-      escapeHTML(t.reqType || 'Request'),
-      badge(t.prio),
-      ageStr(tokenSimAgeH(t) * 3600000)
-    ])).join('');
-  setHTML('tbodyPriority', priorityRows || `<tr><td colspan="4">No active items</td></tr>`);
+      addStep() {
+        this.steps.push({
+          id: 'step_' + Date.now(),
+          title: '',
+          roleId: '',
+          expectedMins: null
+        });
+        this.renderSteps();
+      },
 
-  // Dept Workload (SIMULATED AVG HOURS)
-  const depts = ['SS','HD','FT','MD'];
-  const deptRows = depts.map(d=>{
-    const a = active.filter(t=>t.branch===d);
-    const avgHrs = a.length ? avg(a.map(tokenSimAgeH)) : 0;
-    return row([deptName(d), a.length, a.length?avgHrs.toFixed(1):'—']);
-  }).join('');
-  setHTML('tbodyDeptWorkload', deptRows || `<tr><td colspan="3">—</td></tr>`);
+      updateStep(idx, field, value) {
+        this.steps[idx][field] = value;
+      },
 
-  // Departmental Overtime proxy
-  const fte = {SS:12,HD:8,FT:6,MD:10};
-  const otRows = depts.map(d=>{
-    const open = active.filter(t=>t.branch===d).length;
-    const util = Math.min(1, open / Math.max(1, fte[d]/2));
-    const ot = Math.max(0, Math.round((open - fte[d]*0.6) * 1.7));
-    return row([deptName(d), fte[d], Math.round(util*100)+'%', ot+' hrs']);
-  }).join('');
-  setHTML('tbodyOvertime', otRows);
+      deleteStep(idx) {
+        if (confirm('Delete this step?')) {
+          this.steps.splice(idx, 1);
+          this.renderSteps();
+        }
+      },
 
-  // BU Analysis (SIMULATED AVG DAYS for completed items)
-  const BU_LIST = ["East Wing","West Wing","DIA Louges","Commercial"];
-  const buRows = BU_LIST.map(bu=>{
-    const all = tokens.filter(t=>t.originBU===bu).length + completedHistory.filter(t=>t.originBU===bu).length;
-    const buDone = completedHistory.filter(t=>t.originBU===bu);
-    const avgDaysSim = buDone.length ? avg(buDone.map(t => t.simAgeH/24)) : null;
-    const buSlaOk = buDone.filter(t => businessHoursBetween(t.createdAt, t.completedAt) <= t.slaTargetH).length;
-    const buSlaPct = buDone.length ? Math.round((buSlaOk/buDone.length)*100)+'%' : '—';
-    return row([displayBU(bu), all, (avgDaysSim==null?'—':avgDaysSim.toFixed(1)+' days'), buSlaPct]);
-  }).join('');
-  setHTML('tbodyBU', buRows);
-}
+      moveStep(idx, direction) {
+        const newIdx = idx + direction;
+        if (newIdx < 0 || newIdx >= this.steps.length) return;
 
-/* helpers */
-function setText(id, val){ const el=document.getElementById(id); if(el) el.textContent=val; }
-function setHTML(id, val){ const el=document.getElementById(id); if(el) el.innerHTML=val; }
-function row(cells){ return `<tr>${cells.map(c=>`<td>${c}</td>`).join('')}</tr>`; }
-function avg(arr){ return arr.reduce((a,b)=>a+b,0)/Math.max(1,arr.length); }
-function ageStr(ms){ const h=Math.floor(ms/3600000); const d=Math.floor(h/24); return d? `${d} d` : `${h} hrs`; }
-function deptName(k){ return ({SS:'S&S',HD:'H&D',FT:'Food Tech',MD:'Menu Dev'})[k]||k; }
-function badge(p){
-  const cls = p===PR.urgent?'priority-urgent' : p===PR.high?'priority-high':'priority-normal';
-  const txt = p.name;
-  return `<span class="priority-badge ${cls}">${txt}</span>`;
-}
-function escapeHTML(s){ return String(s).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
-function displayBU(s){ return s==='DIA Louges'?'DIA Lounges':s; }
+        [this.steps[idx], this.steps[newIdx]] = [this.steps[newIdx], this.steps[idx]];
+        this.renderSteps();
+      },
 
-/* ===== Stage tooltips (live stats) ===== */
-function wireStageTips(){
-  const stageGs = document.querySelectorAll('#stages g[data-key]');
-  const tip = document.getElementById('tip');
-  const wrap = document.getElementById('liveWrap');
+      validate() {
+        const workflow = this.captureWorkflow();
+        const errors = Validator.validateWorkflow(workflow, App.state.catalogs);
 
-  const BR_FROM_STAGE = (key)=>{
-    if (key.startsWith('SS')) return 'SS';
-    if (key.startsWith('HD')) return 'HD';
-    if (key.startsWith('FT')) return 'FT';
-    if (key.startsWith('MD')) return 'MD';
-    return null; // intake/router/done
-  };
-  const titleFor = (g)=>{
-    const txt = g.querySelector('text');
-    return txt ? txt.textContent.trim() : g.getAttribute('data-key');
-  };
+        const msgContainer = document.getElementById('validation-messages');
+        if (errors.length === 0) {
+          msgContainer.innerHTML = '<li style="background:#d4edda;border-color:#28a745;color:#155724;padding:10px;">✓ Validation passed! No errors found.</li>';
+        } else {
+          msgContainer.innerHTML = errors.map(err =>
+            `<li class="${err.severity}">${err.message}</li>`
+          ).join('');
+        }
 
-  function buildTipHTML(key){
-    const title = key==='INTAKE' ? 'Unified Intake'
-                : key==='ROUTER' ? 'Router'
-                : key==='DONE'   ? 'Delivery & Done'
-                : titleFor(document.querySelector(`#stages g[data-key="${key}"]`));
+        // Scroll to messages
+        msgContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-    const branch = BR_FROM_STAGE(key);
-    const now = new Date();
-    const sinceWin = new Date(now.getTime() - WINDOW_MIN*60*1000);
+        return errors.filter(e => e.severity === 'error').length === 0;
+      },
 
-    const open = branch ? tokens.filter(t=>t.alive && t.branch===branch) : tokens.filter(t=>t.alive);
-    const doneWin = branch
-      ? completedHistory.filter(t=>t.branch===branch && t.completedAt >= sinceWin)
-      : completedHistory.filter(t=>t.completedAt >= sinceWin);
+      saveDraft() {
+        if (!this.validate()) {
+          alert('Please fix validation errors before saving.');
+          return;
+        }
 
-    const slaOk = doneWin.filter(t => businessHoursBetween(t.createdAt, t.completedAt) <= t.slaTargetH).length;
-    const slaPct = doneWin.length ? Math.round((slaOk/doneWin.length)*100)+'%' : '—';
-    const avgDaysReal = doneWin.length ? avg(doneWin.map(t => (t.completedAt - t.createdAt)/(1000*60*60*24))) : null;
+        const workflow = this.captureWorkflow();
+        App.saveDraft(workflow);
+        alert('Draft saved successfully!');
+      },
 
-    const avgAgeH = open.length ? avg(open.map(tokenSimAgeH)) : null;
+      clear() {
+        if (confirm('Clear the current workflow? Unsaved changes will be lost.')) {
+          document.getElementById('workflow-form').reset();
+          this.steps = [];
+          this.renderSteps();
+          this.renderSLAPolicy();
+          document.getElementById('validation-messages').innerHTML = '';
+        }
+      },
 
-    const mix = {urgent:0, high:0, standard:0};
-    open.forEach(t=>{
-      if (t.prio===PR.urgent) mix.urgent++;
-      else if (t.prio===PR.high) mix.high++;
-      else mix.standard++;
-    });
+      captureWorkflow() {
+        const slaByPriority = {};
+        const priorities = App.state.catalogs.priorities;
 
-    return `
-      <div class="t">${escapeHTML(title)}</div>
-      <div class="row"><div class="k">Open (live)</div><div class="v">${open.length}</div></div>
-      <div class="row"><div class="k">Avg age</div><div class="v">${avgAgeH==null?'—':avgAgeH.toFixed(1)+' h'}</div></div>
-      <div class="row"><div class="k">15-min completes</div><div class="v">${doneWin.length}</div></div>
-      <div class="row"><div class="k">SLA (15-min)</div><div class="v">${slaPct}</div></div>
-      <div class="row"><div class="k">Avg complete</div><div class="v">${avgDaysReal==null?'—':avgDaysReal.toFixed(1)+' days'}</div></div>
-      <div class="row"><div class="k">Priority mix</div><div class="v">U:${mix.urgent} • H:${mix.high} • S:${mix.standard}</div></div>
-    `;
-  }
+        // Capture SLA policy from table
+        document.querySelectorAll('#sla-policy-rows tr').forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length === 0) return;
 
-  function placeTipNextToStage(g){
-    const wrapRect = wrap.getBoundingClientRect();
-    const stageRect = g.getBoundingClientRect();
+          const priorityId = inputs[0].dataset.priority;
+          const ackMins = parseInt(inputs[0].value) || 0;
+          const startMins = parseInt(inputs[1].value) || 0;
+          const resolveMins = parseInt(inputs[2].value) || 0;
+          const escalateAfterMins = parseInt(inputs[3].value) || null;
+          const escalateToRoleId = inputs[4].value || null;
 
-    // Default: to the right of the stage, vertically aligned to its top
-    let left = stageRect.right - wrapRect.left + 8;
-    let top  = stageRect.top   - wrapRect.top;
+          slaByPriority[priorityId] = {
+            ackMins,
+            startMins,
+            resolveMins
+          };
 
-    // measure tip
-    const tipW = tip.offsetWidth;
-    const tipH = tip.offsetHeight;
+          if (escalateAfterMins && escalateToRoleId) {
+            slaByPriority[priorityId].escalate = {
+              afterMins: escalateAfterMins,
+              toRoleId: escalateToRoleId
+            };
+          }
+        });
 
-    // If overflowing right, flip to left side
-    if (left + tipW > wrapRect.width - 8) {
-      left = stageRect.left - wrapRect.left - tipW - 8;
-    }
-    // If overflowing bottom, nudge up to fit
-    if (top + tipH > wrapRect.height - 8) {
-      top = stageRect.bottom - wrapRect.top - tipH;
-    }
-    // Keep within top/left bounds
-    left = Math.max(8, left);
-    top  = Math.max(8, top);
+        return {
+          id: App.state.draftWorkflow?.id || 'workflow_' + Date.now(),
+          departmentId: document.getElementById('wf-department').value,
+          workType: document.getElementById('wf-work-type').value,
+          businessHoursId: document.getElementById('wf-business-hours').value,
+          ownerRoleId: document.getElementById('wf-owner').value,
+          steps: this.steps,
+          slaByPriority
+        };
+      }
+    };
 
-    tip.style.left = left + 'px';
-    tip.style.top  = top + 'px';
-  }
+    // ============================
+    // REVIEW SCREEN
+    // ============================
+    const ReviewScreen = {
+      render() {
+        const workflow = App.state.sharedWorkflow || App.state.draftWorkflow;
+        if (!workflow) {
+          document.getElementById('review-content').innerHTML = '<p class="text-muted">No workflow to review. Create one in the Build screen first.</p>';
+          return;
+        }
 
-  stageGs.forEach(g=>{
-    const key = g.getAttribute('data-key');
-    g.addEventListener('mouseenter', ()=>{
-      tip.innerHTML = buildTipHTML(key);
-      tip.style.display = 'block';
-      // wait a tick so the browser can size the tip, then place it
-      requestAnimationFrame(()=> placeTipNextToStage(g));
-    });
-    g.addEventListener('mouseleave', ()=>{
-      tip.style.display = 'none';
-    });
-  });
-}
+        const catalogs = App.state.catalogs;
+        const dept = catalogs.departments.find(d => d.id === workflow.departmentId);
+        const owner = catalogs.roles.find(r => r.id === workflow.ownerRoleId);
+        const bh = catalogs.businessHours.find(b => b.id === workflow.businessHoursId);
 
-/* tick metrics */
-setInterval(scheduleMetricsUpdate, 1000);
+        const totalMins = workflow.steps.reduce((sum, s) => sum + (s.expectedMins || 0), 0);
 
-/* boot */
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  setTimeout(()=> resetFlow(), 0);
-} else {
-  window.addEventListener('DOMContentLoaded', () => setTimeout(()=> resetFlow(), 0));
-}
-</script>
+        let html = `
+          <div class="summary-header">
+            <dl>
+              <dt>Department:</dt>
+              <dd>${dept?.name || 'Unknown'}</dd>
+              <dt>Work Type:</dt>
+              <dd>${workflow.workType}</dd>
+              <dt>Owner:</dt>
+              <dd>${owner?.name || 'Unknown'}</dd>
+              <dt>Business Hours:</dt>
+              <dd>${bh?.name || 'Unknown'} (${bh?.start} - ${bh?.end}, ${this.formatDays(bh?.days)})</dd>
+              <dt>Total Steps:</dt>
+              <dd>${workflow.steps.length}</dd>
+              <dt>Total Duration:</dt>
+              <dd>${totalMins} minutes (${(totalMins / 60).toFixed(1)} hours)</dd>
+            </dl>
+          </div>
+
+          <div class="summary-steps">
+            <h3>Workflow Steps</h3>
+            ${workflow.steps.map((step, idx) => {
+              const role = catalogs.roles.find(r => r.id === step.roleId);
+              return `
+                <div class="summary-step">
+                  <div class="summary-step-title">${idx + 1}. ${step.title}</div>
+                  <div class="summary-step-meta">
+                    Responsible: ${role?.name || 'Unknown'} |
+                    Duration: ${step.expectedMins} minutes
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <div class="sla-matrix">
+            <h3>SLA Targets</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Priority</th>
+                  <th>Acknowledge</th>
+                  <th>Start Work</th>
+                  <th>Resolve</th>
+                  <th>Escalation</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${catalogs.priorities.map(p => {
+                  const sla = workflow.slaByPriority?.[p.id];
+                  if (!sla) return '';
+
+                  const overrun = Validator.checkSLAOverrun(workflow, p.id, catalogs);
+                  const escalation = sla.escalate
+                    ? `After ${sla.escalate.afterMins} mins → ${catalogs.roles.find(r => r.id === sla.escalate.toRoleId)?.name || 'Unknown'}`
+                    : 'None';
+
+                  return `
+                    <tr>
+                      <td><strong>${p.name}</strong> ${overrun ? '<span class="overrun-badge">Potential SLA overrun</span>' : ''}</td>
+                      <td>${sla.ackMins} mins</td>
+                      <td>${sla.startMins} mins</td>
+                      <td>${sla.resolveMins} mins</td>
+                      <td>${escalation}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        document.getElementById('review-content').innerHTML = html;
+      },
+
+      formatDays(days) {
+        if (!days) return 'N/A';
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        return days.map(d => dayNames[d]).join(', ');
+      },
+
+      exportJSON() {
+        const workflow = App.state.sharedWorkflow || App.state.draftWorkflow;
+        if (!workflow) {
+          alert('No workflow to export');
+          return;
+        }
+
+        const data = App.exportJSON(workflow);
+        App.downloadJSON(data, `sla-workflow-${workflow.id}.json`);
+      },
+
+      importJSON() {
+        document.getElementById('import-file-input').click();
+      },
+
+      handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const success = App.importJSON(e.target.result);
+            if (success) {
+              alert('Import successful! Navigate to Build screen to see the imported workflow.');
+              App.router(); // Re-render
+            } else {
+              alert('Import failed. Please check the file format.');
+            }
+          } catch (error) {
+            alert('Import failed: ' + error.message);
+          }
+        };
+        reader.readAsText(file);
+
+        // Reset input
+        event.target.value = '';
+      },
+
+      async copyShareLink() {
+        const workflow = App.state.sharedWorkflow || App.state.draftWorkflow;
+        if (!workflow) {
+          alert('No workflow to share');
+          return;
+        }
+
+        try {
+          const url = await ShareLink.copyToClipboard(workflow, App.state.catalogs);
+          alert('Share link copied to clipboard!\n\n' + url);
+        } catch (error) {
+          console.error('Failed to copy link:', error);
+          alert('Failed to copy link. Check console for details.');
+        }
+      }
+    };
+  </script>
 </body>
 </html>

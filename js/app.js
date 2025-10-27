@@ -38,9 +38,9 @@ const App = {
       { id: 'std', name: 'Standard CSS', tz: 'Asia/Dubai', days: [1,2,3,4,5], start: '08:00', end: '18:00' }
     ],
     priorities: [
-      { id: 'p1', name: 'Critical', ackMins: 30, startMins: 60, resolveMins: 480 },
-      { id: 'p2', name: 'High', ackMins: 120, startMins: 240, resolveMins: 1440 },
-      { id: 'p3', name: 'Normal', ackMins: 1440, startMins: 2880, resolveMins: 10080 }
+      { id: 'p1', name: 'High', ackMins: 30, startMins: 60, resolveMins: 480 },
+      { id: 'p2', name: 'Medium', ackMins: 120, startMins: 240, resolveMins: 1440 },
+      { id: 'p3', name: 'Low', ackMins: 1440, startMins: 2880, resolveMins: 10080 }
     ]
   },
 
@@ -819,6 +819,53 @@ const App = {
         }
       }, 300);
     }, duration);
+  },
+
+  /**
+   * Show confirm modal with Back-friendly UI
+   */
+  confirm({ title = 'Confirm', message = 'Are you sure?', confirmText = 'OK', cancelText = 'Back', onConfirm = null }) {
+    const wrap = document.createElement('div');
+    wrap.className = 'modal-overlay';
+    wrap.innerHTML = `
+      <div class="modal-card">
+        <h3>${title}</h3>
+        <p>${message}</p>
+        <div class="actions">
+          <button class="btn-cancel">${cancelText}</button>
+          <button class="btn-confirm">${confirmText}</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(wrap);
+
+    const btnCancel = wrap.querySelector('.btn-cancel');
+    const btnConfirm = wrap.querySelector('.btn-confirm');
+
+    const close = () => {
+      wrap.style.opacity = '0';
+      setTimeout(() => {
+        if (wrap.parentNode) {
+          wrap.parentNode.removeChild(wrap);
+        }
+      }, 200);
+    };
+
+    btnCancel.addEventListener('click', close);
+    btnConfirm.addEventListener('click', () => {
+      close();
+      if (onConfirm) {
+        onConfirm();
+      }
+    });
+
+    // Also close on overlay click
+    wrap.addEventListener('click', (e) => {
+      if (e.target === wrap) {
+        close();
+      }
+    });
   },
 
   /**

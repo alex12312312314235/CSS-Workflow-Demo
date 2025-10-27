@@ -366,10 +366,16 @@
 
           if (count === 0) return;
 
-          if (confirm('Delete all workflows in "' + deptName + '" from this device?\n\n' + count + ' workflow(s) will be deleted. This cannot be undone.')) {
-            App.deleteAllWorkflowsForDepartment(deptId);
-            App.renderCurrentRoute();
-          }
+          App.confirm({
+            title: 'Delete All Workflows?',
+            message: 'Delete all workflows in "' + deptName + '" from this device?\n\n' + count + ' workflow(s) will be deleted. This cannot be undone.',
+            confirmText: 'Delete',
+            cancelText: 'Back',
+            onConfirm: () => {
+              App.deleteAllWorkflowsForDepartment(deptId);
+              App.renderCurrentRoute();
+            }
+          });
         });
       },
 
@@ -469,10 +475,16 @@
             const dept = App.state.catalogs.departments.find(d => d.id === wf.departmentId);
             const deptName = dept ? dept.name : 'its department';
 
-            if (confirm('Delete workflow?\n\nThis will remove "' + wf.workType + '" from ' + deptName + '. This cannot be undone.')) {
-              App.deleteWorkflow(id);
-              App.renderCurrentRoute();
-            }
+            App.confirm({
+              title: 'Delete Workflow?',
+              message: 'This will remove "' + wf.workType + '" from ' + deptName + '. This cannot be undone.',
+              confirmText: 'Delete',
+              cancelText: 'Back',
+              onConfirm: () => {
+                App.deleteWorkflow(id);
+                App.renderCurrentRoute();
+              }
+            });
             return;
           }
 
@@ -579,10 +591,16 @@
             const dept = App.state.catalogs.departments.find(d => d.id === wf.departmentId);
             const deptName = dept ? dept.name : 'its department';
 
-            if (confirm('Delete workflow?\n\nThis will remove "' + wf.workType + '" from ' + deptName + '. This cannot be undone.')) {
-              App.deleteWorkflow(id);
-              App.renderCurrentRoute();
-            }
+            App.confirm({
+              title: 'Delete Workflow?',
+              message: 'This will remove "' + wf.workType + '" from ' + deptName + '. This cannot be undone.',
+              confirmText: 'Delete',
+              cancelText: 'Back',
+              onConfirm: () => {
+                App.deleteWorkflow(id);
+                App.renderCurrentRoute();
+              }
+            });
             return;
           }
 
@@ -1658,12 +1676,18 @@
         const dept = App.state.catalogs.departments.find(d => d.id === this.currentWorkflow.departmentId);
         const deptName = dept ? dept.name : 'its department';
 
-        if (confirm('Delete workflow?\n\nThis will remove "' + this.currentWorkflow.workType + '" from ' + deptName + '. This cannot be undone.')) {
-          App.deleteWorkflow(this.currentWorkflow.id);
-          this.close();
-          App.showToast('Workflow deleted', 'success');
-          App.renderCurrentRoute();
-        }
+        App.confirm({
+          title: 'Delete Workflow?',
+          message: 'This will remove "' + this.currentWorkflow.workType + '" from ' + deptName + '. This cannot be undone.',
+          confirmText: 'Delete',
+          cancelText: 'Back',
+          onConfirm: () => {
+            App.deleteWorkflow(this.currentWorkflow.id);
+            this.close();
+            App.showToast('Workflow deleted', 'success');
+            App.renderCurrentRoute();
+          }
+        });
       }
     };
   </script>

@@ -171,6 +171,24 @@ button {
   font-size: 12px;
 }
 
+.btn-ghost {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 16px;
+  transition: color 0.2s;
+}
+
+.btn-ghost:hover {
+  color: #e74c3c;
+}
+
+.clickable-cell {
+  cursor: pointer;
+}
+
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;

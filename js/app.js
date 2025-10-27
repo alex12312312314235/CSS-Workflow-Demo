@@ -546,7 +546,7 @@ const App = {
     }
 
     // Parse route - support both #/catalog and #/settings
-    const match = hash.match(/#\/(home|catalog|settings|build|dept\/([^/]+)|wf\/([^/]+))/);
+    const match = hash.match(/#\/(home|catalog|settings|build|dept\/([^/]+)|wf\/([^/]+)|review)/);
 
     // Hide all screens first
     document.querySelectorAll('.screen').forEach(screen => {
@@ -562,6 +562,25 @@ const App = {
     let route = match[1];
     this.state.currentRoute = route;
 
+    // Redirect legacy Review routes to Home
+    if (route === 'review' || route.startsWith('wf/')) {
+      this.showToast('Review is now shown inline on the department page.', 'info');
+
+      // Try to redirect to department if we can infer it
+      if (route.startsWith('wf/')) {
+        const wfId = match[3];
+        const workflow = this.getWorkflow(wfId);
+        if (workflow && workflow.departmentId) {
+          window.location.hash = '#/dept/' + workflow.departmentId;
+          return;
+        }
+      }
+
+      // Otherwise go to Home
+      window.location.hash = '#/home';
+      return;
+    }
+
     // Alias: catalog → settings
     if (route === 'catalog') {
       route = 'settings';
@@ -570,8 +589,6 @@ const App = {
     // Extract params
     if (route.startsWith('dept/')) {
       this.state.currentDeptId = match[2];
-    } else if (route.startsWith('wf/')) {
-      this.state.currentWorkflowId = match[3];
     }
 
     // Update nav active state
@@ -598,9 +615,6 @@ const App = {
     } else if (route.startsWith('dept/')) {
       document.getElementById('screen-dept').style.display = 'block';
       DeptScreen.render(this.state.currentDeptId);
-    } else if (route.startsWith('wf/')) {
-      document.getElementById('screen-review').style.display = 'block';
-      ReviewScreen.render(this.state.currentWorkflowId);
     }
   },
 
@@ -781,6 +795,56 @@ const App = {
     this.loadWorkflows();
     // Re-run the router to refresh the current screen
     this.router();
+  },
+
+  /**
+   * Show toast notification
+   */
+  showToast(message, type = 'info', duration = 4000) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.textContent = message;
+
+    container.appendChild(toast);
+
+    // Auto-remove after duration
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 300);
+    }, duration);
+  },
+
+  /**
+   * Handle file import (moved from ReviewScreen)
+   */
+  handleFileImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const success = App.importJSON(e.target.result);
+        if (success) {
+          App.showToast('Import successful! Workflows have been imported.', 'success');
+          location.hash = '#/home';
+        } else {
+          App.showToast('Import failed. Please check the file format.', 'error');
+        }
+      } catch (error) {
+        App.showToast('Import failed: ' + error.message, 'error');
+      }
+    };
+    reader.readAsText(file);
+
+    event.target.value = '';
   }
 };
 

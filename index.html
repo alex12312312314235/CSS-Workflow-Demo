@@ -290,11 +290,11 @@
     <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="App.handleFileImport(event)">
   </div>
 
-  <!-- Load JavaScript modules -->
-  <script src="./js/validate.js"></script>
-  <script src="./js/sharelink.js"></script>
-  <script src="./js/templates.js"></script>
-  <script src="./js/app.js"></script>
+  <!-- Load JavaScript modules (cache-busted with version) -->
+  <script src="./js/validate.js?v=101"></script>
+  <script src="./js/sharelink.js?v=101"></script>
+  <script src="./js/templates.js?v=101"></script>
+  <script src="./js/app.js?v=101"></script>
 
   <!-- Screen Implementations -->
   <script>
@@ -899,7 +899,8 @@
         if (confirm('Reset all catalog data to defaults? This will overwrite your changes.')) {
           localStorage.removeItem(LS.CATALOGS);
           localStorage.removeItem(LS.SLA_CATALOG);
-          App.getCatalogs(); // will recreate defaults
+          localStorage.removeItem('schema_version'); // Clear version to force reset
+          App.getCatalogs(); // will recreate defaults from hard defaults
           App.state.catalogs = App.getCatalogs();
           window.location.reload(); // Full reload
         }

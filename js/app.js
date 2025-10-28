@@ -1,4 +1,13 @@
 // Main application - Router, State, LocalStorage
+// Storage keys
+const LS = {
+  CATALOGS: 'catalogs',
+  WORKFLOWS: 'workflows',
+  SLA_CATALOG: 'sla.catalog',
+  SLA_WORKFLOWS: 'sla.workflows',
+  DRAFT: 'sla.draftWorkflow'
+};
+
 const App = {
   state: {
     catalogs: null,
@@ -16,6 +25,25 @@ const App = {
       search: ''
     },
     viewMode: 'cards' // 'cards' or 'table'
+  },
+
+  /**
+   * Safe JSON parsing with fallback
+   */
+  safeParse(raw, fallback) {
+    try {
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) {
+      console.error('JSON parse error:', e);
+      return fallback;
+    }
+  },
+
+  /**
+   * Safe localStorage getter with fallback
+   */
+  safeGet(key, fallback) {
+    return this.safeParse(localStorage.getItem(key), fallback);
   },
 
   // Default catalog data v1.1 (canonical names + position titles)
@@ -372,21 +400,15 @@ const App = {
    * Ensure default catalogs are seeded (only if localStorage is empty)
    */
   ensureDefaultCatalogs() {
-    const cat = localStorage.getItem('catalogs');
-    if (!cat) {
-      console.log('Seeding default catalogs v1.1...');
-      localStorage.setItem('catalogs', JSON.stringify(this.DEFAULT_CATALOG));
-    }
+    // This now uses getCatalogs() which auto-repairs
+    this.getCatalogs();
   },
 
   /**
-   * Migrate catalogs to v1.1 (normalize names, update IDs)
+   * Migrate catalogs to v1.1 (normalize names, update IDs, add origins)
    */
   migrateCatalogs_v11() {
-    const raw = localStorage.getItem('catalogs');
-    if (!raw) return;
-
-    let cat = JSON.parse(raw);
+    let cat = this.getCatalogs();
 
     // Skip if already migrated
     if (cat.version === '1.1' || cat.schemaVersion === '1.1.0') {
@@ -423,24 +445,36 @@ const App = {
       });
     }
 
-    // 3) Update schema version
-    cat.version = '1.1';
-    cat.schemaVersion = '1.1.0';
+    // 3) Ensure required arrays exist with defaults if empty
+    if (!cat.priorities || !cat.priorities.length) {
+      cat.priorities = this.DEFAULT_CATALOG.priorities;
+    }
+    if (!cat.businessHours || !cat.businessHours.length) {
+      cat.businessHours = this.DEFAULT_CATALOG.businessHours;
+    }
+    if (!cat.roles || !cat.roles.length) {
+      cat.roles = this.DEFAULT_CATALOG.roles;
+    }
 
     // 4) Add origins if not present
-    if (!cat.origins) {
+    if (!cat.origins || !cat.origins.length) {
       cat.origins = this.DEFAULT_CATALOG.origins;
     }
 
-    localStorage.setItem('catalogs', JSON.stringify(cat));
-    console.log('Migration complete.');
+    // 5) Update schema version
+    cat.version = '1.1';
+    cat.schemaVersion = '1.1.0';
+
+    this.setCatalogs(cat);
+    console.log('Migration to v1.1 complete.');
   },
 
   /**
    * Seed demo workflows (only if storage is empty)
    */
-  seedDemo() {
-    if (localStorage.getItem('workflows')) {
+  seedDemoIfEmpty() {
+    const existing = this.getWorkflows();
+    if (existing.length > 0) {
       return; // do not overwrite existing data
     }
 
@@ -506,16 +540,76 @@ const App = {
   },
 
   /**
+   * Boot sequence - runs before any async loading
+   * Ensures catalogs exist, runs migrations, optionally seeds demo
+   */
+  boot() {
+    console.log('Booting CSS SLA Configurator...');
+
+    // 1) Ensure catalogs exist (auto-creates if missing or invalid)
+    this.getCatalogs();
+
+    // 2) Run migrations to normalize data
+    this.migrateCatalogs_v11();
+    this.migrateScheduleRef();
+
+    // 3) Optionally seed demo on truly empty storage
+    this.seedDemoIfEmpty();
+
+    console.log('Boot complete');
+  },
+
+  /**
+   * Check if state is healthy and show repair banner if needed
+   */
+  ensureHealthyStateUI() {
+    const cat = this.getCatalogs();
+    const broken = !cat || !cat.departments?.length || !cat.roles?.length || !cat.businessHours?.length;
+    let bar = document.getElementById('repair-bar');
+
+    if (broken) {
+      if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'repair-bar';
+        bar.className = 'repair-bar';
+        bar.innerHTML = `
+          <strong>⚠ Setup incomplete.</strong>
+          <button id="btnRestoreDefaults" class="btn btn-sm">Restore defaults</button>
+          <button id="btnSeedDemo" class="btn btn-sm btn-ghost">Seed demo</button>
+        `;
+        document.body.prepend(bar);
+
+        document.getElementById('btnRestoreDefaults').onclick = () => {
+          localStorage.removeItem(LS.CATALOGS);
+          localStorage.removeItem(LS.SLA_CATALOG);
+          this.getCatalogs(); // will recreate defaults
+          this.state.catalogs = this.getCatalogs();
+          window.location.reload(); // Full reload to ensure clean state
+        };
+
+        document.getElementById('btnSeedDemo').onclick = () => {
+          this.setWorkflows([]); // Clear existing
+          this.seedDemoIfEmpty(); // Seed new demo
+          this.loadWorkflows(); // Reload into state
+          window.location.reload(); // Full reload
+        };
+      }
+    } else if (bar) {
+      bar.remove();
+    }
+  },
+
+  /**
    * Initialize the application
    */
   async init() {
     console.log('Initializing CSS SLA Configurator...');
 
-    // Ensure default catalogs and run migrations (first-run setup)
-    this.ensureDefaultCatalogs();
-    this.migrateCatalogs_v11();
-    this.migrateScheduleRef();
-    this.seedDemo();
+    // Boot sequence (synchronous, runs first)
+    this.boot();
+
+    // Check UI health and show repair banner if needed
+    this.ensureHealthyStateUI();
 
     // Load catalogs
     await this.loadCatalogs();
@@ -541,6 +635,9 @@ const App = {
     // Setup navigation
     this.setupNavigation();
 
+    // Check UI health again after rendering
+    this.ensureHealthyStateUI();
+
     console.log('App initialized');
   },
 
@@ -548,37 +645,10 @@ const App = {
    * Load catalog data
    */
   async loadCatalogs() {
-    try {
-      // Check localStorage first (unless already loaded from file)
-      const stored = localStorage.getItem('sla.catalog');
-      if (stored) {
-        this.state.catalogs = JSON.parse(stored);
-        console.log('Loaded catalogs from localStorage');
-        window.catalog = this.state.catalogs; // Expose for debugging
-        return;
-      }
-
-      // Load from file with cache-busting
-      const cacheBust = '?v=' + Date.now();
-      const response = await fetch('./data/catalog.json' + cacheBust, { cache: 'no-store' });
-      if (!response.ok) throw new Error('Failed to load catalog');
-
-      this.state.catalogs = await response.json();
-      console.log('Loaded catalogs from file');
-      window.catalog = this.state.catalogs; // Expose for debugging
-
-      // Ensure roles are available
-      if (!this.state.catalogs.roles || this.state.catalogs.roles.length === 0) {
-        console.warn('No roles in catalog, using defaults');
-        this.state.catalogs.roles = this.DEFAULT_CATALOG.roles;
-      }
-    } catch (error) {
-      console.error('Failed to load catalogs:', error);
-      console.warn('Using default catalog data');
-      // Use default catalog
-      this.state.catalogs = JSON.parse(JSON.stringify(this.DEFAULT_CATALOG));
-      window.catalog = this.state.catalogs; // Expose for debugging
-    }
+    // Use getCatalogs() which auto-repairs if invalid
+    this.state.catalogs = this.getCatalogs();
+    window.catalog = this.state.catalogs; // Expose for debugging
+    console.log('Catalogs loaded into state');
   },
 
   /**
@@ -640,13 +710,9 @@ const App = {
    * Get workflows from localStorage (fresh read)
    */
   getWorkflows() {
-    try {
-      const stored = localStorage.getItem('sla.workflows');
-      return stored ? JSON.parse(stored) : [];
-    } catch (error) {
-      console.error('Failed to get workflows:', error);
-      return [];
-    }
+    // Try both new and legacy keys
+    const workflows = this.safeGet(LS.WORKFLOWS, null) || this.safeGet(LS.SLA_WORKFLOWS, []);
+    return Array.isArray(workflows) ? workflows : [];
   },
 
   /**
@@ -654,10 +720,48 @@ const App = {
    */
   setWorkflows(list) {
     try {
-      localStorage.setItem('sla.workflows', JSON.stringify(list));
+      const safeList = Array.isArray(list) ? list : [];
+      localStorage.setItem(LS.WORKFLOWS, JSON.stringify(safeList));
+      localStorage.setItem(LS.SLA_WORKFLOWS, JSON.stringify(safeList)); // Keep legacy key
       console.log('Workflows saved to localStorage');
     } catch (error) {
       console.error('Failed to set workflows:', error);
+    }
+  },
+
+  /**
+   * Get catalogs from localStorage with auto-repair
+   */
+  getCatalogs() {
+    // Try both new and legacy keys
+    let cat = this.safeGet(LS.CATALOGS, null) || this.safeGet(LS.SLA_CATALOG, null);
+
+    // Validate structure
+    const isValid = cat &&
+      Array.isArray(cat.departments) && cat.departments.length > 0 &&
+      Array.isArray(cat.roles) && cat.roles.length > 0 &&
+      Array.isArray(cat.priorities) && cat.priorities.length > 0 &&
+      Array.isArray(cat.businessHours) && cat.businessHours.length > 0;
+
+    if (!isValid) {
+      console.warn('Catalogs invalid or missing, restoring defaults');
+      cat = JSON.parse(JSON.stringify(this.DEFAULT_CATALOG));
+      this.setCatalogs(cat);
+    }
+
+    return cat;
+  },
+
+  /**
+   * Set catalogs to localStorage
+   */
+  setCatalogs(cat) {
+    try {
+      localStorage.setItem(LS.CATALOGS, JSON.stringify(cat));
+      localStorage.setItem(LS.SLA_CATALOG, JSON.stringify(cat)); // Keep legacy key
+      console.log('Catalogs saved to localStorage');
+    } catch (error) {
+      console.error('Failed to set catalogs:', error);
     }
   },
 
@@ -997,9 +1101,13 @@ const App = {
       filtered = filtered.filter(w => w.ownerRoleId === this.state.filters.owner);
     }
 
-    // Origin filter
+    // Origin filter (origin-safe: missing origin matches empty filter)
     if (this.state.filters.origin) {
-      filtered = filtered.filter(w => w.origin === this.state.filters.origin);
+      filtered = filtered.filter(w => {
+        // If no origin is set on workflow, treat as matching when filter is empty
+        if (!w.origin) return false; // Don't match if filter is active but workflow has no origin
+        return w.origin === this.state.filters.origin;
+      });
     }
 
     // Search filter

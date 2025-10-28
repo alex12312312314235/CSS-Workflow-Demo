@@ -101,6 +101,7 @@
       <div id="screen-build" class="screen">
         <h2>Workflow Builder</h2>
         <p class="text-muted">Create or edit a workflow with steps and SLA targets.</p>
+        <p id="diagnostics-line" class="text-muted" style="font-size: 0.8em; margin-top: -0.5em;"></p>
 
         <div class="build-layout">
           <div class="build-form">
@@ -926,9 +927,21 @@
       interpretAsBH: true, // Default: interpret as business hours
       slaComposer: { factors: {}, buffers: {} }, // SLA composer state { factors: {p1:1.0,...}, buffers: {p1:0,...} }
 
+      updateDiagnostics() {
+        const diagEl = document.getElementById('diagnostics-line');
+        if (!diagEl) return;
+
+        const cat = App.getCatalogs();
+        const wfCount = App.getWorkflows().length;
+        const tplCount = (App.defaultTemplates || []).length;
+
+        diagEl.textContent = `Diagnostics: Depts ${cat.departments.length} • Roles ${cat.roles.length} • BH ${cat.businessHours.length} • WF ${wfCount} • Templates ${tplCount}`;
+      },
+
       render() {
         this.populateTemplates();
         this.populateDropdowns();
+        this.updateDiagnostics();
 
         // Initialize units if not already set - default to Business Days
         if (!this.slaUnits || Object.keys(this.slaUnits).length === 0) {
@@ -973,69 +986,54 @@
 
       populateTemplates() {
         const select = document.getElementById('template-select');
+        if (!select) return;
 
-        // Guard: only populate if not already populated (or if templates changed)
-        if (!App.state.templates || !App.state.templates.templates) {
-          console.warn('Templates not loaded yet');
-          select.innerHTML = '<option value="">Loading templates...</option>';
-          return;
-        }
+        // Always populate from defaultTemplates (in-code, never empty)
+        const templates = App.defaultTemplates || [];
 
-        const templates = App.state.templates.templates;
+        // Only populate if not already done
+        if (select.options.length > 1) return;
 
-        let options = '<option value="">-- Select a template --</option>';
-        const hasTemplates = Object.keys(templates).some(deptId =>
-          templates[deptId] && templates[deptId].length > 0
-        );
+        let html = '<option value="">-- Select a template --</option>';
 
-        if (!hasTemplates) {
-          options += '<optgroup label="No templates available" disabled></optgroup>';
-        } else {
-          Object.keys(templates).forEach(deptId => {
-            const dept = App.state.catalogs.departments.find(d => d.id === deptId);
-            if (dept && templates[deptId].length > 0) {
-              options += '<optgroup label="' + dept.name + '">';
-              templates[deptId].forEach((tpl, idx) => {
-                options += '<option value="' + deptId + ':' + idx + '">' + tpl.workType + '</option>';
-              });
-              options += '</optgroup>';
-            }
-          });
-        }
+        templates.forEach((t, idx) => {
+          html += '<option value="' + t.id + '">' + t.name + '</option>';
+        });
 
-        select.innerHTML = options;
+        select.innerHTML = html;
       },
 
       loadTemplate(value) {
         if (!value) return;
 
-        const parts = value.split(':');
-        const deptId = parts[0];
-        const idx = parseInt(parts[1]);
-        const template = App.state.templates.templates[deptId][idx];
-
+        // Find template from defaultTemplates by id
+        const template = (App.defaultTemplates || []).find(t => t.id === value);
         if (!template) return;
 
-        document.getElementById('wf-department').value = deptId;
-        document.getElementById('wf-work-type').value = template.workType;
+        // Populate form fields
+        document.getElementById('wf-department').value = template.departmentId;
+        document.getElementById('wf-work-type').value = template.name;
         document.getElementById('wf-business-hours').value = template.businessHoursId;
         document.getElementById('wf-owner').value = template.ownerRoleId;
 
+        // Set origin if available
+        if (template.origin) {
+          const originRadios = document.getElementsByName('origin');
+          originRadios.forEach(r => r.checked = r.value === template.origin);
+        }
+
+        // Load steps
         this.steps = template.steps.map((s, i) => ({
           id: 'step_' + Date.now() + '_' + i,
-          title: s.title,
+          title: s.name,
           roleId: s.roleId,
-          expectedMins: s.expectedMins
+          expectedMins: s.mins
         }));
 
         this.renderSteps();
-
-        if (template.slaPreset) {
-          this.applySLAPreset(template.slaPreset);
-        }
-
         this.onDepartmentChange();
-        alert('Template "' + template.workType + '" loaded successfully!');
+
+        App.showToast('Template "' + template.name + '" loaded successfully!', 'success');
       },
 
       onDepartmentChange() {

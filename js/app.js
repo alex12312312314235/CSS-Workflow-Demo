@@ -470,7 +470,7 @@ const App = {
   },
 
   /**
-   * Seed demo workflows (only if storage is empty)
+   * Seed demo workflows from defaultTemplates (only if storage is empty)
    */
   seedDemoIfEmpty() {
     const existing = this.getWorkflows();
@@ -478,65 +478,58 @@ const App = {
       return; // do not overwrite existing data
     }
 
-    console.log('Seeding demo workflows...');
+    console.log('Seeding demo workflows from templates...');
 
-    const demo = [];
-
-    // 1 x S&S workflow
-    demo.push({
-      id: 'wf-' + this.generateRandomId(),
-      departmentId: 'sands',
-      workType: 'Spec Update – Allergen Revision',
-      ownerRole: 'spec_analyst',
-      origin: 'client',
-      businessHoursId: 'bh_std',
-      steps: [
-        { title: 'Brief', roleId: 'spec_analyst', expectedMins: 30 },
-        { title: 'Feasibility', roleId: 'food_tech', expectedMins: 60 },
-        { title: 'CSS Gate', roleId: 'hod_sands', expectedMins: 30 },
-        { title: 'Spec Pack', roleId: 'spec_analyst', expectedMins: 180 }
-      ],
+    const seeded = (this.defaultTemplates || []).map((t, i) => ({
+      id: 'wf-' + Date.now() + '-' + i,
+      departmentId: t.departmentId,
+      workType: t.name,
+      businessHoursId: t.businessHoursId,
+      ownerRoleId: t.ownerRoleId,
+      steps: t.steps.map(s => ({
+        title: s.name,
+        roleId: s.roleId,
+        expectedMins: s.mins
+      })),
+      origin: t.origin,
+      meta: t.meta || {},
       slaByPriority: {
-        p1: { ackMins: 60, startMins: 120, resolveMins: 1440 },
-        p2: { ackMins: 120, startMins: 240, resolveMins: 2160 },
-        p3: { ackMins: 1440, startMins: 2880, resolveMins: 10080 }
+        p1: { ackMins: 30, startMins: 60, resolveMins: 480, escalateAfter: 0, escalateToRoleId: null },
+        p2: { ackMins: 120, startMins: 240, resolveMins: 1440, escalateAfter: 0, escalateToRoleId: null },
+        p3: { ackMins: 1440, startMins: 2880, resolveMins: 10080, escalateAfter: 0, escalateToRoleId: null }
       },
-      meta: {
-        notes: 'Demo workflow',
-        slaUnits: {}
-      },
-      updatedAt: Date.now()
-    });
+      updatedAt: Date.now(),
+      status: 'ACTIVE'
+    }));
 
-    // 1 x I&I workflow
-    demo.push({
-      id: 'wf-' + this.generateRandomId(),
-      departmentId: 'ii',
-      workType: 'Production Forecast – Route Change',
-      ownerRole: 'planner',
-      origin: 'client',
-      businessHoursId: 'bh_std',
-      steps: [
-        { title: 'Brief', roleId: 'planner', expectedMins: 30 },
-        { title: 'Feasibility', roleId: 'data_analyst', expectedMins: 60 },
-        { title: 'CSS Gate', roleId: 'hod_ii', expectedMins: 30 },
-        { title: 'Forecast Run', roleId: 'planner', expectedMins: 240 },
-        { title: 'Stakeholder Review', roleId: 'sm_ii', expectedMins: 60 }
-      ],
-      slaByPriority: {
-        p1: { ackMins: 60, startMins: 120, resolveMins: 1440 },
-        p2: { ackMins: 120, startMins: 240, resolveMins: 2160 },
-        p3: { ackMins: 1440, startMins: 2880, resolveMins: 10080 }
-      },
-      meta: {
-        notes: 'Demo workflow',
-        slaUnits: {}
-      },
-      updatedAt: Date.now()
-    });
+    if (seeded.length) {
+      this.setWorkflows(seeded);
+      console.log(`Seeded ${seeded.length} demo workflows.`);
+    }
+  },
 
-    localStorage.setItem('workflows', JSON.stringify(demo));
-    console.log('Demo workflows seeded.');
+  /**
+   * Boot sequence - runs before any render
+   * Guarantees catalogs and templates are always available
+   */
+  boot() {
+    console.log('Booting CSS SLA Configurator...');
+
+    // Ensure catalogs exist (creates defaults if missing)
+    this.getCatalogs();
+
+    // Run migrations if needed
+    if (this.migrateCatalogs_v11) {
+      this.migrateCatalogs_v11();
+    }
+    if (this.migrateScheduleRef) {
+      this.migrateScheduleRef();
+    }
+
+    // Seed demo workflows only if none exist
+    this.seedDemoIfEmpty();
+
+    console.log('Boot complete');
   },
 
   /**
@@ -642,7 +635,7 @@ const App = {
   },
 
   /**
-   * Load catalog data
+   * Load catalog data into state
    */
   async loadCatalogs() {
     // Use getCatalogs() which auto-repairs if invalid

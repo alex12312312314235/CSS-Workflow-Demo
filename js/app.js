@@ -18,6 +18,67 @@ const App = {
     viewMode: 'cards' // 'cards' or 'table'
   },
 
+  // Authoritative in-code defaults (always available, never empty)
+  defaultCatalogs: {
+    departments: [
+      { id: 'dept-concept', name: 'Concept Development' },
+      { id: 'dept-standards', name: 'Standards & Specifications' },
+      { id: 'dept-foodtech', name: 'Food Technology' },
+      { id: 'dept-hd', name: 'Health & Dietetics' },
+      { id: 'dept-ii', name: 'Insights & Intelligence' }
+    ],
+    roles: [
+      { id: 'role-esc', name: 'Executive Sous Chef' },
+      { id: 'role-ss-lead', name: 'Standards & Specs Lead' },
+      { id: 'role-hd-lead', name: 'Health & Dietetics Lead' },
+      { id: 'role-ft-lead', name: 'Food Technology Lead' },
+      { id: 'role-ii-analyst', name: 'Insights & Intelligence Analyst' }
+    ],
+    priorities: [
+      { id: 'p1', name: 'Critical', ack: 30, start: 60, resolve: 480 },
+      { id: 'p2', name: 'High', ack: 120, start: 240, resolve: 1440 },
+      { id: 'p3', name: 'Normal', ack: 1440, start: 2880, resolve: 10080 }
+    ],
+    businessHours: [
+      { id: 'bh-standard', name: 'Standard CSS (08:00–18:00, Mon–Fri)', days: [1, 2, 3, 4, 5], hoursPerDay: 10, start: '08:00', end: '18:00' },
+      { id: 'bh-ops', name: 'Ops Window (07:00–19:00, Mon–Sat)', days: [1, 2, 3, 4, 5, 6], hoursPerDay: 12, start: '07:00', end: '19:00' }
+    ],
+    origins: [
+      { id: 'client', name: 'Client-led' },
+      { id: 'internal', name: 'Internal-led' }
+    ]
+  },
+
+  defaultTemplates: [
+    {
+      id: 'tmpl-recipe-verification',
+      name: 'Recipe Verification',
+      departmentId: 'dept-standards',
+      ownerRoleId: 'role-esc',
+      businessHoursId: 'bh-standard',
+      steps: [
+        { name: 'Receive Item', roleId: 'role-ss-lead', mins: 60 },
+        { name: 'Verify Item', roleId: 'role-ii-analyst', mins: 180 }
+      ],
+      origin: 'internal',
+      meta: { notes: 'Template: verify incoming recipe against standards.' }
+    },
+    {
+      id: 'tmpl-allergen-revision',
+      name: 'Spec Update – Allergen Revision',
+      departmentId: 'dept-standards',
+      ownerRoleId: 'role-esc',
+      businessHoursId: 'bh-standard',
+      steps: [
+        { name: 'Cross-contact Review', roleId: 'role-hd-lead', mins: 120 },
+        { name: 'Client Advisory', roleId: 'role-hd-lead', mins: 60 },
+        { name: 'Publish', roleId: 'role-ss-lead', mins: 30 }
+      ],
+      origin: 'client',
+      meta: { notes: 'Template: update spec and communicate revision.' }
+    }
+  ],
+
   // Default catalog data v1.1 (canonical names + position titles)
   DEFAULT_CATALOG: {
     schemaVersion: '1.1.0',
@@ -437,72 +498,66 @@ const App = {
   },
 
   /**
-   * Seed demo workflows (only if storage is empty)
+   * Seed demo workflows from defaultTemplates (only if storage is empty)
    */
-  seedDemo() {
-    if (localStorage.getItem('workflows')) {
+  seedDemoIfEmpty() {
+    const list = this.getWorkflows();
+    if (list.length) {
       return; // do not overwrite existing data
     }
 
-    console.log('Seeding demo workflows...');
+    console.log('Seeding demo workflows from templates...');
 
-    const demo = [];
-
-    // 1 x S&S workflow
-    demo.push({
-      id: 'wf-' + this.generateRandomId(),
-      departmentId: 'sands',
-      workType: 'Spec Update – Allergen Revision',
-      ownerRole: 'spec_analyst',
-      origin: 'client',
-      businessHoursId: 'bh_std',
-      steps: [
-        { title: 'Brief', roleId: 'spec_analyst', expectedMins: 30 },
-        { title: 'Feasibility', roleId: 'food_tech', expectedMins: 60 },
-        { title: 'CSS Gate', roleId: 'hod_sands', expectedMins: 30 },
-        { title: 'Spec Pack', roleId: 'spec_analyst', expectedMins: 180 }
-      ],
+    const seeded = (this.defaultTemplates || []).map((t, i) => ({
+      id: 'wf-' + Date.now() + '-' + i,
+      departmentId: t.departmentId,
+      workType: t.name,
+      businessHoursId: t.businessHoursId,
+      ownerRoleId: t.ownerRoleId,
+      steps: t.steps.map(s => ({
+        title: s.name,
+        roleId: s.roleId,
+        expectedMins: s.mins
+      })),
+      origin: t.origin,
+      meta: t.meta || {},
       slaByPriority: {
-        p1: { ackMins: 60, startMins: 120, resolveMins: 1440 },
-        p2: { ackMins: 120, startMins: 240, resolveMins: 2160 },
-        p3: { ackMins: 1440, startMins: 2880, resolveMins: 10080 }
+        p1: { ackMins: 30, startMins: 60, resolveMins: 480, escalateAfter: 0, escalateToRoleId: null },
+        p2: { ackMins: 120, startMins: 240, resolveMins: 1440, escalateAfter: 0, escalateToRoleId: null },
+        p3: { ackMins: 1440, startMins: 2880, resolveMins: 10080, escalateAfter: 0, escalateToRoleId: null }
       },
-      meta: {
-        notes: 'Demo workflow',
-        slaUnits: {}
-      },
-      updatedAt: Date.now()
-    });
+      updatedAt: Date.now(),
+      status: 'ACTIVE'
+    }));
 
-    // 1 x I&I workflow
-    demo.push({
-      id: 'wf-' + this.generateRandomId(),
-      departmentId: 'ii',
-      workType: 'Production Forecast – Route Change',
-      ownerRole: 'planner',
-      origin: 'client',
-      businessHoursId: 'bh_std',
-      steps: [
-        { title: 'Brief', roleId: 'planner', expectedMins: 30 },
-        { title: 'Feasibility', roleId: 'data_analyst', expectedMins: 60 },
-        { title: 'CSS Gate', roleId: 'hod_ii', expectedMins: 30 },
-        { title: 'Forecast Run', roleId: 'planner', expectedMins: 240 },
-        { title: 'Stakeholder Review', roleId: 'sm_ii', expectedMins: 60 }
-      ],
-      slaByPriority: {
-        p1: { ackMins: 60, startMins: 120, resolveMins: 1440 },
-        p2: { ackMins: 120, startMins: 240, resolveMins: 2160 },
-        p3: { ackMins: 1440, startMins: 2880, resolveMins: 10080 }
-      },
-      meta: {
-        notes: 'Demo workflow',
-        slaUnits: {}
-      },
-      updatedAt: Date.now()
-    });
+    if (seeded.length) {
+      this.setWorkflows(seeded);
+      console.log(`Seeded ${seeded.length} demo workflows.`);
+    }
+  },
 
-    localStorage.setItem('workflows', JSON.stringify(demo));
-    console.log('Demo workflows seeded.');
+  /**
+   * Boot sequence - runs before any render
+   * Guarantees catalogs and templates are always available
+   */
+  boot() {
+    console.log('Booting CSS SLA Configurator...');
+
+    // Ensure catalogs exist (creates defaults if missing)
+    this.getCatalogs();
+
+    // Run migrations if needed
+    if (this.migrateCatalogs_v11) {
+      this.migrateCatalogs_v11();
+    }
+    if (this.migrateScheduleRef) {
+      this.migrateScheduleRef();
+    }
+
+    // Seed demo workflows only if none exist
+    this.seedDemoIfEmpty();
+
+    console.log('Boot complete');
   },
 
   /**
@@ -511,11 +566,8 @@ const App = {
   async init() {
     console.log('Initializing CSS SLA Configurator...');
 
-    // Ensure default catalogs and run migrations (first-run setup)
-    this.ensureDefaultCatalogs();
-    this.migrateCatalogs_v11();
-    this.migrateScheduleRef();
-    this.seedDemo();
+    // Run boot sequence first
+    this.boot();
 
     // Load catalogs
     await this.loadCatalogs();
@@ -545,40 +597,13 @@ const App = {
   },
 
   /**
-   * Load catalog data
+   * Load catalog data into state
    */
   async loadCatalogs() {
-    try {
-      // Check localStorage first (unless already loaded from file)
-      const stored = localStorage.getItem('sla.catalog');
-      if (stored) {
-        this.state.catalogs = JSON.parse(stored);
-        console.log('Loaded catalogs from localStorage');
-        window.catalog = this.state.catalogs; // Expose for debugging
-        return;
-      }
-
-      // Load from file with cache-busting
-      const cacheBust = '?v=' + Date.now();
-      const response = await fetch('./data/catalog.json' + cacheBust, { cache: 'no-store' });
-      if (!response.ok) throw new Error('Failed to load catalog');
-
-      this.state.catalogs = await response.json();
-      console.log('Loaded catalogs from file');
-      window.catalog = this.state.catalogs; // Expose for debugging
-
-      // Ensure roles are available
-      if (!this.state.catalogs.roles || this.state.catalogs.roles.length === 0) {
-        console.warn('No roles in catalog, using defaults');
-        this.state.catalogs.roles = this.DEFAULT_CATALOG.roles;
-      }
-    } catch (error) {
-      console.error('Failed to load catalogs:', error);
-      console.warn('Using default catalog data');
-      // Use default catalog
-      this.state.catalogs = JSON.parse(JSON.stringify(this.DEFAULT_CATALOG));
-      window.catalog = this.state.catalogs; // Expose for debugging
-    }
+    // Use getCatalogs() which auto-rebuilds from defaults if needed
+    this.state.catalogs = this.getCatalogs();
+    window.catalog = this.state.catalogs; // Expose for debugging
+    console.log('Catalogs loaded into state');
   },
 
   /**
@@ -658,6 +683,50 @@ const App = {
       console.log('Workflows saved to localStorage');
     } catch (error) {
       console.error('Failed to set workflows:', error);
+    }
+  },
+
+  /**
+   * Get catalogs from localStorage with auto-rebuild from defaults
+   * Always returns a valid catalog structure
+   */
+  getCatalogs() {
+    let cat = null;
+    try {
+      const stored = localStorage.getItem('catalogs');
+      if (stored) {
+        cat = JSON.parse(stored);
+      }
+    } catch (error) {
+      console.error('Failed to parse catalogs from localStorage:', error);
+    }
+
+    // Validate catalog structure
+    const isValid = (c) => c &&
+      Array.isArray(c.departments) && c.departments.length &&
+      Array.isArray(c.roles) && c.roles.length &&
+      Array.isArray(c.priorities) && c.priorities.length &&
+      Array.isArray(c.businessHours) && c.businessHours.length &&
+      Array.isArray(c.origins) && c.origins.length;
+
+    if (!isValid(cat)) {
+      console.log('Catalogs invalid or missing, rebuilding from defaults...');
+      cat = JSON.parse(JSON.stringify(this.defaultCatalogs));
+      this.setCatalogs(cat);
+    }
+
+    return cat;
+  },
+
+  /**
+   * Set catalogs to localStorage
+   */
+  setCatalogs(cat) {
+    try {
+      localStorage.setItem('catalogs', JSON.stringify(cat));
+      console.log('Catalogs saved to localStorage');
+    } catch (error) {
+      console.error('Failed to set catalogs:', error);
     }
   },
 

@@ -17,30 +17,53 @@ const App = {
     viewMode: 'cards' // 'cards' or 'table'
   },
 
-  // Default catalog data (fallback if files fail to load)
+  // Default catalog data v1.1 (canonical names + position titles)
   DEFAULT_CATALOG: {
-    schemaVersion: '1.0.0',
-    roles: [
-      { id: 'exec_sous', name: 'Executive Sous Chef' },
-      { id: 'food_tech', name: 'Food Technologist' },
-      { id: 's_s_lead', name: 'Standards & Specs Lead' },
-      { id: 'h_d_lead', name: 'Health & Dietetics Lead' },
-      { id: 'i_i_analyst', name: 'Insights & Intelligence Analyst' }
-    ],
+    schemaVersion: '1.1.0',
+    version: '1.1',
     departments: [
-      { id: 'cd', name: 'Concept Dev' },
-      { id: 'ss', name: 'Standards & Specs' },
-      { id: 'ft', name: 'Food Tech' },
+      { id: 'cd', name: 'Concept Development' },
+      { id: 'sands', name: 'Standards & Specifications' },
+      { id: 'ft', name: 'Food Technology' },
       { id: 'hd', name: 'Health & Dietetics' },
       { id: 'ii', name: 'Insights & Intelligence' }
     ],
-    businessHours: [
-      { id: 'std', name: 'Standard CSS', tz: 'Asia/Dubai', days: [1,2,3,4,5], start: '08:00', end: '18:00' }
+    roles: [
+      // Executive / Management
+      { id: 'vp_css', name: 'VP Culinary – Shared Services' },
+      { id: 'hod_cd', name: 'Head of Concept Development' },
+      { id: 'hod_sands', name: 'Head of Standards & Specifications' },
+      { id: 'hod_ft', name: 'Head of Food Technology' },
+      { id: 'hod_hd', name: 'Head of Health & Dietetics' },
+      { id: 'hod_ii', name: 'Head of Insights & Intelligence' },
+      { id: 'sm_cd', name: 'Senior Manager – Concept Development' },
+      { id: 'sm_sands', name: 'Senior Manager – Standards & Specifications' },
+      { id: 'sm_ft', name: 'Senior Manager – Food Technology' },
+      { id: 'sm_hd', name: 'Senior Manager – Health & Dietetics' },
+      { id: 'sm_ii', name: 'Senior Manager – Insights & Intelligence' },
+      // Practitioners (common owners across workflows)
+      { id: 'cd_chef', name: 'Development Chef' },
+      { id: 'spec_analyst', name: 'Specifications Analyst' },
+      { id: 'food_tech', name: 'Food Technologist' },
+      { id: 'dietitian', name: 'Dietitian' },
+      { id: 'data_analyst', name: 'Data Analyst (I&I)' },
+      { id: 'planner', name: 'Production Planner (I&I)' }
     ],
     priorities: [
-      { id: 'p1', name: 'High', ackMins: 30, startMins: 60, resolveMins: 480 },
-      { id: 'p2', name: 'Medium', ackMins: 120, startMins: 240, resolveMins: 1440 },
-      { id: 'p3', name: 'Low', ackMins: 1440, startMins: 2880, resolveMins: 10080 }
+      // keep editable in Settings; these are just defaults
+      { id: 'p1', name: 'High', ackMins: 30, startMins: 60, resolveMins: 540 },   // 9h = 1 BD default
+      { id: 'p2', name: 'Medium', ackMins: 120, startMins: 240, resolveMins: 1440 }, // 1–2 BD
+      { id: 'p3', name: 'Low', ackMins: 1440, startMins: 2880, resolveMins: 10080 }  // ~1w
+    ],
+    businessHours: [
+      { id: 'bh_std', name: 'Standard (Mon–Fri, 9h/day)', hoursPerDay: 9 },
+      { id: 'bh_ops', name: 'Ops Extended (Mon–Sat, 10h/day)', hoursPerDay: 10 },
+      { id: 'bh_light', name: 'Light (Mon–Thu, 8h/day)', hoursPerDay: 8 }
+    ],
+    // for Build → "Origin" radio
+    origins: [
+      { id: 'client', name: 'Client-led' },
+      { id: 'internal', name: 'Internal-led' }
     ]
   },
 
@@ -249,10 +272,166 @@ const App = {
   },
 
   /**
+   * Normalize name (trim extra spaces)
+   */
+  normalizeName(s) {
+    return s.replace(/\s+/g, ' ').trim();
+  },
+
+  /**
+   * Convert to Title Case
+   */
+  toTitle(s) {
+    return this.normalizeName(s).replace(/\b\w/g, c => c.toUpperCase());
+  },
+
+  /**
+   * Ensure default catalogs are seeded (only if localStorage is empty)
+   */
+  ensureDefaultCatalogs() {
+    const cat = localStorage.getItem('catalogs');
+    if (!cat) {
+      console.log('Seeding default catalogs v1.1...');
+      localStorage.setItem('catalogs', JSON.stringify(this.DEFAULT_CATALOG));
+    }
+  },
+
+  /**
+   * Migrate catalogs to v1.1 (normalize names, update IDs)
+   */
+  migrateCatalogs_v11() {
+    const raw = localStorage.getItem('catalogs');
+    if (!raw) return;
+
+    let cat = JSON.parse(raw);
+
+    // Skip if already migrated
+    if (cat.version === '1.1' || cat.schemaVersion === '1.1.0') {
+      return;
+    }
+
+    console.log('Migrating catalogs to v1.1...');
+
+    // 1) Normalize department names
+    const rename = {
+      'Standards & Specs': 'Standards & Specifications',
+      'Concept Dev': 'Concept Development',
+      'Food Tech': 'Food Technology'
+    };
+
+    if (cat.departments) {
+      cat.departments = cat.departments.map(d => {
+        const newName = rename[d.name] || d.name;
+        return { ...d, name: this.toTitle(newName) };
+      });
+
+      // 2) Ensure canonical IDs for known departments (keep user-created as-is)
+      const idMap = {
+        'Concept Development': 'cd',
+        'Standards & Specifications': 'sands',
+        'Food Technology': 'ft',
+        'Health & Dietetics': 'hd',
+        'Insights & Intelligence': 'ii'
+      };
+
+      cat.departments = cat.departments.map(d => {
+        const canonical = idMap[d.name];
+        return canonical ? { ...d, id: canonical } : d;
+      });
+    }
+
+    // 3) Update schema version
+    cat.version = '1.1';
+    cat.schemaVersion = '1.1.0';
+
+    // 4) Add origins if not present
+    if (!cat.origins) {
+      cat.origins = this.DEFAULT_CATALOG.origins;
+    }
+
+    localStorage.setItem('catalogs', JSON.stringify(cat));
+    console.log('Migration complete.');
+  },
+
+  /**
+   * Seed demo workflows (only if storage is empty)
+   */
+  seedDemo() {
+    if (localStorage.getItem('workflows')) {
+      return; // do not overwrite existing data
+    }
+
+    console.log('Seeding demo workflows...');
+
+    const demo = [];
+
+    // 1 x S&S workflow
+    demo.push({
+      id: 'wf-' + this.generateRandomId(),
+      departmentId: 'sands',
+      workType: 'Spec Update – Allergen Revision',
+      ownerRole: 'spec_analyst',
+      origin: 'client',
+      businessHoursId: 'bh_std',
+      steps: [
+        { title: 'Brief', roleId: 'spec_analyst', expectedMins: 30 },
+        { title: 'Feasibility', roleId: 'food_tech', expectedMins: 60 },
+        { title: 'CSS Gate', roleId: 'hod_sands', expectedMins: 30 },
+        { title: 'Spec Pack', roleId: 'spec_analyst', expectedMins: 180 }
+      ],
+      slaByPriority: {
+        p1: { ackMins: 60, startMins: 120, resolveMins: 1440 },
+        p2: { ackMins: 120, startMins: 240, resolveMins: 2160 },
+        p3: { ackMins: 1440, startMins: 2880, resolveMins: 10080 }
+      },
+      meta: {
+        notes: 'Demo workflow',
+        slaUnits: {}
+      },
+      updatedAt: Date.now()
+    });
+
+    // 1 x I&I workflow
+    demo.push({
+      id: 'wf-' + this.generateRandomId(),
+      departmentId: 'ii',
+      workType: 'Production Forecast – Route Change',
+      ownerRole: 'planner',
+      origin: 'client',
+      businessHoursId: 'bh_std',
+      steps: [
+        { title: 'Brief', roleId: 'planner', expectedMins: 30 },
+        { title: 'Feasibility', roleId: 'data_analyst', expectedMins: 60 },
+        { title: 'CSS Gate', roleId: 'hod_ii', expectedMins: 30 },
+        { title: 'Forecast Run', roleId: 'planner', expectedMins: 240 },
+        { title: 'Stakeholder Review', roleId: 'sm_ii', expectedMins: 60 }
+      ],
+      slaByPriority: {
+        p1: { ackMins: 60, startMins: 120, resolveMins: 1440 },
+        p2: { ackMins: 120, startMins: 240, resolveMins: 2160 },
+        p3: { ackMins: 1440, startMins: 2880, resolveMins: 10080 }
+      },
+      meta: {
+        notes: 'Demo workflow',
+        slaUnits: {}
+      },
+      updatedAt: Date.now()
+    });
+
+    localStorage.setItem('workflows', JSON.stringify(demo));
+    console.log('Demo workflows seeded.');
+  },
+
+  /**
    * Initialize the application
    */
   async init() {
     console.log('Initializing CSS SLA Configurator...');
+
+    // Ensure default catalogs and run migrations (first-run setup)
+    this.ensureDefaultCatalogs();
+    this.migrateCatalogs_v11();
+    this.seedDemo();
 
     // Load catalogs
     await this.loadCatalogs();

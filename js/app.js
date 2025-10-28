@@ -286,6 +286,66 @@ const App = {
   },
 
   /**
+   * Get minutes per Business Day for a given business hours profile
+   */
+  minsPerBD(bhProfile) {
+    if (!bhProfile) {
+      // Try to get from current catalogs
+      const bh = this.state.catalogs?.businessHours?.[0];
+      return (bh?.hoursPerDay || 9) * 60;
+    }
+    return (bhProfile.hoursPerDay || 9) * 60;
+  },
+
+  /**
+   * Convert minutes to display value based on unit
+   */
+  stepFromMinutes(mins, unit) {
+    const bhProfile = this.state.catalogs?.businessHours?.[0];
+    const minsPerDay = this.minsPerBD(bhProfile);
+
+    if (unit === 'bd') return (mins / minsPerDay).toFixed(1);
+    if (unit === 'hr') return (mins / 60).toFixed(1);
+    return mins;
+  },
+
+  /**
+   * Convert display value to minutes based on unit
+   */
+  stepToMinutes(val, unit, bhProfile) {
+    const n = Number(val || 0);
+    if (unit === 'bd') {
+      const minsPerDay = this.minsPerBD(bhProfile);
+      return Math.round(n * minsPerDay);
+    }
+    if (unit === 'hr') return Math.round(n * 60);
+    return Math.round(n);
+  },
+
+  /**
+   * Migrate scheduleRef to notes (one-time migration)
+   */
+  migrateScheduleRef() {
+    const list = this.getWorkflows();
+    let changed = false;
+
+    list.forEach(w => {
+      const ref = w?.meta?.scheduleRef;
+      if (ref) {
+        const old = w.meta.notes || '';
+        w.meta.notes = old ? `${old}\n\n[Schedule Ref]\n${ref}` : `[Schedule Ref]\n${ref}`;
+        delete w.meta.scheduleRef;
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      this.setWorkflows(list);
+      console.log('Migrated scheduleRef to notes');
+    }
+  },
+
+  /**
    * Ensure default catalogs are seeded (only if localStorage is empty)
    */
   ensureDefaultCatalogs() {
@@ -431,6 +491,7 @@ const App = {
     // Ensure default catalogs and run migrations (first-run setup)
     this.ensureDefaultCatalogs();
     this.migrateCatalogs_v11();
+    this.migrateScheduleRef();
     this.seedDemo();
 
     // Load catalogs

@@ -49,67 +49,6 @@ const App = {
   // Schema version for forcing catalog reset when needed
   SCHEMA_VERSION: '1.0.1',
 
-  // Authoritative in-code defaults (always available, never empty)
-  defaultCatalogs: {
-    departments: [
-      { id: 'dept-concept', name: 'Concept Development' },
-      { id: 'dept-standards', name: 'Standards & Specifications' },
-      { id: 'dept-foodtech', name: 'Food Technology' },
-      { id: 'dept-hd', name: 'Health & Dietetics' },
-      { id: 'dept-ii', name: 'Insights & Intelligence' }
-    ],
-    roles: [
-      { id: 'role-esc', name: 'Executive Sous Chef' },
-      { id: 'role-ss-lead', name: 'Standards & Specs Lead' },
-      { id: 'role-hd-lead', name: 'Health & Dietetics Lead' },
-      { id: 'role-ft-lead', name: 'Food Technology Lead' },
-      { id: 'role-ii-analyst', name: 'Insights & Intelligence Analyst' }
-    ],
-    priorities: [
-      { id: 'p1', name: 'Critical', ack: 30, start: 60, resolve: 480 },
-      { id: 'p2', name: 'High', ack: 120, start: 240, resolve: 1440 },
-      { id: 'p3', name: 'Normal', ack: 1440, start: 2880, resolve: 10080 }
-    ],
-    businessHours: [
-      { id: 'bh-standard', name: 'Standard CSS (08:00–18:00, Mon–Fri)', days: [1, 2, 3, 4, 5], hoursPerDay: 10, start: '08:00', end: '18:00' },
-      { id: 'bh-ops', name: 'Ops Window (07:00–19:00, Mon–Sat)', days: [1, 2, 3, 4, 5, 6], hoursPerDay: 12, start: '07:00', end: '19:00' }
-    ],
-    origins: [
-      { id: 'client', name: 'Client-led' },
-      { id: 'internal', name: 'Internal-led' }
-    ]
-  },
-
-  defaultTemplates: [
-    {
-      id: 'tmpl-recipe-verification',
-      name: 'Recipe Verification',
-      departmentId: 'dept-standards',
-      ownerRoleId: 'role-esc',
-      businessHoursId: 'bh-standard',
-      steps: [
-        { name: 'Receive Item', roleId: 'role-ss-lead', mins: 60 },
-        { name: 'Verify Item', roleId: 'role-ii-analyst', mins: 180 }
-      ],
-      origin: 'internal',
-      meta: { notes: 'Template: verify incoming recipe against standards.' }
-    },
-    {
-      id: 'tmpl-allergen-revision',
-      name: 'Spec Update – Allergen Revision',
-      departmentId: 'dept-standards',
-      ownerRoleId: 'role-esc',
-      businessHoursId: 'bh-standard',
-      steps: [
-        { name: 'Cross-contact Review', roleId: 'role-hd-lead', mins: 120 },
-        { name: 'Client Advisory', roleId: 'role-hd-lead', mins: 60 },
-        { name: 'Publish', roleId: 'role-ss-lead', mins: 30 }
-      ],
-      origin: 'client',
-      meta: { notes: 'Template: update spec and communicate revision.' }
-    }
-  ],
-
   /**
    * Get schema version from localStorage
    */
@@ -560,41 +499,46 @@ const App = {
   },
 
   /**
-   * Seed demo workflows from defaultTemplates (only if storage is empty)
+   * Seed demo workflows (only if storage is empty)
    */
-  seedDemoIfEmpty() {
-    const existing = this.getWorkflows();
-    if (existing.length > 0) {
+  seedDemo() {
+    if (localStorage.getItem('workflows')) {
       return; // do not overwrite existing data
     }
 
-    console.log('Seeding demo workflows from templates...');
+    console.log('Seeding demo workflows...');
 
-    const seeded = (this.defaultTemplates || []).map((t, i) => ({
-      id: 'wf-' + Date.now() + '-' + i,
-      departmentId: t.departmentId,
-      workType: t.name,
-      businessHoursId: t.businessHoursId,
-      ownerRoleId: t.ownerRoleId,
-      steps: t.steps.map(s => ({
-        title: s.name,
-        roleId: s.roleId,
-        expectedMins: s.mins
-      })),
-      origin: t.origin,
-      meta: t.meta || {},
+    const demo = [];
+
+    // 1 x S&S workflow
+    demo.push({
+      id: 'wf-' + this.generateRandomId(),
+      departmentId: 'sands',
+      workType: 'Spec Update – Allergen Revision',
+      ownerRole: 'spec_analyst',
+      origin: 'client',
+      businessHoursId: 'bh_std',
+      steps: [
+        { title: 'Brief', roleId: 'spec_analyst', expectedMins: 30 },
+        { title: 'Feasibility', roleId: 'food_tech', expectedMins: 60 },
+        { title: 'CSS Gate', roleId: 'hod_sands', expectedMins: 30 },
+        { title: 'Spec Pack', roleId: 'spec_analyst', expectedMins: 180 }
+      ],
       slaByPriority: {
-        p1: { ackMins: 30, startMins: 60, resolveMins: 480, escalateAfter: 0, escalateToRoleId: null },
-        p2: { ackMins: 120, startMins: 240, resolveMins: 1440, escalateAfter: 0, escalateToRoleId: null },
-        p3: { ackMins: 1440, startMins: 2880, resolveMins: 10080, escalateAfter: 0, escalateToRoleId: null }
+        p1: { ackMins: 60, startMins: 120, resolveMins: 1440 },
+        p2: { ackMins: 120, startMins: 240, resolveMins: 2160 },
+        p3: { ackMins: 1440, startMins: 2880, resolveMins: 10080 }
+      },
+      meta: {
+        notes: 'Demo workflow'
       },
       updatedAt: Date.now(),
       status: 'ACTIVE'
-    }));
+    });
 
-    if (seeded.length) {
-      this.setWorkflows(seeded);
-      console.log(`Seeded ${seeded.length} demo workflows.`);
+    if (demo.length > 0) {
+      localStorage.setItem('workflows', JSON.stringify(demo));
+      console.log(`Seeded ${demo.length} demo workflows.`);
     }
   },
 
@@ -617,7 +561,7 @@ const App = {
     }
 
     // 3) Seed demo workflows only if none exist
-    this.seedDemoIfEmpty();
+    this.seedDemo();
 
     console.log('Boot complete');
   },
@@ -653,7 +597,7 @@ const App = {
 
         document.getElementById('btnSeedDemo').onclick = () => {
           this.setWorkflows([]); // Clear existing
-          this.seedDemoIfEmpty(); // Seed new demo
+          this.seedDemo(); // Seed new demo
           this.loadWorkflows(); // Reload into state
           window.location.reload(); // Full reload
         };
@@ -816,7 +760,7 @@ const App = {
       }
 
       // Force-replace with in-code defaults
-      cat = JSON.parse(JSON.stringify(this.defaultCatalogs));
+      cat = JSON.parse(JSON.stringify(this.DEFAULT_CATALOG));
       localStorage.setItem(LS.CATALOGS, JSON.stringify(cat));
       localStorage.setItem(LS.SLA_CATALOG, JSON.stringify(cat));
       this.setSchemaVersion(this.SCHEMA_VERSION);

@@ -12,6 +12,7 @@ const App = {
     filters: {
       department: 'all',
       owner: 'all',
+      origin: '',
       search: ''
     },
     viewMode: 'cards' // 'cards' or 'table'
@@ -343,6 +344,28 @@ const App = {
       this.setWorkflows(list);
       console.log('Migrated scheduleRef to notes');
     }
+  },
+
+  /**
+   * Render Business Hours banner showing conversion rate
+   */
+  renderBHBanner(containerId, businessHoursId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Remove existing banner if present
+    const existingBanner = container.querySelector('.bh-banner');
+    if (existingBanner) existingBanner.remove();
+
+    // Get business hours profile
+    const bhProfile = this.state.catalogs?.businessHours?.find(bh => bh.id === businessHoursId) || this.state.catalogs?.businessHours?.[0];
+    if (!bhProfile) return;
+
+    const mins = this.minsPerBD(bhProfile);
+    const div = document.createElement('div');
+    div.className = 'bh-banner';
+    div.textContent = `${bhProfile.name} → 1 BD = ${mins} minutes`;
+    container.prepend(div);
   },
 
   /**
@@ -972,6 +995,11 @@ const App = {
     // Owner filter
     if (this.state.filters.owner !== 'all') {
       filtered = filtered.filter(w => w.ownerRoleId === this.state.filters.owner);
+    }
+
+    // Origin filter
+    if (this.state.filters.origin) {
+      filtered = filtered.filter(w => w.origin === this.state.filters.origin);
     }
 
     // Search filter

@@ -1149,3 +1149,26 @@ tr.origin-client {
 tr.origin-internal {
   border-left: 3px solid #7a8aa0;
 }
+
+/* ======================
+   Validation & Info Banners
+   ====================== */
+.alert-warn {
+  background: #fff3cd;
+  border: 1px solid #ffeeba;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #856404;
+  margin-bottom: 8px;
+}
+
+.bh-banner {
+  background: #f1f3f5;
+  border-left: 3px solid #0078d4;
+  padding: 4px 10px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #444;
+  border-radius: 4px;
+}

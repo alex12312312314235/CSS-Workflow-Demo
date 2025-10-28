@@ -55,6 +55,14 @@
             </select>
           </div>
           <div class="filter-group">
+            <label>Origin</label>
+            <select id="filter-origin" onchange="HomeScreen.updateFilters()">
+              <option value="">All Origins</option>
+              <option value="client">Client-led</option>
+              <option value="internal">Internal-led</option>
+            </select>
+          </div>
+          <div class="filter-group">
             <label>Search Work Type</label>
             <input type="text" id="filter-search" placeholder="Type to search..." oninput="HomeScreen.updateFilters()">
           </div>
@@ -308,12 +316,18 @@
           App.state.catalogs.roles.map(r => '<option value="' + r.id + '">' + r.name + '</option>').join('');
         ownerFilter.value = App.state.filters.owner;
 
+        const originFilter = document.getElementById('filter-origin');
+        if (originFilter) {
+          originFilter.value = App.state.filters.origin || '';
+        }
+
         document.getElementById('filter-search').value = App.state.filters.search;
       },
 
       updateFilters() {
         App.state.filters.department = document.getElementById('filter-dept').value;
         App.state.filters.owner = document.getElementById('filter-owner').value;
+        App.state.filters.origin = document.getElementById('filter-origin')?.value || '';
         App.state.filters.search = document.getElementById('filter-search').value;
         this.renderContent();
       },
@@ -550,13 +564,29 @@
         html += '<div class="kpi-box"><div class="kpi-value">' + stats.avgDuration + '</div><div class="kpi-label">Avg Cycle (mins)</div></div>';
         html += '</div>';
 
+        html += '<div style="margin: 1rem 0;">';
+        html += '<label style="margin-right: 0.5rem;">Filter by Origin:</label>';
+        html += '<select id="dept-filter-origin" onchange="DeptScreen.render(\'' + deptId + '\')" style="padding: 0.25rem 0.5rem;">';
+        html += '<option value="">All Origins</option>';
+        html += '<option value="client">Client-led</option>';
+        html += '<option value="internal">Internal-led</option>';
+        html += '</select>';
+        html += '</div>';
+
         html += '<div class="action-bar">';
         html += '<button class="btn-primary" onclick="DeptScreen.newWorkflow(\'' + deptId + '\')">+ New Workflow</button>';
         html += '<button class="btn-secondary" onclick="DeptScreen.exportDept(\'' + deptId + '\')">Export Dept JSON</button>';
         html += '<button class="btn-secondary" onclick="DeptScreen.printDept(\'' + deptId + '\')">Print Dept Pack</button>';
         html += '</div>';
 
-        if (workflows.length === 0) {
+        // Apply origin filter
+        const originFilter = document.getElementById('dept-filter-origin')?.value || '';
+        let filteredWorkflows = workflows;
+        if (originFilter) {
+          filteredWorkflows = workflows.filter(w => w.origin === originFilter);
+        }
+
+        if (filteredWorkflows.length === 0) {
           html += '<p class="text-muted">No workflows yet for this department.</p>';
         } else {
           html += '<table id="dept-table"><thead><tr>';
@@ -565,7 +595,7 @@
           html += '<th style="width:60px;"></th>';
           html += '</tr></thead><tbody>';
 
-          workflows.forEach(wf => {
+          filteredWorkflows.forEach(wf => {
             const owner = App.state.catalogs.roles.find(r => r.id === wf.ownerRoleId);
             const validation = Validator.validateWithSummary(wf, App.state.catalogs);
             const p3 = validation.summary.feasibleByPriority.p3 || {};
@@ -1329,6 +1359,9 @@
         });
 
         container.innerHTML = html;
+
+        // Validate escalations after rendering
+        setTimeout(() => this.validateEscalations(), 100);
       },
 
       changeSLAUnit(priorityId, field, newUnit) {
@@ -1396,6 +1429,78 @@
 
         // Update helper text
         helper.innerHTML = '≈ ' + minutes + ' mins<br>1 BD = ' + minsPerDay + ' mins';
+
+        // Validate escalations after SLA change
+        this.validateEscalations();
+      },
+
+      validateEscalations() {
+        // Check that escalateAfter < resolve for each priority
+        const violations = [];
+        const priorities = App.state.catalogs?.priorities || [];
+
+        const bhId = document.getElementById('wf-business-hours')?.value;
+        const bhProfile = App.state.catalogs?.businessHours?.find(bh => bh.id === bhId) || App.state.catalogs?.businessHours?.[0];
+
+        priorities.forEach(p => {
+          const units = this.slaUnits[p.id] || { ack: 'businessDays', start: 'businessDays', resolve: 'businessDays', escalateAfter: 'businessDays' };
+
+          const resolveInput = document.getElementById('sla-resolve-' + p.id);
+          const escalateAfterInput = document.getElementById('sla-escalateAfter-' + p.id);
+
+          if (resolveInput && escalateAfterInput) {
+            const resolveValue = parseFloat(resolveInput.value) || 0;
+            const escalateAfterValue = parseFloat(escalateAfterInput.value) || 0;
+
+            const resolveMins = App.convertUserSlaToMinutes(resolveValue, units.resolve, bhProfile);
+            const escalateAfterMins = App.convertUserSlaToMinutes(escalateAfterValue, units.escalateAfter, bhProfile);
+
+            // Only validate if escalateAfter is set (> 0)
+            if (escalateAfterMins > 0 && escalateAfterMins >= resolveMins) {
+              violations.push({
+                priority: p.name,
+                escalateAfter: escalateAfterMins,
+                resolve: resolveMins
+              });
+            }
+          }
+        });
+
+        this.showEscalationWarning(violations);
+        return violations.length === 0;
+      },
+
+      showEscalationWarning(violations) {
+        const strip = document.getElementById('validation-strip');
+        const saveBtn = document.querySelector('.btn-success');
+
+        if (!strip) return;
+
+        if (violations.length > 0) {
+          let html = '<div class="alert-warn">';
+          html += '<strong>⚠ Escalation Timing Error:</strong> Escalate After must be strictly less than Resolve time.<br>';
+          violations.forEach(v => {
+            html += '• <strong>' + v.priority + '</strong>: Escalate After (' + v.escalateAfter + ' mins) ≥ Resolve (' + v.resolve + ' mins)<br>';
+          });
+          html += '</div>';
+          strip.innerHTML = html;
+
+          // Disable Save button
+          if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.style.opacity = '0.5';
+            saveBtn.style.cursor = 'not-allowed';
+          }
+        } else {
+          strip.innerHTML = '';
+
+          // Enable Save button
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.style.opacity = '1';
+            saveBtn.style.cursor = 'pointer';
+          }
+        }
       },
 
       collectSLAData() {
@@ -1584,6 +1689,12 @@
 
         html += '</tbody></table>';
         container.innerHTML = html;
+
+        // Render BH banner
+        const bhId = document.getElementById('wf-business-hours')?.value;
+        if (bhId) {
+          App.renderBHBanner('sla-summary-table', bhId);
+        }
       },
 
       deleteStep(idx) {
@@ -1805,7 +1916,7 @@
         });
         html += '</div>';
 
-        html += '<div class="sla-matrix"><h3>SLA Targets</h3>';
+        html += '<div class="sla-matrix" id="drawer-sla-matrix"><h3>SLA Targets</h3>';
 
         // Show interpretation mode if available
         const interpretAsBH = workflow.meta?.interpretAsBusinessHours !== false;
@@ -1869,6 +1980,11 @@
         html += '</tbody></table></div>';
 
         document.getElementById('summary-drawer-body').innerHTML = html;
+
+        // Render BH banner in drawer
+        if (workflow.businessHoursId) {
+          App.renderBHBanner('drawer-sla-matrix', workflow.businessHoursId);
+        }
       },
 
       formatDays(days) {

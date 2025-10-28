@@ -12,6 +12,7 @@ const App = {
     filters: {
       department: 'all',
       owner: 'all',
+      origin: '',
       search: ''
     },
     viewMode: 'cards' // 'cards' or 'table'
@@ -286,6 +287,88 @@ const App = {
   },
 
   /**
+   * Get minutes per Business Day for a given business hours profile
+   */
+  minsPerBD(bhProfile) {
+    if (!bhProfile) {
+      // Try to get from current catalogs
+      const bh = this.state.catalogs?.businessHours?.[0];
+      return (bh?.hoursPerDay || 9) * 60;
+    }
+    return (bhProfile.hoursPerDay || 9) * 60;
+  },
+
+  /**
+   * Convert minutes to display value based on unit
+   */
+  stepFromMinutes(mins, unit) {
+    const bhProfile = this.state.catalogs?.businessHours?.[0];
+    const minsPerDay = this.minsPerBD(bhProfile);
+
+    if (unit === 'bd') return (mins / minsPerDay).toFixed(1);
+    if (unit === 'hr') return (mins / 60).toFixed(1);
+    return mins;
+  },
+
+  /**
+   * Convert display value to minutes based on unit
+   */
+  stepToMinutes(val, unit, bhProfile) {
+    const n = Number(val || 0);
+    if (unit === 'bd') {
+      const minsPerDay = this.minsPerBD(bhProfile);
+      return Math.round(n * minsPerDay);
+    }
+    if (unit === 'hr') return Math.round(n * 60);
+    return Math.round(n);
+  },
+
+  /**
+   * Migrate scheduleRef to notes (one-time migration)
+   */
+  migrateScheduleRef() {
+    const list = this.getWorkflows();
+    let changed = false;
+
+    list.forEach(w => {
+      const ref = w?.meta?.scheduleRef;
+      if (ref) {
+        const old = w.meta.notes || '';
+        w.meta.notes = old ? `${old}\n\n[Schedule Ref]\n${ref}` : `[Schedule Ref]\n${ref}`;
+        delete w.meta.scheduleRef;
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      this.setWorkflows(list);
+      console.log('Migrated scheduleRef to notes');
+    }
+  },
+
+  /**
+   * Render Business Hours banner showing conversion rate
+   */
+  renderBHBanner(containerId, businessHoursId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Remove existing banner if present
+    const existingBanner = container.querySelector('.bh-banner');
+    if (existingBanner) existingBanner.remove();
+
+    // Get business hours profile
+    const bhProfile = this.state.catalogs?.businessHours?.find(bh => bh.id === businessHoursId) || this.state.catalogs?.businessHours?.[0];
+    if (!bhProfile) return;
+
+    const mins = this.minsPerBD(bhProfile);
+    const div = document.createElement('div');
+    div.className = 'bh-banner';
+    div.textContent = `${bhProfile.name} → 1 BD = ${mins} minutes`;
+    container.prepend(div);
+  },
+
+  /**
    * Ensure default catalogs are seeded (only if localStorage is empty)
    */
   ensureDefaultCatalogs() {
@@ -431,6 +514,7 @@ const App = {
     // Ensure default catalogs and run migrations (first-run setup)
     this.ensureDefaultCatalogs();
     this.migrateCatalogs_v11();
+    this.migrateScheduleRef();
     this.seedDemo();
 
     // Load catalogs
@@ -911,6 +995,11 @@ const App = {
     // Owner filter
     if (this.state.filters.owner !== 'all') {
       filtered = filtered.filter(w => w.ownerRoleId === this.state.filters.owner);
+    }
+
+    // Origin filter
+    if (this.state.filters.origin) {
+      filtered = filtered.filter(w => w.origin === this.state.filters.origin);
     }
 
     // Search filter

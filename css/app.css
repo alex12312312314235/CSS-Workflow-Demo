@@ -1103,3 +1103,72 @@ tr:hover {
     width: 100%;
   }
 }
+
+/* ======================
+   Origin Visual Identity
+   ====================== */
+.origin-badge {
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.origin-client {
+  background: #d90429;
+  color: #fff;
+  border: 1px solid #b10322;
+}
+
+.origin-internal {
+  background: #e8eef6;
+  color: #1f2a44;
+  border: 1px solid #c7d3e6;
+}
+
+.card.origin-client {
+  --card-accent: #d90429;
+}
+
+.card.origin-internal {
+  --card-accent: #7a8aa0;
+}
+
+.card .card-accent {
+  height: 4px;
+  background: var(--card-accent, #3498db);
+  border-radius: 4px 4px 0 0;
+}
+
+/* Row highlighting for origin */
+tr.origin-client {
+  border-left: 3px solid #d90429;
+}
+
+tr.origin-internal {
+  border-left: 3px solid #7a8aa0;
+}
+
+/* ======================
+   Validation & Info Banners
+   ====================== */
+.alert-warn {
+  background: #fff3cd;
+  border: 1px solid #ffeeba;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #856404;
+  margin-bottom: 8px;
+}
+
+.bh-banner {
+  background: #f1f3f5;
+  border-left: 3px solid #0078d4;
+  padding: 4px 10px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #444;
+  border-radius: 4px;
+}

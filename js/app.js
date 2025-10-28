@@ -46,6 +46,96 @@ const App = {
     return this.safeParse(localStorage.getItem(key), fallback);
   },
 
+  // Schema version for forcing catalog reset when needed
+  SCHEMA_VERSION: '1.0.1',
+
+  // Authoritative in-code defaults (always available, never empty)
+  defaultCatalogs: {
+    departments: [
+      { id: 'dept-concept', name: 'Concept Development' },
+      { id: 'dept-standards', name: 'Standards & Specifications' },
+      { id: 'dept-foodtech', name: 'Food Technology' },
+      { id: 'dept-hd', name: 'Health & Dietetics' },
+      { id: 'dept-ii', name: 'Insights & Intelligence' }
+    ],
+    roles: [
+      { id: 'role-esc', name: 'Executive Sous Chef' },
+      { id: 'role-ss-lead', name: 'Standards & Specs Lead' },
+      { id: 'role-hd-lead', name: 'Health & Dietetics Lead' },
+      { id: 'role-ft-lead', name: 'Food Technology Lead' },
+      { id: 'role-ii-analyst', name: 'Insights & Intelligence Analyst' }
+    ],
+    priorities: [
+      { id: 'p1', name: 'Critical', ack: 30, start: 60, resolve: 480 },
+      { id: 'p2', name: 'High', ack: 120, start: 240, resolve: 1440 },
+      { id: 'p3', name: 'Normal', ack: 1440, start: 2880, resolve: 10080 }
+    ],
+    businessHours: [
+      { id: 'bh-standard', name: 'Standard CSS (08:00–18:00, Mon–Fri)', days: [1, 2, 3, 4, 5], hoursPerDay: 10, start: '08:00', end: '18:00' },
+      { id: 'bh-ops', name: 'Ops Window (07:00–19:00, Mon–Sat)', days: [1, 2, 3, 4, 5, 6], hoursPerDay: 12, start: '07:00', end: '19:00' }
+    ],
+    origins: [
+      { id: 'client', name: 'Client-led' },
+      { id: 'internal', name: 'Internal-led' }
+    ]
+  },
+
+  defaultTemplates: [
+    {
+      id: 'tmpl-recipe-verification',
+      name: 'Recipe Verification',
+      departmentId: 'dept-standards',
+      ownerRoleId: 'role-esc',
+      businessHoursId: 'bh-standard',
+      steps: [
+        { name: 'Receive Item', roleId: 'role-ss-lead', mins: 60 },
+        { name: 'Verify Item', roleId: 'role-ii-analyst', mins: 180 }
+      ],
+      origin: 'internal',
+      meta: { notes: 'Template: verify incoming recipe against standards.' }
+    },
+    {
+      id: 'tmpl-allergen-revision',
+      name: 'Spec Update – Allergen Revision',
+      departmentId: 'dept-standards',
+      ownerRoleId: 'role-esc',
+      businessHoursId: 'bh-standard',
+      steps: [
+        { name: 'Cross-contact Review', roleId: 'role-hd-lead', mins: 120 },
+        { name: 'Client Advisory', roleId: 'role-hd-lead', mins: 60 },
+        { name: 'Publish', roleId: 'role-ss-lead', mins: 30 }
+      ],
+      origin: 'client',
+      meta: { notes: 'Template: update spec and communicate revision.' }
+    }
+  ],
+
+  /**
+   * Get schema version from localStorage
+   */
+  getSchemaVersion() {
+    return localStorage.getItem('schema_version') || '';
+  },
+
+  /**
+   * Set schema version to localStorage
+   */
+  setSchemaVersion(version) {
+    localStorage.setItem('schema_version', version);
+  },
+
+  /**
+   * Validate catalog structure
+   */
+  _isValidCatalogs(cat) {
+    return !!cat &&
+      Array.isArray(cat.departments) && cat.departments.length > 0 &&
+      Array.isArray(cat.roles) && cat.roles.length > 0 &&
+      Array.isArray(cat.priorities) && cat.priorities.length > 0 &&
+      Array.isArray(cat.businessHours) && cat.businessHours.length > 0 &&
+      Array.isArray(cat.origins) && cat.origins.length > 0;
+  },
+
   // Default catalog data v1.1 (canonical names + position titles)
   DEFAULT_CATALOG: {
     schemaVersion: '1.1.0',
@@ -509,16 +599,16 @@ const App = {
   },
 
   /**
-   * Boot sequence - runs before any render
-   * Guarantees catalogs and templates are always available
+   * Boot sequence - runs before any async loading
+   * Guarantees catalogs are never empty via schema version gate
    */
   boot() {
     console.log('Booting CSS SLA Configurator...');
 
-    // Ensure catalogs exist (creates defaults if missing)
+    // 1) getCatalogs() now enforces schema version and forces rebuild if needed
     this.getCatalogs();
 
-    // Run migrations if needed
+    // 2) Run migrations (if catalogs were valid)
     if (this.migrateCatalogs_v11) {
       this.migrateCatalogs_v11();
     }
@@ -526,27 +616,7 @@ const App = {
       this.migrateScheduleRef();
     }
 
-    // Seed demo workflows only if none exist
-    this.seedDemoIfEmpty();
-
-    console.log('Boot complete');
-  },
-
-  /**
-   * Boot sequence - runs before any async loading
-   * Ensures catalogs exist, runs migrations, optionally seeds demo
-   */
-  boot() {
-    console.log('Booting CSS SLA Configurator...');
-
-    // 1) Ensure catalogs exist (auto-creates if missing or invalid)
-    this.getCatalogs();
-
-    // 2) Run migrations to normalize data
-    this.migrateCatalogs_v11();
-    this.migrateScheduleRef();
-
-    // 3) Optionally seed demo on truly empty storage
+    // 3) Seed demo workflows only if none exist
     this.seedDemoIfEmpty();
 
     console.log('Boot complete');
@@ -575,6 +645,7 @@ const App = {
         document.getElementById('btnRestoreDefaults').onclick = () => {
           localStorage.removeItem(LS.CATALOGS);
           localStorage.removeItem(LS.SLA_CATALOG);
+          localStorage.removeItem('schema_version'); // Clear version to force reset
           this.getCatalogs(); // will recreate defaults
           this.state.catalogs = this.getCatalogs();
           window.location.reload(); // Full reload to ensure clean state
@@ -723,32 +794,49 @@ const App = {
   },
 
   /**
-   * Get catalogs from localStorage with auto-repair
+   * Get catalogs from localStorage with auto-repair and schema version gate
+   * Forces rebuild from defaults if schema version changed or catalogs invalid
    */
   getCatalogs() {
     // Try both new and legacy keys
     let cat = this.safeGet(LS.CATALOGS, null) || this.safeGet(LS.SLA_CATALOG, null);
 
-    // Validate structure
-    const isValid = cat &&
-      Array.isArray(cat.departments) && cat.departments.length > 0 &&
-      Array.isArray(cat.roles) && cat.roles.length > 0 &&
-      Array.isArray(cat.priorities) && cat.priorities.length > 0 &&
-      Array.isArray(cat.businessHours) && cat.businessHours.length > 0;
+    // Check schema version
+    const currentVersion = this.getSchemaVersion();
 
-    if (!isValid) {
-      console.warn('Catalogs invalid or missing, restoring defaults');
-      cat = JSON.parse(JSON.stringify(this.DEFAULT_CATALOG));
-      this.setCatalogs(cat);
+    // Validate structure and check version
+    const isValid = this._isValidCatalogs(cat);
+    const versionMatches = currentVersion === this.SCHEMA_VERSION;
+
+    if (!isValid || !versionMatches) {
+      if (!versionMatches) {
+        console.log(`Schema version mismatch (${currentVersion} → ${this.SCHEMA_VERSION}), forcing catalog reset`);
+      } else {
+        console.warn('Catalogs invalid or missing, restoring defaults');
+      }
+
+      // Force-replace with in-code defaults
+      cat = JSON.parse(JSON.stringify(this.defaultCatalogs));
+      localStorage.setItem(LS.CATALOGS, JSON.stringify(cat));
+      localStorage.setItem(LS.SLA_CATALOG, JSON.stringify(cat));
+      this.setSchemaVersion(this.SCHEMA_VERSION);
+      console.log('Catalogs restored from hard defaults');
     }
 
     return cat;
   },
 
   /**
-   * Set catalogs to localStorage
+   * Set catalogs to localStorage (only if valid)
+   * Never writes empty catalogs
    */
   setCatalogs(cat) {
+    // Safety: never write empty catalogs
+    if (!this._isValidCatalogs(cat)) {
+      console.error('Attempted to write invalid catalogs, ignoring');
+      return;
+    }
+
     try {
       localStorage.setItem(LS.CATALOGS, JSON.stringify(cat));
       localStorage.setItem(LS.SLA_CATALOG, JSON.stringify(cat)); // Keep legacy key

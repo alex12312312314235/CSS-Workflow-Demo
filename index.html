@@ -90,7 +90,8 @@
         <p class="text-muted">Manage departments, roles, business hours, and priorities. Changes persist locally.</p>
 
         <div class="action-bar">
-          <button class="btn-secondary" onclick="CatalogScreen.resetToDefaults()">Reset to Defaults</button>
+          <button class="btn-secondary" onclick="CatalogScreen.resetToDefaults()">Reset Catalogs to Defaults</button>
+          <button class="btn-secondary" onclick="CatalogScreen.seedDemoWorkflows()">Seed Demo Workflows</button>
         </div>
 
         <div id="settings-content"></div>
@@ -896,7 +897,21 @@
 
       resetToDefaults() {
         if (confirm('Reset all catalog data to defaults? This will overwrite your changes.')) {
-          App.resetCatalogs();
+          localStorage.removeItem(LS.CATALOGS);
+          localStorage.removeItem(LS.SLA_CATALOG);
+          App.getCatalogs(); // will recreate defaults
+          App.state.catalogs = App.getCatalogs();
+          window.location.reload(); // Full reload
+        }
+      },
+
+      seedDemoWorkflows() {
+        if (confirm('Seed demo workflows? This will clear existing workflows.')) {
+          App.setWorkflows([]); // Clear existing
+          App.seedDemoIfEmpty(); // Seed new demo
+          App.loadWorkflows(); // Reload into state
+          alert('Demo workflows seeded! Reloading...');
+          window.location.reload(); // Full reload
         }
       }
     };

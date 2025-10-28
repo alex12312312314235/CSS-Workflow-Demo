@@ -461,9 +461,12 @@
           const totalMins = feasibility ? feasibility.totalExpectedMins : 0;
           const updated = wf.updatedAt ? new Date(wf.updatedAt).toLocaleDateString() : 'Never';
 
-          html += '<tr data-wf-id="' + wf.id + '">';
+          const originClass = wf.origin === 'client' ? 'origin-client' : 'origin-internal';
+          const originLabel = wf.origin === 'client' ? 'Client-led' : 'Internal-led';
+
+          html += '<tr data-wf-id="' + wf.id + '" class="' + originClass + '">';
           html += '<td class="clickable-cell">' + (dept ? dept.name : 'Unknown') + '</td>';
-          html += '<td class="clickable-cell"><strong>' + wf.workType + '</strong></td>';
+          html += '<td class="clickable-cell"><strong>' + wf.workType + '</strong> <span class="origin-badge ' + originClass + '">' + originLabel + '</span></td>';
           html += '<td class="clickable-cell">' + (owner ? owner.name : 'Unknown') + '</td>';
           html += '<td class="clickable-cell">' + stepCount + '</td>';
           html += '<td class="clickable-cell">' + totalMins + '</td>';
@@ -576,8 +579,11 @@
 
             const updated = wf.updatedAt ? new Date(wf.updatedAt).toLocaleDateString() : 'Never';
 
-            html += '<tr data-wf-id="' + wf.id + '">';
-            html += '<td class="clickable-work-type"><strong style="color:#3498db; cursor:pointer;">' + wf.workType + '</strong></td>';
+            const originClass = wf.origin === 'client' ? 'origin-client' : 'origin-internal';
+            const originLabel = wf.origin === 'client' ? 'Client-led' : 'Internal-led';
+
+            html += '<tr data-wf-id="' + wf.id + '" class="' + originClass + '">';
+            html += '<td class="clickable-work-type"><strong style="color:#3498db; cursor:pointer;">' + wf.workType + '</strong> <span class="origin-badge ' + originClass + '">' + originLabel + '</span></td>';
             html += '<td>' + (owner ? owner.name : 'Unknown') + '</td>';
             html += '<td>' + (wf.steps ? wf.steps.length : 0) + '</td>';
             html += '<td>' + validation.summary.totalExpectedMins + '</td>';
@@ -1764,8 +1770,11 @@
 
         const totalMins = workflow.steps.reduce((sum, s) => sum + (s.expectedMins || 0), 0);
 
-        // Update title
-        document.getElementById('summary-drawer-title').textContent = workflow.workType;
+        // Update title with origin badge
+        const originClass = workflow.origin === 'client' ? 'origin-client' : 'origin-internal';
+        const originLabel = workflow.origin === 'client' ? 'Client-led' : 'Internal-led';
+        const titleEl = document.getElementById('summary-drawer-title');
+        titleEl.innerHTML = workflow.workType + ' <span class="origin-badge ' + originClass + '" style="font-size:0.7em; font-weight:normal; margin-left:0.5rem;">' + originLabel + '</span>';
 
         // Build body content
         let html = '<div class="summary-header"><dl>';

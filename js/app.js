@@ -132,28 +132,28 @@ const App = {
       hd: [
         {
           workType: 'Nutritional Analysis',
-          ownerRoleId: 'h_d_lead',
-          businessHoursId: 'std',
+          ownerRoleId: 'dietitian',
+          businessHoursId: 'bh_std',
           steps: [
-            { title: 'Intake triage', roleId: 'h_d_lead', expectedMins: 30 },
-            { title: 'Data collection', roleId: 'i_i_analyst', expectedMins: 180 },
+            { title: 'Intake triage', roleId: 'hod_hd', expectedMins: 30 },
+            { title: 'Data collection', roleId: 'data_analyst', expectedMins: 180 },
             { title: 'Lab analysis', roleId: 'food_tech', expectedMins: 240 },
-            { title: 'Label update', roleId: 'h_d_lead', expectedMins: 60 }
+            { title: 'Label update', roleId: 'dietitian', expectedMins: 60 }
           ],
-          slaPreset: 'standard'
+          slaPreset: 'medium'
         }
       ],
-      ss: [
+      sands: [
         {
           workType: 'Allergen Update',
-          ownerRoleId: 's_s_lead',
-          businessHoursId: 'std',
+          ownerRoleId: 'spec_analyst',
+          businessHoursId: 'bh_std',
           steps: [
-            { title: 'Intake & triage', roleId: 's_s_lead', expectedMins: 60 },
+            { title: 'Intake & triage', roleId: 'spec_analyst', expectedMins: 60 },
             { title: 'Verification', roleId: 'food_tech', expectedMins: 240 },
-            { title: 'Publish & notify', roleId: 'exec_sous', expectedMins: 60 }
+            { title: 'Publish & notify', roleId: 'hod_sands', expectedMins: 60 }
           ],
-          slaPreset: 'standard'
+          slaPreset: 'medium'
         }
       ],
       ft: [],

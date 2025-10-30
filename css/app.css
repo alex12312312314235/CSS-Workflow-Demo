@@ -1107,32 +1107,49 @@ tr:hover {
 /* ======================
    Origin Visual Identity
    ====================== */
+:root {
+  --origin-client: #d90429;
+  --origin-client-text: #fff;
+  --origin-internal: #c9a227;
+  --origin-internal-text: #1a1a1a;
+}
+
 .origin-badge {
-  padding: 2px 6px;
   border-radius: 999px;
-  font-size: 12px;
   font-weight: 600;
+  padding: 2px 8px;
+  font-size: 12px;
   display: inline-block;
 }
 
 .origin-client {
-  background: #d90429;
-  color: #fff;
-  border: 1px solid #b10322;
+  background: var(--origin-client);
+  color: var(--origin-client-text);
 }
 
 .origin-internal {
-  background: #e8eef6;
-  color: #1f2a44;
-  border: 1px solid #c7d3e6;
+  background: var(--origin-internal);
+  color: var(--origin-internal-text);
+}
+
+.row-origin-left {
+  border-left: 3px solid transparent;
+}
+
+.row-origin-left.client {
+  border-left-color: var(--origin-client);
+}
+
+.row-origin-left.internal {
+  border-left-color: var(--origin-internal);
 }
 
 .card.origin-client {
-  --card-accent: #d90429;
+  --card-accent: var(--origin-client);
 }
 
 .card.origin-internal {
-  --card-accent: #7a8aa0;
+  --card-accent: var(--origin-internal);
 }
 
 .card .card-accent {
@@ -1141,13 +1158,13 @@ tr:hover {
   border-radius: 4px 4px 0 0;
 }
 
-/* Row highlighting for origin */
+/* Legacy row highlighting for origin (keep for backwards compat) */
 tr.origin-client {
-  border-left: 3px solid #d90429;
+  border-left: 3px solid var(--origin-client);
 }
 
 tr.origin-internal {
-  border-left: 3px solid #7a8aa0;
+  border-left: 3px solid var(--origin-internal);
 }
 
 /* ======================

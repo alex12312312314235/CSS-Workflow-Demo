@@ -55,6 +55,14 @@
             </select>
           </div>
           <div class="filter-group">
+            <label>Origin</label>
+            <select id="filter-origin" onchange="HomeScreen.updateFilters()">
+              <option value="">All Origins</option>
+              <option value="client">Client-led</option>
+              <option value="internal">Internal-led</option>
+            </select>
+          </div>
+          <div class="filter-group">
             <label>Search Work Type</label>
             <input type="text" id="filter-search" placeholder="Type to search..." oninput="HomeScreen.updateFilters()">
           </div>
@@ -82,7 +90,8 @@
         <p class="text-muted">Manage departments, roles, business hours, and priorities. Changes persist locally.</p>
 
         <div class="action-bar">
-          <button class="btn-secondary" onclick="CatalogScreen.resetToDefaults()">Reset to Defaults</button>
+          <button class="btn-secondary" onclick="CatalogScreen.resetToDefaults()">Reset Catalogs to Defaults</button>
+          <button class="btn-secondary" onclick="CatalogScreen.seedDemoWorkflows()">Seed Demo Workflows</button>
         </div>
 
         <div id="settings-content"></div>
@@ -92,6 +101,7 @@
       <div id="screen-build" class="screen">
         <h2>Workflow Builder</h2>
         <p class="text-muted">Create or edit a workflow with steps and SLA targets.</p>
+        <p id="diagnostics-line" class="text-muted" style="font-size: 0.8em; margin-top: -0.5em;"></p>
 
         <div class="build-layout">
           <div class="build-form">
@@ -132,12 +142,8 @@
                   <input type="text" id="wf-work-type" placeholder="e.g., Spec Update – Allergen Revision" required maxlength="60">
                 </div>
                 <div class="form-group">
-                  <label for="wf-schedule-ref">Schedule Ref (optional)</label>
-                  <input type="text" id="wf-schedule-ref" placeholder="e.g., Q2-2024-EK">
-                </div>
-                <div class="form-group">
                   <label for="wf-business-hours">Business Hours *</label>
-                  <select id="wf-business-hours" required></select>
+                  <select id="wf-business-hours" required onchange="BuildScreen.onBusinessHoursChange()"></select>
                 </div>
                 <div class="form-group">
                   <label for="wf-owner">Owner Role *</label>
@@ -147,9 +153,19 @@
 
               <!-- Steps Section -->
               <div class="steps-container">
-                <h3>Workflow Steps
-                  <button type="button" class="btn-secondary" onclick="BuildScreen.showTemplateModal()" style="margin-left:1rem; padding:0.35rem 0.75rem; font-size:0.85rem;">📋 Insert Template</button>
-                </h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                  <h3 style="margin:0;">Workflow Steps
+                    <button type="button" class="btn-secondary" onclick="BuildScreen.showTemplateModal()" style="margin-left:1rem; padding:0.35rem 0.75rem; font-size:0.85rem;">📋 Insert Template</button>
+                  </h3>
+                  <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <label style="font-size:0.9rem; color:#666;">Step duration unit:</label>
+                    <select id="step-unit" onchange="BuildScreen.onStepUnitChange()" style="padding:0.25rem 0.5rem;">
+                      <option value="bd">Business Days</option>
+                      <option value="hr">Hours</option>
+                      <option value="min" selected>Minutes</option>
+                    </select>
+                  </div>
+                </div>
                 <div id="steps-list"></div>
                 <button type="button" class="btn-primary" onclick="BuildScreen.addStep()">+ Add Step</button>
               </div>
@@ -158,7 +174,7 @@
               <div class="sla-table">
                 <h3>SLA Targets by Priority</h3>
                 <p class="text-muted" style="margin: -0.5rem 0 1rem 0; font-size: 0.9rem;">
-                  Choose a preset to prefill targets for High / Medium / Low. Values are entered in your selected unit and stored internally in minutes. Business Days use the selected Business Hours profile.
+                  <strong>Resolve</strong> is calculated from total workflow step time × priority factor + buffer. Adjust factors/buffers to tune room for review and handoffs. <strong>Ack/Start</strong> remain editable.
                 </p>
 
                 <div class="sla-presets">
@@ -167,25 +183,16 @@
                   <button type="button" class="preset-btn" data-preset="aggressive" onclick="BuildScreen.applySLAPreset('aggressive')">Aggressive</button>
                 </div>
 
-                <details style="margin: 1rem 0;">
-                  <summary style="cursor: pointer; font-weight: 500; color: #666;">Advanced: edit SLA targets by priority</summary>
-                  <p class="text-muted" style="margin: 0.5rem 0 1rem 0; font-size: 0.9rem;">
-                    Configure SLA targets and escalation settings for each priority level.
-                  </p>
+                <div id="sla-summary-table" style="margin: 1rem 0;">
+                  <!-- SLA preview table will be rendered here -->
+                </div>
 
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Priority</th>
-                        <th title="Computed using business hours window from selected profile.">Acknowledge (Business Days)</th>
-                        <th title="Computed using business hours window from selected profile.">Start Work (Business Days)</th>
-                        <th title="Computed using business hours window from selected profile.">Resolve (Business Days)</th>
-                        <th title="Escalation timing">Escalate After</th>
-                        <th>Escalate To Role</th>
-                      </tr>
-                    </thead>
-                    <tbody id="sla-policy-rows"></tbody>
-                  </table>
+                <details style="margin: 1rem 0;">
+                  <summary style="cursor: pointer; font-weight: 500; color: #666;">Advanced: tune SLA composer (factors & buffers)</summary>
+                  <p class="text-muted" style="margin: 0.5rem 0 1rem 0; font-size: 0.9rem;">
+                    Fine-tune how Resolve is computed for each priority. Factor scales total step time; Buffer adds fixed cushion.
+                  </p>
+                  <div id="sla-composer-controls"></div>
                 </details>
               </div>
 
@@ -205,6 +212,7 @@
                 <button type="button" class="btn-success" onclick="BuildScreen.saveWorkflow()">Save Workflow</button>
                 <button type="button" class="btn-secondary" onclick="BuildScreen.saveDraft()">Save Draft</button>
                 <button type="button" class="btn-secondary" onclick="BuildScreen.clear()">Clear</button>
+                <button type="button" class="btn-secondary" onclick="BuildScreen.cancel()">Cancel</button>
               </div>
             </form>
           </div>
@@ -261,7 +269,7 @@
       <div class="summary-drawer-content">
         <div class="summary-drawer-header">
           <h3 id="summary-drawer-title">Workflow Summary</h3>
-          <button class="btn-close" onclick="SummaryDrawer.close()" aria-label="Close">&times;</button>
+          <button class="btn-close" onclick="SummaryDrawer.close()" aria-label="Close (Esc)" title="Close (Esc)">&times;</button>
         </div>
         <div class="summary-drawer-body" id="summary-drawer-body">
           <!-- Content will be dynamically rendered -->
@@ -283,11 +291,11 @@
     <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="App.handleFileImport(event)">
   </div>
 
-  <!-- Load JavaScript modules -->
-  <script src="./js/validate.js"></script>
-  <script src="./js/sharelink.js"></script>
-  <script src="./js/templates.js"></script>
-  <script src="./js/app.js"></script>
+  <!-- Load JavaScript modules (cache-busted with version) -->
+  <script src="./js/validate.js?v=101"></script>
+  <script src="./js/sharelink.js?v=101"></script>
+  <script src="./js/templates.js?v=101"></script>
+  <script src="./js/app.js?v=101"></script>
 
   <!-- Screen Implementations -->
   <script>
@@ -311,12 +319,18 @@
           App.state.catalogs.roles.map(r => '<option value="' + r.id + '">' + r.name + '</option>').join('');
         ownerFilter.value = App.state.filters.owner;
 
+        const originFilter = document.getElementById('filter-origin');
+        if (originFilter) {
+          originFilter.value = App.state.filters.origin || '';
+        }
+
         document.getElementById('filter-search').value = App.state.filters.search;
       },
 
       updateFilters() {
         App.state.filters.department = document.getElementById('filter-dept').value;
         App.state.filters.owner = document.getElementById('filter-owner').value;
+        App.state.filters.origin = document.getElementById('filter-origin')?.value || '';
         App.state.filters.search = document.getElementById('filter-search').value;
         this.renderContent();
       },
@@ -464,9 +478,12 @@
           const totalMins = feasibility ? feasibility.totalExpectedMins : 0;
           const updated = wf.updatedAt ? new Date(wf.updatedAt).toLocaleDateString() : 'Never';
 
-          html += '<tr data-wf-id="' + wf.id + '">';
+          const originClass = wf.origin === 'client' ? 'origin-client' : 'origin-internal';
+          const originLabel = wf.origin === 'client' ? 'Client-led' : 'Internal-led';
+
+          html += '<tr data-wf-id="' + wf.id + '" class="' + originClass + '">';
           html += '<td class="clickable-cell">' + (dept ? dept.name : 'Unknown') + '</td>';
-          html += '<td class="clickable-cell"><strong>' + wf.workType + '</strong></td>';
+          html += '<td class="clickable-cell"><strong>' + wf.workType + '</strong> <span class="origin-badge ' + originClass + '">' + originLabel + '</span></td>';
           html += '<td class="clickable-cell">' + (owner ? owner.name : 'Unknown') + '</td>';
           html += '<td class="clickable-cell">' + stepCount + '</td>';
           html += '<td class="clickable-cell">' + totalMins + '</td>';
@@ -550,13 +567,29 @@
         html += '<div class="kpi-box"><div class="kpi-value">' + stats.avgDuration + '</div><div class="kpi-label">Avg Cycle (mins)</div></div>';
         html += '</div>';
 
+        html += '<div style="margin: 1rem 0;">';
+        html += '<label style="margin-right: 0.5rem;">Filter by Origin:</label>';
+        html += '<select id="dept-filter-origin" onchange="DeptScreen.render(\'' + deptId + '\')" style="padding: 0.25rem 0.5rem;">';
+        html += '<option value="">All Origins</option>';
+        html += '<option value="client">Client-led</option>';
+        html += '<option value="internal">Internal-led</option>';
+        html += '</select>';
+        html += '</div>';
+
         html += '<div class="action-bar">';
         html += '<button class="btn-primary" onclick="DeptScreen.newWorkflow(\'' + deptId + '\')">+ New Workflow</button>';
         html += '<button class="btn-secondary" onclick="DeptScreen.exportDept(\'' + deptId + '\')">Export Dept JSON</button>';
         html += '<button class="btn-secondary" onclick="DeptScreen.printDept(\'' + deptId + '\')">Print Dept Pack</button>';
         html += '</div>';
 
-        if (workflows.length === 0) {
+        // Apply origin filter
+        const originFilter = document.getElementById('dept-filter-origin')?.value || '';
+        let filteredWorkflows = workflows;
+        if (originFilter) {
+          filteredWorkflows = workflows.filter(w => w.origin === originFilter);
+        }
+
+        if (filteredWorkflows.length === 0) {
           html += '<p class="text-muted">No workflows yet for this department.</p>';
         } else {
           html += '<table id="dept-table"><thead><tr>';
@@ -565,7 +598,7 @@
           html += '<th style="width:60px;"></th>';
           html += '</tr></thead><tbody>';
 
-          workflows.forEach(wf => {
+          filteredWorkflows.forEach(wf => {
             const owner = App.state.catalogs.roles.find(r => r.id === wf.ownerRoleId);
             const validation = Validator.validateWithSummary(wf, App.state.catalogs);
             const p3 = validation.summary.feasibleByPriority.p3 || {};
@@ -579,8 +612,11 @@
 
             const updated = wf.updatedAt ? new Date(wf.updatedAt).toLocaleDateString() : 'Never';
 
-            html += '<tr data-wf-id="' + wf.id + '">';
-            html += '<td class="clickable-work-type"><strong style="color:#3498db; cursor:pointer;">' + wf.workType + '</strong></td>';
+            const originClass = wf.origin === 'client' ? 'origin-client' : 'origin-internal';
+            const originLabel = wf.origin === 'client' ? 'Client-led' : 'Internal-led';
+
+            html += '<tr data-wf-id="' + wf.id + '" class="' + originClass + '">';
+            html += '<td class="clickable-work-type"><strong style="color:#3498db; cursor:pointer;">' + wf.workType + '</strong> <span class="origin-badge ' + originClass + '">' + originLabel + '</span></td>';
             html += '<td>' + (owner ? owner.name : 'Unknown') + '</td>';
             html += '<td>' + (wf.steps ? wf.steps.length : 0) + '</td>';
             html += '<td>' + validation.summary.totalExpectedMins + '</td>';
@@ -862,7 +898,22 @@
 
       resetToDefaults() {
         if (confirm('Reset all catalog data to defaults? This will overwrite your changes.')) {
-          App.resetCatalogs();
+          localStorage.removeItem(LS.CATALOGS);
+          localStorage.removeItem(LS.SLA_CATALOG);
+          localStorage.removeItem('schema_version'); // Clear version to force reset
+          App.getCatalogs(); // will recreate defaults from hard defaults
+          App.state.catalogs = App.getCatalogs();
+          window.location.reload(); // Full reload
+        }
+      },
+
+      seedDemoWorkflows() {
+        if (confirm('Seed demo workflows? This will clear existing workflows.')) {
+          App.setWorkflows([]); // Clear existing
+          App.seedDemoIfEmpty(); // Seed new demo
+          App.loadWorkflows(); // Reload into state
+          alert('Demo workflows seeded! Reloading...');
+          window.location.reload(); // Full reload
         }
       }
     };
@@ -873,12 +924,26 @@
     const BuildScreen = {
       steps: [],
       currentWorkflowId: null,
+      stepUnit: 'min', // Default step duration unit: 'bd', 'hr', or 'min'
       slaUnits: {}, // Track unit selection per priority { p1: {ack:'businessDays', start:'businessDays', resolve:'businessDays', escalateAfter:'businessDays'}, ... }
       interpretAsBH: true, // Default: interpret as business hours
+      slaComposer: { factors: {}, buffers: {} }, // SLA composer state { factors: {p1:1.0,...}, buffers: {p1:0,...} }
+
+      updateDiagnostics() {
+        const diagEl = document.getElementById('diagnostics-line');
+        if (!diagEl) return;
+
+        const cat = App.getCatalogs();
+        const wfCount = App.getWorkflows().length;
+        const tplCount = (App.defaultTemplates || []).length;
+
+        diagEl.textContent = `Diagnostics: Depts ${cat.departments.length} • Roles ${cat.roles.length} • BH ${cat.businessHours.length} • WF ${wfCount} • Templates ${tplCount}`;
+      },
 
       render() {
         this.populateTemplates();
         this.populateDropdowns();
+        this.updateDiagnostics();
 
         // Initialize units if not already set - default to Business Days
         if (!this.slaUnits || Object.keys(this.slaUnits).length === 0) {
@@ -923,69 +988,54 @@
 
       populateTemplates() {
         const select = document.getElementById('template-select');
+        if (!select) return;
 
-        // Guard: only populate if not already populated (or if templates changed)
-        if (!App.state.templates || !App.state.templates.templates) {
-          console.warn('Templates not loaded yet');
-          select.innerHTML = '<option value="">Loading templates...</option>';
-          return;
-        }
+        // Always populate from defaultTemplates (in-code, never empty)
+        const templates = App.defaultTemplates || [];
 
-        const templates = App.state.templates.templates;
+        // Only populate if not already done
+        if (select.options.length > 1) return;
 
-        let options = '<option value="">-- Select a template --</option>';
-        const hasTemplates = Object.keys(templates).some(deptId =>
-          templates[deptId] && templates[deptId].length > 0
-        );
+        let html = '<option value="">-- Select a template --</option>';
 
-        if (!hasTemplates) {
-          options += '<optgroup label="No templates available" disabled></optgroup>';
-        } else {
-          Object.keys(templates).forEach(deptId => {
-            const dept = App.state.catalogs.departments.find(d => d.id === deptId);
-            if (dept && templates[deptId].length > 0) {
-              options += '<optgroup label="' + dept.name + '">';
-              templates[deptId].forEach((tpl, idx) => {
-                options += '<option value="' + deptId + ':' + idx + '">' + tpl.workType + '</option>';
-              });
-              options += '</optgroup>';
-            }
-          });
-        }
+        templates.forEach((t, idx) => {
+          html += '<option value="' + t.id + '">' + t.name + '</option>';
+        });
 
-        select.innerHTML = options;
+        select.innerHTML = html;
       },
 
       loadTemplate(value) {
         if (!value) return;
 
-        const parts = value.split(':');
-        const deptId = parts[0];
-        const idx = parseInt(parts[1]);
-        const template = App.state.templates.templates[deptId][idx];
-
+        // Find template from defaultTemplates by id
+        const template = (App.defaultTemplates || []).find(t => t.id === value);
         if (!template) return;
 
-        document.getElementById('wf-department').value = deptId;
-        document.getElementById('wf-work-type').value = template.workType;
+        // Populate form fields
+        document.getElementById('wf-department').value = template.departmentId;
+        document.getElementById('wf-work-type').value = template.name;
         document.getElementById('wf-business-hours').value = template.businessHoursId;
         document.getElementById('wf-owner').value = template.ownerRoleId;
 
+        // Set origin if available
+        if (template.origin) {
+          const originRadios = document.getElementsByName('origin');
+          originRadios.forEach(r => r.checked = r.value === template.origin);
+        }
+
+        // Load steps
         this.steps = template.steps.map((s, i) => ({
           id: 'step_' + Date.now() + '_' + i,
-          title: s.title,
+          title: s.name,
           roleId: s.roleId,
-          expectedMins: s.expectedMins
+          expectedMins: s.mins
         }));
 
         this.renderSteps();
-
-        if (template.slaPreset) {
-          this.applySLAPreset(template.slaPreset);
-        }
-
         this.onDepartmentChange();
-        alert('Template "' + template.workType + '" loaded successfully!');
+
+        App.showToast('Template "' + template.name + '" loaded successfully!', 'success');
       },
 
       onDepartmentChange() {
@@ -1130,31 +1180,33 @@
           if (originRadio) originRadio.checked = true;
         }
 
-        // Load schedule ref
-        const scheduleRefField = document.getElementById('wf-schedule-ref');
-        if (scheduleRefField && workflow.meta && workflow.meta.scheduleRef) {
-          scheduleRefField.value = workflow.meta.scheduleRef;
-        }
-
         this.steps = workflow.steps || [];
 
         // Restore meta information
         if (workflow.meta) {
+          // Restore SLA composer state
+          if (workflow.meta.slaComposer) {
+            this.slaComposer = workflow.meta.slaComposer;
+          } else {
+            // Initialize from workflow SLA if no composer state
+            this.slaComposer = { factors: {}, buffers: {}, ackValues: {}, startValues: {}, resolveValues: {} };
+            if (workflow.slaByPriority) {
+              Object.keys(workflow.slaByPriority).forEach(pid => {
+                const sla = workflow.slaByPriority[pid];
+                this.slaComposer.ackValues[pid] = sla.ackMins || 60;
+                this.slaComposer.startValues[pid] = sla.startMins || 120;
+                this.slaComposer.resolveValues[pid] = sla.resolveMins || 0;
+                this.slaComposer.factors[pid] = 1.0;
+                this.slaComposer.buffers[pid] = 0;
+              });
+            }
+          }
+
           if (workflow.meta.slaUnits) {
             this.slaUnits = workflow.meta.slaUnits;
-            // Backward compatibility: ensure escalateAfter exists
-            App.state.catalogs.priorities.forEach(p => {
-              if (!this.slaUnits[p.id]) {
-                this.slaUnits[p.id] = { ack: 'businessDays', start: 'businessDays', resolve: 'businessDays', escalateAfter: 'businessDays' };
-              } else if (!this.slaUnits[p.id].escalateAfter) {
-                this.slaUnits[p.id].escalateAfter = 'businessDays';
-              }
-            });
           }
           if (workflow.meta.interpretAsBusinessHours !== undefined) {
             this.interpretAsBH = workflow.meta.interpretAsBusinessHours;
-            const checkbox = document.getElementById('interpret-as-bh');
-            if (checkbox) checkbox.checked = this.interpretAsBH;
           }
           // Restore notes
           const notesField = document.getElementById('wf-notes');
@@ -1164,7 +1216,7 @@
         }
 
         this.renderSteps();
-        this.renderSLAPolicy(workflow.slaByPriority);
+        this.renderSLASummary();
       },
 
       renderSteps() {
@@ -1183,8 +1235,20 @@
           return;
         }
 
+        // Get current unit and business hours for conversion
+        const unit = this.stepUnit || 'min';
+        const bhId = document.getElementById('wf-business-hours')?.value;
+        const bhProfile = App.state.catalogs.businessHours?.find(bh => bh.id === bhId) || App.state.catalogs.businessHours?.[0];
+        const minsPerDay = App.minsPerBD(bhProfile);
+
+        const unitLabel = unit === 'bd' ? 'BD' : (unit === 'hr' ? 'Hours' : 'Minutes');
+
         let html = '';
         this.steps.forEach((step, idx) => {
+          // Convert minutes to display unit
+          const mins = step.expectedMins || 0;
+          const displayValue = App.stepFromMinutes(mins, unit);
+
           html += '<div class="step-item">';
           html += '<div class="step-number">' + (idx + 1) + '</div>';
           html += '<div><input type="text" placeholder="Step title *" value="' + (step.title || '') + '" onchange="BuildScreen.updateStep(' + idx + ', \'title\', this.value)" required></div>';
@@ -1195,7 +1259,13 @@
             html += '<option value="' + r.id + '" ' + selected + '>' + r.name + '</option>';
           });
           html += '</select></div>';
-          html += '<div><input type="number" placeholder="Minutes *" value="' + (step.expectedMins || '') + '" min="1" onchange="BuildScreen.updateStep(' + idx + ', \'expectedMins\', parseInt(this.value))" required></div>';
+          html += '<div>';
+          html += '<input type="number" step="0.1" placeholder="Duration *" value="' + displayValue + '" min="0.1" onchange="BuildScreen.updateStepDuration(' + idx + ', this.value)" required>';
+          html += '<div class="text-muted" style="font-size:0.75rem; margin-top:0.25rem;">';
+          html += '≈ ' + mins + ' mins';
+          if (unit === 'bd') html += '<br>1 BD = ' + minsPerDay + ' mins';
+          html += '</div>';
+          html += '</div>';
           html += '<div class="step-controls">';
           html += '<button type="button" class="btn-secondary btn-sm" onclick="BuildScreen.moveStep(' + idx + ', -1)" ' + (idx === 0 ? 'disabled' : '') + '>↑</button>';
           html += '<button type="button" class="btn-secondary btn-sm" onclick="BuildScreen.moveStep(' + idx + ', 1)" ' + (idx === this.steps.length - 1 ? 'disabled' : '') + '>↓</button>';
@@ -1205,6 +1275,9 @@
         });
 
         container.innerHTML = html;
+
+        // Recompute SLA after rendering steps
+        this.recomputeResolveFromSteps();
       },
 
       renderSLAPolicy(existingSLA) {
@@ -1301,6 +1374,9 @@
         });
 
         container.innerHTML = html;
+
+        // Validate escalations after rendering
+        setTimeout(() => this.validateEscalations(), 100);
       },
 
       changeSLAUnit(priorityId, field, newUnit) {
@@ -1368,6 +1444,78 @@
 
         // Update helper text
         helper.innerHTML = '≈ ' + minutes + ' mins<br>1 BD = ' + minsPerDay + ' mins';
+
+        // Validate escalations after SLA change
+        this.validateEscalations();
+      },
+
+      validateEscalations() {
+        // Check that escalateAfter < resolve for each priority
+        const violations = [];
+        const priorities = App.state.catalogs?.priorities || [];
+
+        const bhId = document.getElementById('wf-business-hours')?.value;
+        const bhProfile = App.state.catalogs?.businessHours?.find(bh => bh.id === bhId) || App.state.catalogs?.businessHours?.[0];
+
+        priorities.forEach(p => {
+          const units = this.slaUnits[p.id] || { ack: 'businessDays', start: 'businessDays', resolve: 'businessDays', escalateAfter: 'businessDays' };
+
+          const resolveInput = document.getElementById('sla-resolve-' + p.id);
+          const escalateAfterInput = document.getElementById('sla-escalateAfter-' + p.id);
+
+          if (resolveInput && escalateAfterInput) {
+            const resolveValue = parseFloat(resolveInput.value) || 0;
+            const escalateAfterValue = parseFloat(escalateAfterInput.value) || 0;
+
+            const resolveMins = App.convertUserSlaToMinutes(resolveValue, units.resolve, bhProfile);
+            const escalateAfterMins = App.convertUserSlaToMinutes(escalateAfterValue, units.escalateAfter, bhProfile);
+
+            // Only validate if escalateAfter is set (> 0)
+            if (escalateAfterMins > 0 && escalateAfterMins >= resolveMins) {
+              violations.push({
+                priority: p.name,
+                escalateAfter: escalateAfterMins,
+                resolve: resolveMins
+              });
+            }
+          }
+        });
+
+        this.showEscalationWarning(violations);
+        return violations.length === 0;
+      },
+
+      showEscalationWarning(violations) {
+        const strip = document.getElementById('validation-strip');
+        const saveBtn = document.querySelector('.btn-success');
+
+        if (!strip) return;
+
+        if (violations.length > 0) {
+          let html = '<div class="alert-warn">';
+          html += '<strong>⚠ Escalation Timing Error:</strong> Escalate After must be strictly less than Resolve time.<br>';
+          violations.forEach(v => {
+            html += '• <strong>' + v.priority + '</strong>: Escalate After (' + v.escalateAfter + ' mins) ≥ Resolve (' + v.resolve + ' mins)<br>';
+          });
+          html += '</div>';
+          strip.innerHTML = html;
+
+          // Disable Save button
+          if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.style.opacity = '0.5';
+            saveBtn.style.cursor = 'not-allowed';
+          }
+        } else {
+          strip.innerHTML = '';
+
+          // Enable Save button
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.style.opacity = '1';
+            saveBtn.style.cursor = 'pointer';
+          }
+        }
       },
 
       collectSLAData() {
@@ -1420,47 +1568,42 @@
       },
 
       applySLAPreset(presetName) {
-        const preset = App.SLA_PRESETS[presetName];
-        if (!preset) return;
-
         document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
         const activeBtn = document.querySelector('.preset-btn[data-preset="' + presetName + '"]');
         if (activeBtn) activeBtn.classList.add('active');
 
-        // Get current business hours for conversions
         const bhId = document.getElementById('wf-business-hours')?.value;
-        const bhProfile = App.state.catalogs.businessHours.find(bh => bh.id === bhId) || App.state.catalogs.businessHours[0];
-        const minsPerDay = App.minutesPerBusinessDay(bhProfile);
+        const bhProfile = App.state.catalogs.businessHours?.find(bh => bh.id === bhId) || App.state.catalogs.businessHours?.[0];
+        const minsPerDay = App.minsPerBD(bhProfile);
 
-        Object.keys(preset).forEach(priorityId => {
-          const values = preset[priorityId];
+        // Set factors and buffers based on preset
+        const priorities = App.state.catalogs?.priorities || [];
 
-          // Convert preset minutes to Business Days (default display unit)
-          const ackValue = (values.ackMins / minsPerDay).toFixed(1);
-          const startValue = (values.startMins / minsPerDay).toFixed(1);
-          const resolveValue = (values.resolveMins / minsPerDay).toFixed(1);
-
-          // Set values
-          const ackInput = document.getElementById('sla-ack-' + priorityId);
-          const startInput = document.getElementById('sla-start-' + priorityId);
-          const resolveInput = document.getElementById('sla-resolve-' + priorityId);
-
-          if (ackInput) ackInput.value = ackValue;
-          if (startInput) startInput.value = startValue;
-          if (resolveInput) resolveInput.value = resolveValue;
-
-          // Sync sliders
-          const ackSlider = document.getElementById('sla-ack-slider-' + priorityId);
-          const startSlider = document.getElementById('sla-start-slider-' + priorityId);
-          const resolveSlider = document.getElementById('sla-resolve-slider-' + priorityId);
-
-          if (ackSlider) ackSlider.value = ackValue;
-          if (startSlider) startSlider.value = startValue;
-          if (resolveSlider) resolveSlider.value = resolveValue;
+        priorities.forEach(p => {
+          if (presetName === 'conservative') {
+            this.slaComposer.factors[p.id] = 1.2;
+            this.slaComposer.buffers[p.id] = Math.round(0.2 * minsPerDay); // 0.2 BD buffer
+            this.slaComposer.ackValues[p.id] = Math.round(0.1 * minsPerDay); // 0.1 BD
+            this.slaComposer.startValues[p.id] = Math.round(0.2 * minsPerDay); // 0.2 BD
+          } else if (presetName === 'standard') {
+            this.slaComposer.factors[p.id] = 1.0;
+            this.slaComposer.buffers[p.id] = Math.round(0.1 * minsPerDay); // 0.1 BD buffer
+            this.slaComposer.ackValues[p.id] = Math.round(0.1 * minsPerDay); // 0.1 BD
+            this.slaComposer.startValues[p.id] = Math.round(0.2 * minsPerDay); // 0.2 BD
+          } else if (presetName === 'aggressive') {
+            this.slaComposer.factors[p.id] = 0.9;
+            this.slaComposer.buffers[p.id] = 0; // No buffer
+            this.slaComposer.ackValues[p.id] = Math.round(0.05 * minsPerDay); // 0.05 BD
+            this.slaComposer.startValues[p.id] = Math.round(0.1 * minsPerDay); // 0.1 BD
+          }
         });
 
-        // Re-render to show updated minutes helpers
-        this.renderSLAPolicy(this.collectSLAData());
+        // Initialize slaComposer objects if not present
+        if (!this.slaComposer.ackValues) this.slaComposer.ackValues = {};
+        if (!this.slaComposer.startValues) this.slaComposer.startValues = {};
+
+        // Recompute resolve from steps
+        this.recomputeResolveFromSteps();
       },
 
       addStep() {
@@ -1475,6 +1618,98 @@
 
       updateStep(idx, field, value) {
         this.steps[idx][field] = value;
+      },
+
+      updateStepDuration(idx, value) {
+        // Convert from display unit to minutes
+        const bhId = document.getElementById('wf-business-hours')?.value;
+        const bhProfile = App.state.catalogs.businessHours?.find(bh => bh.id === bhId) || App.state.catalogs.businessHours?.[0];
+        const mins = App.stepToMinutes(value, this.stepUnit, bhProfile);
+        this.steps[idx].expectedMins = mins;
+        this.renderSteps(); // Re-render to update helpers
+      },
+
+      onStepUnitChange() {
+        const select = document.getElementById('step-unit');
+        this.stepUnit = select?.value || 'min';
+        this.renderSteps(); // Re-render to show values in new unit
+      },
+
+      onBusinessHoursChange() {
+        // Re-render steps and SLA to reflect new BD conversion
+        this.renderSteps();
+        this.recomputeResolveFromSteps();
+      },
+
+      recomputeResolveFromSteps() {
+        // Auto-compute Resolve SLA from steps using factors and buffers
+        const totalMins = (this.steps || []).reduce((a, s) => a + (s.expectedMins || 0), 0);
+
+        if (!App.state.catalogs?.priorities) return;
+
+        const priorities = App.state.catalogs.priorities;
+
+        priorities.forEach(p => {
+          const factor = this.slaComposer.factors[p.id] || 1.0;
+          const buffer = this.slaComposer.buffers[p.id] || 0; // in minutes
+          const resolveMins = Math.max(0, Math.round(totalMins * factor + buffer));
+
+          // Store in slaComposer for reference
+          if (!this.slaComposer.resolveValues) this.slaComposer.resolveValues = {};
+          this.slaComposer.resolveValues[p.id] = resolveMins;
+        });
+
+        // Update the SLA display
+        this.renderSLASummary();
+      },
+
+      renderSLASummary() {
+        const container = document.getElementById('sla-summary-table');
+        if (!container) return;
+
+        if (!App.state.catalogs?.priorities) {
+          container.innerHTML = '<p class="text-muted">Loading...</p>';
+          return;
+        }
+
+        const priorities = App.state.catalogs.priorities;
+        const bhId = document.getElementById('wf-business-hours')?.value;
+        const bhProfile = App.state.catalogs.businessHours?.find(bh => bh.id === bhId) || App.state.catalogs.businessHours?.[0];
+        const minsPerDay = App.minsPerBD(bhProfile);
+
+        let html = '<table style="width:100%;">';
+        html += '<thead><tr>';
+        html += '<th>Priority</th>';
+        html += '<th>Acknowledge (BD)</th>';
+        html += '<th>Start Work (BD)</th>';
+        html += '<th>Resolve (BD) <em>auto</em></th>';
+        html += '</tr></thead><tbody>';
+
+        priorities.forEach(p => {
+          const ackMins = this.slaComposer.ackValues?.[p.id] || 60;
+          const startMins = this.slaComposer.startValues?.[p.id] || 120;
+          const resolveMins = this.slaComposer.resolveValues?.[p.id] || 0;
+
+          const ackBD = (ackMins / minsPerDay).toFixed(1);
+          const startBD = (startMins / minsPerDay).toFixed(1);
+          const resolveBD = (resolveMins / minsPerDay).toFixed(1);
+
+          html += '<tr>';
+          html += '<td><strong>' + p.name + '</strong></td>';
+          html += '<td>' + ackBD + ' <span class="text-muted" style="font-size:0.8rem;">(≈ ' + ackMins + ' mins)</span></td>';
+          html += '<td>' + startBD + ' <span class="text-muted" style="font-size:0.8rem;">(≈ ' + startMins + ' mins)</span></td>';
+          html += '<td>' + resolveBD + ' <span class="text-muted" style="font-size:0.8rem;">(≈ ' + resolveMins + ' mins)</span></td>';
+          html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+
+        // Render BH banner
+        const bhId = document.getElementById('wf-business-hours')?.value;
+        if (bhId) {
+          App.renderBHBanner('sla-summary-table', bhId);
+        }
       },
 
       deleteStep(idx) {
@@ -1571,13 +1806,62 @@
         }
       },
 
+      cancel() {
+        // Check if there are unsaved changes
+        if (this.hasUnsavedChanges()) {
+          App.confirm({
+            title: 'Discard changes?',
+            message: 'You have unsaved edits. Discard changes and return to the previous view?',
+            confirmText: 'Discard',
+            cancelText: 'Cancel',
+            onConfirm: () => {
+              this.navigateBack();
+            }
+          });
+        } else {
+          this.navigateBack();
+        }
+      },
+
+      hasUnsavedChanges() {
+        // Check if form has any values (simple check)
+        const workType = document.getElementById('wf-work-type').value;
+        const dept = document.getElementById('wf-department').value;
+        const owner = document.getElementById('wf-owner').value;
+
+        // If there's content in the form, consider it unsaved
+        return (workType || dept || owner || this.steps.length > 0);
+      },
+
+      navigateBack() {
+        // Clear draft
+        App.state.draftWorkflow = null;
+        localStorage.removeItem('sla.draftWorkflow');
+
+        // Navigate to the previous page (try department, then home)
+        const dept = document.getElementById('wf-department').value;
+        if (dept) {
+          location.hash = '#/dept/' + dept;
+        } else {
+          location.hash = '#/home';
+        }
+      },
+
       captureWorkflow() {
-        // Use the new collectSLAData method
-        const slaByPriority = this.collectSLAData();
+        // Build SLA from composer (Ack/Start from values, Resolve auto-computed)
+        const slaByPriority = {};
+        const priorities = App.state.catalogs?.priorities || [];
+
+        priorities.forEach(p => {
+          slaByPriority[p.id] = {
+            ackMins: this.slaComposer.ackValues?.[p.id] || 60,
+            startMins: this.slaComposer.startValues?.[p.id] || 120,
+            resolveMins: this.slaComposer.resolveValues?.[p.id] || 0
+          };
+        });
 
         const workType = document.getElementById('wf-work-type').value;
         const notes = document.getElementById('wf-notes') ? document.getElementById('wf-notes').value : '';
-        const scheduleRef = document.getElementById('wf-schedule-ref') ? document.getElementById('wf-schedule-ref').value : '';
 
         // Get origin from radio buttons
         const originRadio = document.querySelector('input[name="wf-origin"]:checked');
@@ -1588,7 +1872,7 @@
           slaUnits: this.slaUnits,
           interpretAsBusinessHours: this.interpretAsBH,
           notes: notes,
-          scheduleRef: scheduleRef
+          slaComposer: this.slaComposer
         };
 
         // Generate ID if needed
@@ -1621,6 +1905,7 @@
     // ============================
     const SummaryDrawer = {
       currentWorkflow: null,
+      escKeyHandler: null,
 
       open(workflowId) {
         const workflow = App.getWorkflow(workflowId);
@@ -1634,9 +1919,24 @@
 
         const drawer = document.getElementById('summary-drawer');
         drawer.style.display = 'block';
+
+        // Add ESC key listener
+        this.escKeyHandler = (e) => {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            this.close();
+          }
+        };
+        document.addEventListener('keydown', this.escKeyHandler);
       },
 
       close() {
+        // Remove ESC key listener
+        if (this.escKeyHandler) {
+          document.removeEventListener('keydown', this.escKeyHandler);
+          this.escKeyHandler = null;
+        }
+
         const drawer = document.getElementById('summary-drawer');
         drawer.style.display = 'none';
         this.currentWorkflow = null;
@@ -1653,8 +1953,11 @@
 
         const totalMins = workflow.steps.reduce((sum, s) => sum + (s.expectedMins || 0), 0);
 
-        // Update title
-        document.getElementById('summary-drawer-title').textContent = workflow.workType;
+        // Update title with origin badge
+        const originClass = workflow.origin === 'client' ? 'origin-client' : 'origin-internal';
+        const originLabel = workflow.origin === 'client' ? 'Client-led' : 'Internal-led';
+        const titleEl = document.getElementById('summary-drawer-title');
+        titleEl.innerHTML = workflow.workType + ' <span class="origin-badge ' + originClass + '" style="font-size:0.7em; font-weight:normal; margin-left:0.5rem;">' + originLabel + '</span>';
 
         // Build body content
         let html = '<div class="summary-header"><dl>';
@@ -1685,7 +1988,7 @@
         });
         html += '</div>';
 
-        html += '<div class="sla-matrix"><h3>SLA Targets</h3>';
+        html += '<div class="sla-matrix" id="drawer-sla-matrix"><h3>SLA Targets</h3>';
 
         // Show interpretation mode if available
         const interpretAsBH = workflow.meta?.interpretAsBusinessHours !== false;
@@ -1749,6 +2052,11 @@
         html += '</tbody></table></div>';
 
         document.getElementById('summary-drawer-body').innerHTML = html;
+
+        // Render BH banner in drawer
+        if (workflow.businessHoursId) {
+          App.renderBHBanner('drawer-sla-matrix', workflow.businessHoursId);
+        }
       },
 
       formatDays(days) {

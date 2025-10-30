@@ -160,9 +160,8 @@
                   <div style="display:flex; gap:0.5rem; align-items:center;">
                     <label style="font-size:0.9rem; color:#666;">Step duration unit:</label>
                     <select id="step-unit" onchange="BuildScreen.onStepUnitChange()" style="padding:0.25rem 0.5rem;">
-                      <option value="bd">Business Days</option>
+                      <option value="bd" selected>Business Days</option>
                       <option value="hr">Hours</option>
-                      <option value="min" selected>Minutes</option>
                     </select>
                   </div>
                 </div>
@@ -178,9 +177,9 @@
                 </p>
 
                 <div class="sla-presets">
-                  <button type="button" class="preset-btn" data-preset="conservative" onclick="BuildScreen.applySLAPreset('conservative')">Conservative</button>
-                  <button type="button" class="preset-btn" data-preset="standard" onclick="BuildScreen.applySLAPreset('standard')">Standard</button>
-                  <button type="button" class="preset-btn" data-preset="aggressive" onclick="BuildScreen.applySLAPreset('aggressive')">Aggressive</button>
+                  <button type="button" class="preset-btn" data-preset="low" onclick="BuildScreen.applySLAPreset('low')">Low</button>
+                  <button type="button" class="preset-btn" data-preset="medium" onclick="BuildScreen.applySLAPreset('medium')">Medium</button>
+                  <button type="button" class="preset-btn" data-preset="high" onclick="BuildScreen.applySLAPreset('high')">High</button>
                 </div>
 
                 <div id="sla-summary-table" style="margin: 1rem 0;">
@@ -235,7 +234,7 @@
               </div>
               <div class="help-section">
                 <strong>Expected Duration</strong>
-                <p>Working time to complete the step. Minutes, positive integers.</p>
+                <p>Working time to complete the step in the selected unit (BD or Hours).</p>
               </div>
               <div class="help-section">
                 <strong>Acknowledge</strong>

@@ -164,17 +164,17 @@ const App = {
 
   // SLA Presets
   SLA_PRESETS: {
-    conservative: {
+    low: {
       p1: { ackMins: 60, startMins: 120, resolveMins: 960 },
       p2: { ackMins: 120, startMins: 480, resolveMins: 2880 },
       p3: { ackMins: 1440, startMins: 4320, resolveMins: 15120 }
     },
-    standard: {
+    medium: {
       p1: { ackMins: 30, startMins: 60, resolveMins: 480 },
       p2: { ackMins: 120, startMins: 240, resolveMins: 1440 },
       p3: { ackMins: 1440, startMins: 2880, resolveMins: 10080 }
     },
-    aggressive: {
+    high: {
       p1: { ackMins: 15, startMins: 30, resolveMins: 240 },
       p2: { ackMins: 60, startMins: 120, resolveMins: 720 },
       p3: { ackMins: 720, startMins: 1440, resolveMins: 5040 }
@@ -241,6 +241,105 @@ const App = {
     if (!minutes && minutes !== 0) return '0.0';
     const minsPerDay = this.minutesPerBusinessDay(bhProfile);
     return (minutes / minsPerDay).toFixed(1);
+  },
+
+  /**
+   * Alias for minutesPerBusinessDay - returns minutes per BD for a given business hours profile
+   */
+  minsPerBD(bhProfile) {
+    return this.minutesPerBusinessDay(bhProfile);
+  },
+
+  /**
+   * Convert minutes to BD
+   */
+  minsToBD(mins, bhProfile) {
+    const minsPerDay = this.minsPerBD(bhProfile);
+    return mins / minsPerDay;
+  },
+
+  /**
+   * Convert BD to minutes
+   */
+  bdToMins(bd, bhProfile) {
+    const minsPerDay = this.minsPerBD(bhProfile);
+    return Math.round(bd * minsPerDay);
+  },
+
+  /**
+   * Convert hours to minutes
+   */
+  hoursToMins(hours) {
+    return Math.round(hours * 60);
+  },
+
+  /**
+   * Convert minutes to hours
+   */
+  minsToHours(mins) {
+    return mins / 60;
+  },
+
+  /**
+   * Rank roles by seniority for auto-escalation
+   * Returns roles sorted by seniority (most senior first)
+   */
+  rankRolesBySeniority(roles, departmentId) {
+    const seniorityKeywords = ['vp', 'head', 'hod', 'director', 'senior', 'manager', 'lead'];
+
+    return roles.map(role => {
+      // Calculate seniority score based on keywords in ID and name
+      let score = 0;
+      const roleText = (role.id + ' ' + role.name).toLowerCase();
+
+      seniorityKeywords.forEach((keyword, index) => {
+        if (roleText.includes(keyword)) {
+          // Earlier keywords (like 'vp') get higher scores
+          score += (seniorityKeywords.length - index) * 10;
+        }
+      });
+
+      return { ...role, seniorityScore: score };
+    })
+    .filter(role => role.seniorityScore > 0) // Only roles with keywords
+    .sort((a, b) => b.seniorityScore - a.seniorityScore);
+  },
+
+  /**
+   * Get recommended escalation role for a priority level
+   * @param {string} priorityId - Priority ID (p1, p2, p3)
+   * @param {string} departmentId - Department ID
+   * @returns {string|null} - Recommended role ID or null
+   */
+  getRecommendedEscalationRole(priorityId, departmentId) {
+    const rankedRoles = this.rankRolesBySeniority(this.state.catalogs.roles, departmentId);
+
+    if (rankedRoles.length === 0) return null;
+
+    // p1 (Critical/High) → most senior (VP)
+    if (priorityId === 'p1') {
+      return rankedRoles[0]?.id || null;
+    }
+
+    // p2 (High/Medium) → department head (HOD/Head)
+    if (priorityId === 'p2') {
+      const head = rankedRoles.find(r =>
+        r.id.includes('hod') || r.id.includes('head') ||
+        r.name.toLowerCase().includes('head')
+      );
+      return head?.id || rankedRoles[1]?.id || rankedRoles[0]?.id || null;
+    }
+
+    // p3 (Normal/Low) → Senior Manager/Manager
+    if (priorityId === 'p3') {
+      const manager = rankedRoles.find(r =>
+        r.id.includes('manager') || r.id.includes('senior') ||
+        r.name.toLowerCase().includes('manager') || r.name.toLowerCase().includes('senior')
+      );
+      return manager?.id || rankedRoles[2]?.id || rankedRoles[1]?.id || rankedRoles[0]?.id || null;
+    }
+
+    return null;
   },
 
   /**
@@ -404,6 +503,36 @@ const App = {
   },
 
   /**
+   * Migrate SLA preset labels from conservative/standard/aggressive to low/medium/high
+   */
+  migrateSLAPresetLabels() {
+    const list = this.getWorkflows();
+    let changed = false;
+
+    const presetMap = {
+      'conservative': 'low',
+      'standard': 'medium',
+      'aggressive': 'high'
+    };
+
+    list.forEach(w => {
+      // Check if workflow has old preset label in metadata
+      if (w.meta && w.meta.slaPreset) {
+        const oldPreset = w.meta.slaPreset;
+        if (presetMap[oldPreset]) {
+          w.meta.slaPreset = presetMap[oldPreset];
+          changed = true;
+        }
+      }
+    });
+
+    if (changed) {
+      this.setWorkflows(list);
+      console.log('Migrated SLA preset labels to low/medium/high');
+    }
+  },
+
+  /**
    * Render Business Hours banner showing conversion rate
    */
   renderBHBanner(containerId, businessHoursId) {
@@ -558,6 +687,9 @@ const App = {
     }
     if (this.migrateScheduleRef) {
       this.migrateScheduleRef();
+    }
+    if (this.migrateSLAPresetLabels) {
+      this.migrateSLAPresetLabels();
     }
 
     // 3) Seed demo workflows only if none exist

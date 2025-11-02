@@ -477,8 +477,9 @@
           const totalMins = feasibility ? feasibility.totalExpectedMins : 0;
           const updated = wf.updatedAt ? new Date(wf.updatedAt).toLocaleDateString() : 'Never';
 
-          const originClass = wf.origin === 'client' ? 'origin-client' : 'origin-internal';
-          const originLabel = wf.origin === 'client' ? 'Client-led' : 'Internal-led';
+          // Origin badge (resilient: handle missing origin)
+          const originClass = wf.origin === 'client' ? 'origin-client' : (wf.origin === 'internal' ? 'origin-internal' : 'origin-neutral');
+          const originLabel = wf.origin === 'client' ? 'Client-led' : (wf.origin === 'internal' ? 'Internal-led' : 'Unknown');
 
           html += '<tr data-wf-id="' + wf.id + '" class="' + originClass + '">';
           html += '<td class="clickable-cell">' + (dept ? dept.name : 'Unknown') + '</td>';
@@ -611,8 +612,9 @@
 
             const updated = wf.updatedAt ? new Date(wf.updatedAt).toLocaleDateString() : 'Never';
 
-            const originClass = wf.origin === 'client' ? 'origin-client' : 'origin-internal';
-            const originLabel = wf.origin === 'client' ? 'Client-led' : 'Internal-led';
+            // Origin badge (resilient: handle missing origin)
+            const originClass = wf.origin === 'client' ? 'origin-client' : (wf.origin === 'internal' ? 'origin-internal' : 'origin-neutral');
+            const originLabel = wf.origin === 'client' ? 'Client-led' : (wf.origin === 'internal' ? 'Internal-led' : 'Unknown');
 
             html += '<tr data-wf-id="' + wf.id + '" class="' + originClass + '">';
             html += '<td class="clickable-work-type"><strong style="color:#3498db; cursor:pointer;">' + wf.workType + '</strong> <span class="origin-badge ' + originClass + '">' + originLabel + '</span></td>';
@@ -923,7 +925,7 @@
     const BuildScreen = {
       steps: [],
       currentWorkflowId: null,
-      stepUnit: 'min', // Default step duration unit: 'bd', 'hr', or 'min'
+      stepUnit: 'bd', // Default step duration unit: 'bd' | 'hr' (UI never shows 'min')
       slaUnits: {}, // Track unit selection per priority { p1: {ack:'businessDays', start:'businessDays', resolve:'businessDays', escalateAfter:'businessDays'}, ... }
       interpretAsBH: true, // Default: interpret as business hours
       slaComposer: { factors: {}, buffers: {} }, // SLA composer state { factors: {p1:1.0,...}, buffers: {p1:0,...} }
@@ -989,19 +991,19 @@
         const select = document.getElementById('template-select');
         if (!select) return;
 
-        // Always populate from defaultTemplates (in-code, never empty)
+        // Always rebuild from defaultTemplates (never use populate-once guard)
         const templates = App.defaultTemplates || [];
-
-        // Only populate if not already done
-        if (select.options.length > 1) return;
 
         let html = '<option value="">-- Select a template --</option>';
 
         templates.forEach((t, idx) => {
-          html += '<option value="' + t.id + '">' + t.name + '</option>';
+          const id = t.id ?? idx;
+          const name = t.name ?? t.title ?? `Template ${idx + 1}`;
+          html += '<option value="' + id + '">' + name + '</option>';
         });
 
         select.innerHTML = html;
+        console.log('populateTemplates: count=', templates.length);
       },
 
       loadTemplate(value) {
@@ -1579,17 +1581,17 @@
         const priorities = App.state.catalogs?.priorities || [];
 
         priorities.forEach(p => {
-          if (presetName === 'conservative') {
+          if (presetName === 'low') {
             this.slaComposer.factors[p.id] = 1.2;
             this.slaComposer.buffers[p.id] = Math.round(0.2 * minsPerDay); // 0.2 BD buffer
             this.slaComposer.ackValues[p.id] = Math.round(0.1 * minsPerDay); // 0.1 BD
             this.slaComposer.startValues[p.id] = Math.round(0.2 * minsPerDay); // 0.2 BD
-          } else if (presetName === 'standard') {
+          } else if (presetName === 'medium') {
             this.slaComposer.factors[p.id] = 1.0;
             this.slaComposer.buffers[p.id] = Math.round(0.1 * minsPerDay); // 0.1 BD buffer
             this.slaComposer.ackValues[p.id] = Math.round(0.1 * minsPerDay); // 0.1 BD
             this.slaComposer.startValues[p.id] = Math.round(0.2 * minsPerDay); // 0.2 BD
-          } else if (presetName === 'aggressive') {
+          } else if (presetName === 'high') {
             this.slaComposer.factors[p.id] = 0.9;
             this.slaComposer.buffers[p.id] = 0; // No buffer
             this.slaComposer.ackValues[p.id] = Math.round(0.05 * minsPerDay); // 0.05 BD
@@ -1952,9 +1954,9 @@
 
         const totalMins = workflow.steps.reduce((sum, s) => sum + (s.expectedMins || 0), 0);
 
-        // Update title with origin badge
-        const originClass = workflow.origin === 'client' ? 'origin-client' : 'origin-internal';
-        const originLabel = workflow.origin === 'client' ? 'Client-led' : 'Internal-led';
+        // Update title with origin badge (resilient: handle missing origin)
+        const originClass = workflow.origin === 'client' ? 'origin-client' : (workflow.origin === 'internal' ? 'origin-internal' : 'origin-neutral');
+        const originLabel = workflow.origin === 'client' ? 'Client-led' : (workflow.origin === 'internal' ? 'Internal-led' : 'Unknown');
         const titleEl = document.getElementById('summary-drawer-title');
         titleEl.innerHTML = workflow.workType + ' <span class="origin-badge ' + originClass + '" style="font-size:0.7em; font-weight:normal; margin-left:0.5rem;">' + originLabel + '</span>';
 

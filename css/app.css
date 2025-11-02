@@ -1132,6 +1132,11 @@ tr:hover {
   color: var(--origin-internal-text);
 }
 
+.origin-neutral {
+  background: #999;
+  color: #fff;
+}
+
 .row-origin-left {
   border-left: 3px solid transparent;
 }
@@ -1165,6 +1170,10 @@ tr.origin-client {
 
 tr.origin-internal {
   border-left: 3px solid var(--origin-internal);
+}
+
+tr.origin-neutral {
+  border-left: 3px solid #999;
 }
 
 /* ======================

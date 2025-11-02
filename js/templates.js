@@ -1,6 +1,9 @@
 // Workflow templates by department
 // These are used for the Build "Add from Template" feature
 
+// Ensure window.App exists
+window.App = window.App || {};
+
 const WorkflowTemplates = {
   byDept: {
     cd: [
@@ -242,5 +245,27 @@ const WorkflowTemplates = {
    */
   getTemplatesForDept(deptId) {
     return this.byDept[deptId] || [];
+  },
+
+  /**
+   * Flatten all templates to array for dropdown
+   */
+  getAllTemplatesAsArray() {
+    const arr = [];
+    Object.keys(this.byDept).forEach(deptId => {
+      this.byDept[deptId].forEach((t, idx) => {
+        arr.push({
+          id: `${deptId}_${idx}`,
+          departmentId: deptId,
+          name: t.workType,
+          ...t
+        });
+      });
+    });
+    return arr;
   }
 };
+
+// Attach templates globally to window.App.defaultTemplates
+window.App.defaultTemplates = WorkflowTemplates.getAllTemplatesAsArray();
+console.log('Templates attached to window.App.defaultTemplates:', window.App.defaultTemplates.length);

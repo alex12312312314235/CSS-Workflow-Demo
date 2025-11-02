@@ -9,6 +9,10 @@ const LS = {
 };
 
 const App = {
+  __booted: false, // Boot flag
+  stepUnitDefault: 'bd', // Default step unit for UI: 'bd' | 'hr' (never 'min' in UI)
+  defaultTemplates: [], // Single source for templates
+
   state: {
     catalogs: null,
     templates: null,
@@ -306,6 +310,21 @@ const App = {
   },
 
   /**
+   * Get senior role candidates for escalation (guarded)
+   * Returns VP / Sr Manager / HoD tier by department if present, otherwise fallback
+   */
+  getSeniorRoleCandidates(deptId) {
+    try {
+      const cats = this.state?.catalogs;
+      if (!cats || !cats.roles) return [];
+      return this.rankRolesBySeniority(cats.roles, deptId);
+    } catch (e) {
+      console.warn('getSeniorRoleCandidates failed', e);
+      return [];
+    }
+  },
+
+  /**
    * Get recommended escalation role for a priority level
    * @param {string} priorityId - Priority ID (p1, p2, p3)
    * @param {string} departmentId - Department ID
@@ -504,31 +523,81 @@ const App = {
 
   /**
    * Migrate SLA preset labels from conservative/standard/aggressive to low/medium/high
+   * (wrapped with guards)
    */
   migrateSLAPresetLabels() {
-    const list = this.getWorkflows();
-    let changed = false;
+    try {
+      const list = this.getWorkflows();
+      if (!list || !Array.isArray(list)) return;
 
-    const presetMap = {
-      'conservative': 'low',
-      'standard': 'medium',
-      'aggressive': 'high'
-    };
+      let changed = false;
 
-    list.forEach(w => {
-      // Check if workflow has old preset label in metadata
-      if (w.meta && w.meta.slaPreset) {
-        const oldPreset = w.meta.slaPreset;
-        if (presetMap[oldPreset]) {
-          w.meta.slaPreset = presetMap[oldPreset];
-          changed = true;
+      const presetMap = {
+        'conservative': 'low',
+        'standard': 'medium',
+        'aggressive': 'high'
+      };
+
+      list.forEach(w => {
+        // Check if workflow has old preset label in metadata
+        if (w?.meta?.slaPreset) {
+          const oldPreset = w.meta.slaPreset;
+          if (presetMap[oldPreset]) {
+            w.meta.slaPreset = presetMap[oldPreset];
+            changed = true;
+          }
         }
-      }
-    });
+      });
 
-    if (changed) {
-      this.setWorkflows(list);
-      console.log('Migrated SLA preset labels to low/medium/high');
+      if (changed) {
+        this.setWorkflows(list);
+        console.log('Migrated SLA preset labels to low/medium/high');
+      }
+    } catch (e) {
+      console.warn('migrateSLAPresetLabels failed', e);
+    }
+  },
+
+  /**
+   * Wrap all migrations in a safe runner
+   */
+  runMigrationsSafe() {
+    try {
+      if (this.migrateCatalogs_v11) {
+        this.migrateCatalogs_v11();
+      }
+    } catch (e) {
+      console.error('Migration migrateCatalogs_v11 error:', e);
+    }
+
+    try {
+      if (this.migrateScheduleRef) {
+        this.migrateScheduleRef();
+      }
+    } catch (e) {
+      console.error('Migration migrateScheduleRef error:', e);
+    }
+
+    try {
+      if (this.migrateSLAPresetLabels) {
+        this.migrateSLAPresetLabels();
+      }
+    } catch (e) {
+      console.error('Migration migrateSLAPresetLabels error:', e);
+    }
+  },
+
+  /**
+   * Ensure catalogs are never empty - restore known-good defaults if needed
+   */
+  ensureCatalogs() {
+    const cat = this.state.catalogs;
+    const broken = !cat || !cat.departments?.length || !cat.roles?.length || !cat.businessHours?.length;
+
+    if (broken) {
+      console.warn('Catalogs missing or empty — restoring defaults');
+      this.state.catalogs = JSON.parse(JSON.stringify(this.DEFAULT_CATALOG));
+      this.setCatalogs(this.state.catalogs);
     }
   },
 
@@ -678,24 +747,34 @@ const App = {
   boot() {
     console.log('Booting CSS SLA Configurator...');
 
-    // 1) getCatalogs() now enforces schema version and forces rebuild if needed
-    this.getCatalogs();
+    // 1) Load catalogs from storage or defaults - single source
+    const cat = this.getCatalogs();
+    this.state.catalogs = cat;
 
-    // 2) Run migrations (if catalogs were valid)
-    if (this.migrateCatalogs_v11) {
-      this.migrateCatalogs_v11();
-    }
-    if (this.migrateScheduleRef) {
-      this.migrateScheduleRef();
-    }
-    if (this.migrateSLAPresetLabels) {
-      this.migrateSLAPresetLabels();
+    // 2) Attach templates to App.defaultTemplates (read from window.App if already present)
+    if (!this.defaultTemplates || this.defaultTemplates.length === 0) {
+      this.defaultTemplates = (window.App && window.App.defaultTemplates) || [];
     }
 
-    // 3) Seed demo workflows only if none exist
+    // 3) Run migrations in safe wrapper
+    this.runMigrationsSafe();
+
+    // 4) Ensure catalogs are never empty
+    this.ensureCatalogs();
+
+    // 5) Seed demo workflows only if none exist
     this.seedDemo();
 
-    console.log('Boot complete');
+    // 6) Set boot flag
+    this.__booted = true;
+
+    console.log('Boot complete', {
+      booted: this.__booted,
+      catalogs: !!this.state.catalogs,
+      departments: this.state.catalogs?.departments?.length || 0,
+      roles: this.state.catalogs?.roles?.length || 0,
+      templates: this.defaultTemplates?.length || 0
+    });
   },
 
   /**
@@ -740,21 +819,18 @@ const App = {
   },
 
   /**
-   * Initialize the application
+   * Initialize the application (deterministic boot + single source)
    */
   async init() {
     console.log('Initializing CSS SLA Configurator...');
 
-    // Boot sequence (synchronous, runs first)
+    // Boot sequence (synchronous, runs first - loads catalogs once)
     this.boot();
 
     // Check UI health and show repair banner if needed
     this.ensureHealthyStateUI();
 
-    // Load catalogs
-    await this.loadCatalogs();
-
-    // Load templates
+    // Load templates (async from file, fallback to defaults)
     await this.loadTemplates();
 
     // Load workflows from localStorage
@@ -769,8 +845,8 @@ const App = {
     // Setup router
     this.setupRouter();
 
-    // Render initial route
-    this.router();
+    // Render initial route (with catalog guard)
+    await this.renderCurrentRoute();
 
     // Setup navigation
     this.setupNavigation();
@@ -782,17 +858,7 @@ const App = {
   },
 
   /**
-   * Load catalog data into state
-   */
-  async loadCatalogs() {
-    // Use getCatalogs() which auto-repairs if invalid
-    this.state.catalogs = this.getCatalogs();
-    window.catalog = this.state.catalogs; // Expose for debugging
-    console.log('Catalogs loaded into state');
-  },
-
-  /**
-   * Load templates
+   * Load templates (async from file, fallback to defaults, attach to App.defaultTemplates)
    */
   async loadTemplates() {
     try {
@@ -801,16 +867,47 @@ const App = {
       const response = await fetch('./data/templates.json' + cacheBust, { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to load templates');
 
-      this.state.templates = await response.json();
-      console.log('Loaded templates from file');
+      const data = await response.json();
+      this.state.templates = data;
+
+      // Attach to App.defaultTemplates for UI consumption
+      this.defaultTemplates = this._flattenTemplatesToArray(data);
+      window.App.defaultTemplates = this.defaultTemplates;
+
+      console.log('Loaded templates from file', this.defaultTemplates.length);
       window.templates = this.state.templates; // Expose for debugging
     } catch (error) {
       console.error('Failed to load templates:', error);
       console.warn('Using default template data');
       // Use default templates
       this.state.templates = JSON.parse(JSON.stringify(this.DEFAULT_TEMPLATES));
+      this.defaultTemplates = this._flattenTemplatesToArray(this.state.templates);
+      window.App.defaultTemplates = this.defaultTemplates;
       window.templates = this.state.templates; // Expose for debugging
     }
+  },
+
+  /**
+   * Flatten templates object to array for dropdown
+   */
+  _flattenTemplatesToArray(templatesData) {
+    const arr = [];
+    const templates = templatesData.templates || templatesData;
+
+    Object.keys(templates).forEach(deptId => {
+      if (Array.isArray(templates[deptId])) {
+        templates[deptId].forEach((t, idx) => {
+          arr.push({
+            id: `${deptId}_${idx}`,
+            departmentId: deptId,
+            name: t.workType || t.name || `Template ${idx + 1}`,
+            ...t
+          });
+        });
+      }
+    });
+
+    return arr;
   },
 
   /**
@@ -1062,6 +1159,12 @@ const App = {
    * Router - handle navigation
    */
   router() {
+    // Catalog guard: ensure catalogs are loaded before routing
+    if (!this.state?.catalogs?.departments?.length) {
+      console.warn('Router: catalogs missing, cannot route yet');
+      return;
+    }
+
     let hash = window.location.hash || '#/home';
 
     // Handle share link
@@ -1322,8 +1425,16 @@ const App = {
 
   /**
    * Re-render current route (for refreshing after deletes)
+   * With catalog guard to prevent empty state
    */
-  renderCurrentRoute() {
+  async renderCurrentRoute() {
+    // Guard: ensure catalogs are present before rendering
+    if (!this.state?.catalogs?.departments?.length) {
+      console.warn('Catalogs missing at render — re-init and re-render');
+      await this.init();
+      return;
+    }
+
     // Reload workflows from storage
     this.loadWorkflows();
     // Re-run the router to refresh the current screen

@@ -429,6 +429,7 @@
   <script src="./js/sharelink.js?v=102"></script>
   <script src="./js/templates.js?v=102"></script>
   <script src="./js/app.js?v=102"></script>
+  <script src="./js/simulator.js?v=102"></script>
 
   <!-- Screen Implementations -->
   <script>
@@ -2348,12 +2349,210 @@
       }
     };
 
+    // ============================
+    // SIMULATE SCREEN
+    // ============================
+    const SimulateScreen = {
+      render() {
+        this.populateControls();
+        this.checkDeepLink();
+        this.loadPersistedControls();
+        this.attachEventListeners();
+      },
+
+      populateControls() {
+        // Populate departments
+        const deptSelect = document.getElementById('sim-dept');
+        const departments = [...new Set(App.state.workflows.map(w => w.departmentId))];
+        let html = '<option value="">-- Select Department --</option>';
+        departments.forEach(deptId => {
+          const dept = App.state.catalogs.departments.find(d => d.id === deptId);
+          if (dept) {
+            html += `<option value="${deptId}">${dept.name}</option>`;
+          }
+        });
+        deptSelect.innerHTML = html;
+
+        // Set default start time to now
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('sim-start-time').value = now.toISOString().slice(0, 16);
+      },
+
+      onDeptChange() {
+        const deptId = document.getElementById('sim-dept').value;
+        const requestTypeSelect = document.getElementById('sim-request-type');
+
+        if (!deptId) {
+          requestTypeSelect.innerHTML = '<option value="">-- Select Department First --</option>';
+          return;
+        }
+
+        // Filter workflows by department
+        const workflows = App.state.workflows.filter(w => w.departmentId === deptId);
+        let html = '<option value="">-- Select Request Type --</option>';
+        workflows.forEach(w => {
+          html += `<option value="${w.id}">${w.workType}</option>`;
+        });
+        requestTypeSelect.innerHTML = html;
+      },
+
+      onRequestTypeChange() {
+        // Save to localStorage
+        this.persistControls();
+      },
+
+      checkDeepLink() {
+        const hash = window.location.hash;
+        const params = new URLSearchParams(hash.split('?')[1]);
+        const dept = params.get('dept');
+        const code = params.get('code');
+
+        if (dept && code) {
+          document.getElementById('sim-dept').value = dept;
+          this.onDeptChange();
+
+          // Find workflow by code
+          setTimeout(() => {
+            const workflow = App.state.workflows.find(w =>
+              w.departmentId === dept &&
+              (w.id === code || w.workType.includes(code))
+            );
+            if (workflow) {
+              document.getElementById('sim-request-type').value = workflow.id;
+            }
+          }, 100);
+        }
+      },
+
+      attachEventListeners() {
+        // Failure rate slider
+        const slider = document.getElementById('sim-failure-rate');
+        const valueSpan = document.getElementById('sim-failure-rate-value');
+        slider.addEventListener('input', () => {
+          valueSpan.textContent = slider.value + '%';
+          this.persistControls();
+        });
+
+        // Other controls
+        ['sim-scenario', 'sim-start-time', 'sim-queue-delay', 'sim-speed'].forEach(id => {
+          document.getElementById(id)?.addEventListener('change', () => this.persistControls());
+        });
+      },
+
+      persistControls() {
+        const controls = {
+          dept: document.getElementById('sim-dept').value,
+          requestType: document.getElementById('sim-request-type').value,
+          scenario: document.getElementById('sim-scenario').value,
+          startTime: document.getElementById('sim-start-time').value,
+          queueDelay: document.getElementById('sim-queue-delay').value,
+          failureRate: document.getElementById('sim-failure-rate').value,
+          speed: document.getElementById('sim-speed').value
+        };
+        localStorage.setItem('simulator', JSON.stringify(controls));
+      },
+
+      loadPersistedControls() {
+        try {
+          const stored = localStorage.getItem('simulator');
+          if (!stored) return;
+
+          const controls = JSON.parse(stored);
+
+          if (controls.dept) {
+            document.getElementById('sim-dept').value = controls.dept;
+            this.onDeptChange();
+          }
+
+          setTimeout(() => {
+            if (controls.requestType) document.getElementById('sim-request-type').value = controls.requestType;
+            if (controls.scenario) document.getElementById('sim-scenario').value = controls.scenario;
+            if (controls.startTime) document.getElementById('sim-start-time').value = controls.startTime;
+            if (controls.queueDelay) document.getElementById('sim-queue-delay').value = controls.queueDelay;
+            if (controls.failureRate) {
+              document.getElementById('sim-failure-rate').value = controls.failureRate;
+              document.getElementById('sim-failure-rate-value').textContent = controls.failureRate + '%';
+            }
+            if (controls.speed) document.getElementById('sim-speed').value = controls.speed;
+          }, 150);
+        } catch (e) {
+          console.warn('Failed to load persisted controls:', e);
+        }
+      },
+
+      play() {
+        const params = this.collectParams();
+        if (!params) return;
+
+        // Disable play, enable pause
+        document.getElementById('sim-play').disabled = true;
+        document.getElementById('sim-pause').disabled = false;
+
+        // Set speed from control
+        App.simulator.state.speed = document.getElementById('sim-speed').value;
+
+        // Run simulation
+        App.simulator.run(params);
+      },
+
+      pause() {
+        App.simulator.pause();
+      },
+
+      next() {
+        const params = this.collectParams();
+        if (!params) return;
+
+        // Set speed and ensure we have params
+        App.simulator.state.speed = document.getElementById('sim-speed').value;
+        if (!App.simulator.state.params) {
+          App.simulator.state.params = params;
+          App.simulator.state.steps = App.simulator.buildSteps(params);
+        }
+
+        App.simulator.next();
+      },
+
+      reset() {
+        App.simulator.reset();
+      },
+
+      collectParams() {
+        const workflowId = document.getElementById('sim-request-type').value;
+        if (!workflowId) {
+          alert('Please select a request type');
+          return null;
+        }
+
+        const workflow = App.state.workflows.find(w => w.id === workflowId);
+        if (!workflow) {
+          alert('Workflow not found');
+          return null;
+        }
+
+        const bh = App.state.catalogs.businessHours.find(b => b.id === workflow.businessHoursId);
+        const priority = App.state.catalogs.priorities[1]; // Default to P2
+
+        return {
+          sla: workflow,
+          bh: bh,
+          priority: priority,
+          scenario: document.getElementById('sim-scenario').value,
+          startTime: document.getElementById('sim-start-time').value,
+          queueDelay: document.getElementById('sim-queue-delay').value,
+          failureRate: parseInt(document.getElementById('sim-failure-rate').value) || 0
+        };
+      }
+    };
+
     // Expose screen objects to window scope for onclick handlers
     window.HomeScreen = HomeScreen;
     window.BuildScreen = BuildScreen;
     window.CatalogScreen = CatalogScreen;
     window.DeptScreen = DeptScreen;
     window.SummaryDrawer = SummaryDrawer;
+    window.SimulateScreen = SimulateScreen;
 
     // Initialize App AFTER all screens are defined
     if (document.readyState === 'loading') {

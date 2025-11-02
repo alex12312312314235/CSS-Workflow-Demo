@@ -1262,6 +1262,9 @@ const App = {
     } else if (route === 'settings') {
       document.getElementById('screen-settings').style.display = 'block';
       CatalogScreen.render();
+    } else if (route === 'simulate') {
+      document.getElementById('screen-simulate').style.display = 'block';
+      SimulateScreen.render();
     } else if (route === 'build') {
       document.getElementById('screen-build').style.display = 'block';
       BuildScreen.render();

@@ -1706,8 +1706,7 @@
         html += '</tbody></table>';
         container.innerHTML = html;
 
-        // Render BH banner
-        const bhId = document.getElementById('wf-business-hours')?.value;
+        // Render BH banner (bhId already declared at line 1677)
         if (bhId) {
           App.renderBHBanner('sla-summary-table', bhId);
         }

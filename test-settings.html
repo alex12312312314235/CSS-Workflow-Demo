@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings Diagnostic Test</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; padding: 2rem; }
+    .debug { background: #f0f0f0; padding: 1rem; margin: 1rem 0; border-radius: 4px; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #f5f5f5; }
+    button { padding: 0.5rem 1rem; margin: 0.25rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Settings Screen Diagnostic</h1>
+
+  <div class="debug">
+    <h3>Debug Info</h3>
+    <div id="debug-info">Loading...</div>
+  </div>
+
+  <h2>Settings Content (should render below)</h2>
+  <div id="settings-content"></div>
+
+  <!-- Load app.js first -->
+  <script src="js/app.js"></script>
+
+  <script>
+    // Diagnostic script
+    function runDiagnostic() {
+      const debug = document.getElementById('debug-info');
+      let info = '';
+
+      // Check if App exists
+      info += '<p><strong>App exists:</strong> ' + (typeof App !== 'undefined' ? '✅ Yes' : '❌ No') + '</p>';
+
+      if (typeof App !== 'undefined') {
+        // Check if App.state exists
+        info += '<p><strong>App.state exists:</strong> ' + (App.state ? '✅ Yes' : '❌ No') + '</p>';
+
+        if (App.state) {
+          // Check if App.state.catalogs exists
+          info += '<p><strong>App.state.catalogs exists:</strong> ' + (App.state.catalogs ? '✅ Yes' : '❌ No') + '</p>';
+
+          if (App.state.catalogs) {
+            info += '<p><strong>Departments:</strong> ' + (App.state.catalogs.departments?.length || 0) + '</p>';
+            info += '<p><strong>Roles:</strong> ' + (App.state.catalogs.roles?.length || 0) + '</p>';
+            info += '<p><strong>Business Hours:</strong> ' + (App.state.catalogs.businessHours?.length || 0) + '</p>';
+            info += '<p><strong>Priorities:</strong> ' + (App.state.catalogs.priorities?.length || 0) + '</p>';
+
+            // Show sample data
+            info += '<p><strong>Sample Department:</strong> ' + JSON.stringify(App.state.catalogs.departments[0]) + '</p>';
+            info += '<p><strong>Sample Business Hour:</strong> ' + JSON.stringify(App.state.catalogs.businessHours[0]) + '</p>';
+          }
+        }
+      }
+
+      debug.innerHTML = info;
+    }
+
+    // Simple inline render function
+    function testRender() {
+      const container = document.getElementById('settings-content');
+
+      if (!App.state.catalogs) {
+        container.innerHTML = '<p style="color:red;">❌ No catalogs data found!</p>';
+        return;
+      }
+
+      let html = '<h3>Departments</h3><table><thead><tr><th>ID</th><th>Name</th></tr></thead><tbody>';
+      App.state.catalogs.departments.forEach(d => {
+        html += '<tr><td>' + d.id + '</td><td>' + d.name + '</td></tr>';
+      });
+      html += '</tbody></table>';
+
+      html += '<h3>Business Hours</h3><table><thead><tr><th>ID</th><th>Name</th><th>Hours/Day</th></tr></thead><tbody>';
+      App.state.catalogs.businessHours.forEach(bh => {
+        html += '<tr><td>' + bh.id + '</td><td>' + bh.name + '</td><td>' + bh.hoursPerDay + '</td></tr>';
+      });
+      html += '</tbody></table>';
+
+      container.innerHTML = html;
+    }
+
+    // Wait for App to boot
+    if (typeof App !== 'undefined') {
+      // Boot the app
+      App.boot();
+
+      // Run diagnostic
+      setTimeout(() => {
+        runDiagnostic();
+        testRender();
+      }, 500);
+    } else {
+      document.getElementById('debug-info').innerHTML = '<p style="color:red;">❌ App.js failed to load!</p>';
+    }
+  </script>
+</body>
+</html>

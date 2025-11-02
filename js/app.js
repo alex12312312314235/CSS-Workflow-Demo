@@ -91,7 +91,8 @@ const App = {
       { id: 'ii', name: 'Insights & Intelligence' }
     ],
     roles: [
-      // Executive / Management
+      // Executive / Management (seniority order: VP > HoD > SM)
+      // Used for escalation paths: P1 → VP, P2 → HoD, P3 → SM
       { id: 'vp_css', name: 'VP Culinary – Shared Services' },
       { id: 'hod_cd', name: 'Head of Concept Development' },
       { id: 'hod_sands', name: 'Head of Standards & Specifications' },
@@ -103,7 +104,7 @@ const App = {
       { id: 'sm_ft', name: 'Senior Manager – Food Technology' },
       { id: 'sm_hd', name: 'Senior Manager – Health & Dietetics' },
       { id: 'sm_ii', name: 'Senior Manager – Insights & Intelligence' },
-      // Practitioners (common owners across workflows)
+      // Practitioners (common workflow owners across departments)
       { id: 'cd_chef', name: 'Development Chef' },
       { id: 'spec_analyst', name: 'Specifications Analyst' },
       { id: 'food_tech', name: 'Food Technologist' },
@@ -167,21 +168,25 @@ const App = {
   },
 
   // SLA Presets
+  // These provide starting points for SLA configuration based on workflow urgency
+  // - Low: Generous SLAs for complex, multi-step workflows (factor: 1.2, buffer: 0.2 BD)
+  // - Medium: Balanced SLAs for standard workflows (factor: 1.0, buffer: 0.1 BD)
+  // - High: Tight SLAs for urgent, time-sensitive workflows (factor: 0.9, buffer: 0 BD)
   SLA_PRESETS: {
     low: {
-      p1: { ackMins: 60, startMins: 120, resolveMins: 960 },
-      p2: { ackMins: 120, startMins: 480, resolveMins: 2880 },
-      p3: { ackMins: 1440, startMins: 4320, resolveMins: 15120 }
+      p1: { ackMins: 60, startMins: 120, resolveMins: 960 },    // ~2 BD resolve
+      p2: { ackMins: 120, startMins: 480, resolveMins: 2880 },  // ~5 BD resolve
+      p3: { ackMins: 1440, startMins: 4320, resolveMins: 15120 } // ~28 BD resolve
     },
     medium: {
-      p1: { ackMins: 30, startMins: 60, resolveMins: 480 },
-      p2: { ackMins: 120, startMins: 240, resolveMins: 1440 },
-      p3: { ackMins: 1440, startMins: 2880, resolveMins: 10080 }
+      p1: { ackMins: 30, startMins: 60, resolveMins: 480 },     // ~1 BD resolve
+      p2: { ackMins: 120, startMins: 240, resolveMins: 1440 },  // ~3 BD resolve
+      p3: { ackMins: 1440, startMins: 2880, resolveMins: 10080 } // ~19 BD resolve
     },
     high: {
-      p1: { ackMins: 15, startMins: 30, resolveMins: 240 },
-      p2: { ackMins: 60, startMins: 120, resolveMins: 720 },
-      p3: { ackMins: 720, startMins: 1440, resolveMins: 5040 }
+      p1: { ackMins: 15, startMins: 30, resolveMins: 240 },     // ~0.5 BD resolve
+      p2: { ackMins: 60, startMins: 120, resolveMins: 720 },    // ~1.3 BD resolve
+      p3: { ackMins: 720, startMins: 1440, resolveMins: 5040 }  // ~9 BD resolve
     }
   },
 
@@ -203,7 +208,19 @@ const App = {
   },
 
   /**
-   * Convert user SLA input to minutes
+   * Convert user SLA input to minutes (internal storage format)
+   *
+   * All SLA values are stored internally in minutes for consistency.
+   * The UI displays values in user-selected units (BD or hours).
+   *
+   * @param {number} value - The numeric value from user input
+   * @param {string} unit - 'hours' | 'businessDays' | 'mins'
+   * @param {object} bhProfile - Business hours profile with hoursPerDay
+   * @returns {number} - Value converted to minutes
+   *
+   * Examples:
+   *   - convertUserSlaToMinutes(1, 'businessDays', {hoursPerDay: 9}) → 540 mins
+   *   - convertUserSlaToMinutes(2, 'hours', null) → 120 mins
    */
   convertUserSlaToMinutes(value, unit, bhProfile) {
     value = parseFloat(value);
@@ -222,6 +239,17 @@ const App = {
 
   /**
    * Format SLA minutes for display with unit label
+   *
+   * Converts internal minute values to user-friendly display format.
+   *
+   * @param {number} minutes - The internal minute value
+   * @param {string} unit - 'hours' | 'businessDays' | 'mins'
+   * @param {object} bhProfile - Business hours profile
+   * @returns {string} - Formatted display string
+   *
+   * Examples:
+   *   - formatSlaForDisplay(540, 'businessDays', {hoursPerDay: 9}) → "1.0 business days (540 mins)"
+   *   - formatSlaForDisplay(120, 'hours') → "2.0 hours (120 mins)"
    */
   formatSlaForDisplay(minutes, unit, bhProfile) {
     if (!minutes && minutes !== 0) return '—';

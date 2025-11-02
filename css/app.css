@@ -1108,18 +1108,30 @@ tr:hover {
    Origin Visual Identity
    ====================== */
 :root {
-  --origin-client: #d90429;
+  /* Client-led: Red for urgency/external priority */
+  --origin-client: #dc3545;
   --origin-client-text: #fff;
-  --origin-internal: #c9a227;
-  --origin-internal-text: #1a1a1a;
+  --origin-client-hover: #c82333;
+
+  /* Internal-led: Blue for planned/internal initiatives */
+  --origin-internal: #0d6efd;
+  --origin-internal-text: #fff;
+  --origin-internal-hover: #0b5ed7;
+
+  /* Neutral/missing: Gray for undefined */
+  --origin-neutral: #6c757d;
+  --origin-neutral-text: #fff;
 }
 
 .origin-badge {
   border-radius: 999px;
   font-weight: 600;
-  padding: 2px 8px;
-  font-size: 12px;
+  padding: 3px 10px;
+  font-size: 11px;
   display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .origin-client {
@@ -1133,8 +1145,8 @@ tr:hover {
 }
 
 .origin-neutral {
-  background: #999;
-  color: #fff;
+  background: var(--origin-neutral);
+  color: var(--origin-neutral-text);
 }
 
 .row-origin-left {

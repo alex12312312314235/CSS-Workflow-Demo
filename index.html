@@ -452,7 +452,6 @@
         html += '<th>Dept</th><th>Work Type</th><th>Owner</th><th>Steps</th>';
         html += '<th>Total mins</th>';
         html += '<th title="Computed using business-hours if enabled on each workflow">Resolve (Normal)</th>';
-        html += '<th title="Computed using business-hours if enabled on each workflow">Feasible?</th>';
         html += '<th>Updated</th>';
         html += '<th style="width:60px;"></th>';
         html += '</tr></thead><tbody>';
@@ -488,7 +487,6 @@
           html += '<td class="clickable-cell">' + stepCount + '</td>';
           html += '<td class="clickable-cell">' + totalMins + '</td>';
           html += '<td class="clickable-cell">' + slaResolveDisplay + '</td>';
-          html += '<td class="clickable-cell"><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
           html += '<td class="clickable-cell">' + updated + '</td>';
           html += '<td><button class="btn-sm btn-ghost row-delete" data-id="' + wf.id + '" aria-label="Delete workflow" title="Delete workflow">🗑</button></td>';
           html += '</tr>';
@@ -594,7 +592,7 @@
         } else {
           html += '<table id="dept-table"><thead><tr>';
           html += '<th>Work Type</th><th>Owner</th><th>Steps</th><th>Total (hrs)</th>';
-          html += '<th>Resolve (Normal)</th><th>Feasible?</th><th>Updated</th>';
+          html += '<th>Resolve (Normal)</th><th>Updated</th>';
           html += '<th style="width:60px;"></th>';
           html += '</tr></thead><tbody>';
 
@@ -622,7 +620,6 @@
             html += '<td>' + (wf.steps ? wf.steps.length : 0) + '</td>';
             html += '<td>' + (validation.summary.totalExpectedMins / 60).toFixed(1) + '</td>';
             html += '<td>' + slaResolveDisplay + '</td>';
-            html += '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
             html += '<td>' + updated + '</td>';
             html += '<td><button class="btn-sm btn-ghost row-delete" data-id="' + wf.id + '" aria-label="Delete workflow" title="Delete workflow">🗑</button></td>';
             html += '</tr>';
@@ -1721,6 +1718,87 @@
         if (bhId) {
           App.renderBHBanner('sla-summary-table', bhId);
         }
+
+        // Render SLA composer controls (factors & buffers)
+        this.renderSLAComposerControls();
+      },
+
+      renderSLAComposerControls() {
+        const container = document.getElementById('sla-composer-controls');
+        if (!container) return;
+
+        if (!App.state.catalogs?.priorities) {
+          container.innerHTML = '<p class="text-muted">Loading...</p>';
+          return;
+        }
+
+        const priorities = App.state.catalogs.priorities;
+        const bhId = document.getElementById('wf-business-hours')?.value;
+        const bhProfile = App.state.catalogs.businessHours?.find(bh => bh.id === bhId) || App.state.catalogs.businessHours?.[0];
+        const minsPerDay = App.minsPerBD(bhProfile);
+
+        let html = '<div style="display:grid; gap:1.5rem;">';
+
+        priorities.forEach(p => {
+          const factor = this.slaComposer.factors?.[p.id] || 1.0;
+          const bufferMins = this.slaComposer.buffers?.[p.id] || 0;
+          const bufferBD = (bufferMins / minsPerDay).toFixed(1);
+
+          html += '<div style="border:1px solid #e0e0e0; padding:1rem; border-radius:6px; background:#f9f9f9;">';
+          html += '<h4 style="margin:0 0 1rem 0; color:#333;">' + p.name + '</h4>';
+
+          // Factor slider
+          html += '<div style="margin-bottom:1rem;">';
+          html += '<label style="display:block; font-weight:500; margin-bottom:0.5rem;">Factor (multiplier): <span id="factor-value-' + p.id + '">' + factor.toFixed(2) + '</span></label>';
+          html += '<input type="range" min="0.5" max="2.0" step="0.1" value="' + factor + '" ';
+          html += 'style="width:100%; height:8px; background: linear-gradient(to right, #e74c3c 0%, #f39c12 25%, #2ecc71 50%, #3498db 75%, #9b59b6 100%); border-radius:4px;" ';
+          html += 'oninput="BuildScreen.updateSLAFactor(\'' + p.id + '\', parseFloat(this.value))">';
+          html += '<div class="text-muted" style="font-size:0.75rem; margin-top:0.25rem;">Lower = tighter SLA, Higher = more generous</div>';
+          html += '</div>';
+
+          // Buffer slider
+          html += '<div>';
+          html += '<label style="display:block; font-weight:500; margin-bottom:0.5rem;">Buffer: <span id="buffer-value-' + p.id + '">' + bufferBD + ' BD</span> <span class="text-muted" style="font-size:0.85rem;">(≈ ' + bufferMins + ' mins)</span></label>';
+          html += '<input type="range" min="0" max="2.0" step="0.1" value="' + bufferBD + '" ';
+          html += 'style="width:100%; height:8px; background: linear-gradient(to right, #3498db 0%, #2ecc71 50%, #f39c12 100%); border-radius:4px;" ';
+          html += 'oninput="BuildScreen.updateSLABuffer(\'' + p.id + '\', parseFloat(this.value))">';
+          html += '<div class="text-muted" style="font-size:0.75rem; margin-top:0.25rem;">Extra time added after factored calculation</div>';
+          html += '</div>';
+
+          html += '</div>';
+        });
+
+        html += '</div>';
+        container.innerHTML = html;
+      },
+
+      updateSLAFactor(priorityId, factor) {
+        if (!this.slaComposer.factors) this.slaComposer.factors = {};
+        this.slaComposer.factors[priorityId] = factor;
+
+        // Update display
+        const valueEl = document.getElementById('factor-value-' + priorityId);
+        if (valueEl) valueEl.textContent = factor.toFixed(2);
+
+        // Recompute resolve
+        this.recomputeResolveFromSteps();
+      },
+
+      updateSLABuffer(priorityId, bufferBD) {
+        const bhId = document.getElementById('wf-business-hours')?.value;
+        const bhProfile = App.state.catalogs.businessHours?.find(bh => bh.id === bhId) || App.state.catalogs.businessHours?.[0];
+        const minsPerDay = App.minsPerBD(bhProfile);
+        const bufferMins = Math.round(bufferBD * minsPerDay);
+
+        if (!this.slaComposer.buffers) this.slaComposer.buffers = {};
+        this.slaComposer.buffers[priorityId] = bufferMins;
+
+        // Update display
+        const valueEl = document.getElementById('buffer-value-' + priorityId);
+        if (valueEl) valueEl.textContent = bufferBD.toFixed(1) + ' BD';
+
+        // Recompute resolve
+        this.recomputeResolveFromSteps();
       },
 
       deleteStep(idx) {
@@ -2006,7 +2084,7 @@
         html += '<p class="text-muted">Feasibility computed using ' + (interpretAsBH ? 'business hours' : 'calendar time') + '</p>';
 
         html += '<table><thead><tr>';
-        html += '<th>Priority</th><th>Acknowledge</th><th>Start Work</th><th>Resolve</th><th>Feasible?</th><th>Escalation</th>';
+        html += '<th>Priority</th><th>Acknowledge</th><th>Start Work</th><th>Resolve</th><th>Escalation</th>';
         html += '</tr></thead><tbody>';
 
         // Get feasibility calculation
@@ -2055,7 +2133,6 @@
           html += '<td>' + ackDisplay + '</td>';
           html += '<td>' + startDisplay + '</td>';
           html += '<td>' + resolveDisplay + '</td>';
-          html += '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
           html += '<td>' + escalation + '</td>';
           html += '</tr>';
         });

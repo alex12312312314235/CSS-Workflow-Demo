@@ -752,31 +752,22 @@
       },
 
       renderBusinessHoursTable(businessHours) {
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        let html = '<div class="catalog-section"><h3>Business Hours</h3><table><thead><tr>';
-        html += '<th>ID</th><th>Name</th><th>Timezone</th><th>Days</th><th>Start</th><th>End</th><th>Actions</th>';
+        let html = '<div class="catalog-section"><h3>Business Hours Profiles</h3>';
+        html += '<p class="text-muted" style="font-size:0.9em; margin-bottom:1rem;">Define how many hours per business day. Used for BD → minutes conversions.</p>';
+        html += '<table><thead><tr>';
+        html += '<th>ID</th><th>Name</th><th>Hours per Day</th><th>Actions</th>';
         html += '</tr></thead><tbody>';
 
         businessHours.forEach((bh, i) => {
           html += '<tr>';
           html += '<td><input type="text" value="' + bh.id + '" onchange="CatalogScreen.updateBH(' + i + ', \'id\', this.value)"></td>';
           html += '<td><input type="text" value="' + bh.name + '" onchange="CatalogScreen.updateBH(' + i + ', \'name\', this.value)"></td>';
-          html += '<td><input type="text" value="' + bh.tz + '" onchange="CatalogScreen.updateBH(' + i + ', \'tz\', this.value)"></td>';
-          html += '<td><div class="checkbox-group">';
-
-          dayNames.forEach((day, dayIdx) => {
-            const checked = bh.days.includes(dayIdx) ? 'checked' : '';
-            html += '<label><input type="checkbox" ' + checked + ' onchange="CatalogScreen.toggleBHDay(' + i + ', ' + dayIdx + ', this.checked)">' + day + '</label>';
-          });
-
-          html += '</div></td>';
-          html += '<td><input type="time" value="' + bh.start + '" onchange="CatalogScreen.updateBH(' + i + ', \'start\', this.value)"></td>';
-          html += '<td><input type="time" value="' + bh.end + '" onchange="CatalogScreen.updateBH(' + i + ', \'end\', this.value)"></td>';
+          html += '<td><input type="number" min="1" max="24" step="0.5" value="' + bh.hoursPerDay + '" onchange="CatalogScreen.updateBH(' + i + ', \'hoursPerDay\', parseFloat(this.value))"></td>';
           html += '<td><button class="btn-danger btn-sm" onclick="CatalogScreen.deleteBH(' + i + ')">Delete</button></td>';
           html += '</tr>';
         });
 
-        html += '<tr><td colspan="7"><button class="btn-secondary btn-sm" onclick="CatalogScreen.addBH()">+ Add Business Hours</button></td></tr>';
+        html += '<tr><td colspan="4"><button class="btn-secondary btn-sm" onclick="CatalogScreen.addBH()">+ Add Business Hours Profile</button></td></tr>';
         html += '</tbody></table></div>';
         return html;
       },
@@ -840,25 +831,11 @@
         App.state.catalogs.businessHours[idx][field] = value;
         App.saveCatalogs();
       },
-      toggleBHDay(idx, day, checked) {
-        const days = App.state.catalogs.businessHours[idx].days;
-        if (checked && !days.includes(day)) {
-          days.push(day);
-          days.sort((a, b) => a - b);
-        } else if (!checked) {
-          const i = days.indexOf(day);
-          if (i > -1) days.splice(i, 1);
-        }
-        App.saveCatalogs();
-      },
       addBH() {
         App.state.catalogs.businessHours.push({
-          id: 'new_bh',
+          id: 'bh_new',
           name: 'New Profile',
-          tz: 'Asia/Dubai',
-          days: [1, 2, 3, 4, 5],
-          start: '08:00',
-          end: '18:00'
+          hoursPerDay: 8
         });
         App.saveCatalogs();
         this.render();

@@ -704,13 +704,23 @@
     const CatalogScreen = {
       render() {
         const container = document.getElementById('settings-content');
+        if (!container) {
+          console.error('Settings container not found');
+          return;
+        }
+
         const catalogs = App.state.catalogs;
+        if (!catalogs) {
+          console.error('Catalogs not found in App.state');
+          container.innerHTML = '<p class="text-muted">Loading catalogs...</p>';
+          return;
+        }
 
         let html = '';
-        html += this.renderDepartmentsTable(catalogs.departments);
-        html += this.renderRolesTable(catalogs.roles);
-        html += this.renderBusinessHoursTable(catalogs.businessHours);
-        html += this.renderPrioritiesTable(catalogs.priorities);
+        html += this.renderDepartmentsTable(catalogs.departments || []);
+        html += this.renderRolesTable(catalogs.roles || []);
+        html += this.renderBusinessHoursTable(catalogs.businessHours || []);
+        html += this.renderPrioritiesTable(catalogs.priorities || []);
 
         container.innerHTML = html;
       },

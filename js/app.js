@@ -1540,9 +1540,4 @@ const App = {
 // Expose App to window scope for inline scripts and onclick handlers
 window.App = App;
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => App.init());
-} else {
-  App.init();
-}
+// DO NOT call App.init() here - it will be called from index.html after screens are defined

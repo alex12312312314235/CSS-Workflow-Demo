@@ -291,10 +291,10 @@
   </div>
 
   <!-- Load JavaScript modules (cache-busted with version) -->
-  <script src="./js/validate.js?v=101"></script>
-  <script src="./js/sharelink.js?v=101"></script>
-  <script src="./js/templates.js?v=101"></script>
-  <script src="./js/app.js?v=101"></script>
+  <script src="./js/validate.js?v=102"></script>
+  <script src="./js/sharelink.js?v=102"></script>
+  <script src="./js/templates.js?v=102"></script>
+  <script src="./js/app.js?v=102"></script>
 
   <!-- Screen Implementations -->
   <script>
@@ -2140,6 +2140,13 @@
     window.CatalogScreen = CatalogScreen;
     window.DeptScreen = DeptScreen;
     window.SummaryDrawer = SummaryDrawer;
+
+    // Initialize App AFTER all screens are defined
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => App.init());
+    } else {
+      App.init();
+    }
   </script>
 </body>
 </html>

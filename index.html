@@ -564,7 +564,7 @@
         html += '<div class="kpi-boxes">';
         html += '<div class="kpi-box"><div class="kpi-value">' + stats.count + '</div><div class="kpi-label">Workflows</div></div>';
         html += '<div class="kpi-box"><div class="kpi-value">' + stats.feasiblePct + '%</div><div class="kpi-label">Feasible (Normal)</div></div>';
-        html += '<div class="kpi-box"><div class="kpi-value">' + stats.avgDuration + '</div><div class="kpi-label">Avg Cycle (mins)</div></div>';
+        html += '<div class="kpi-box"><div class="kpi-value">' + (stats.avgDuration !== '—' ? (stats.avgDuration / 60).toFixed(1) : '—') + '</div><div class="kpi-label">Avg Cycle (hrs)</div></div>';
         html += '</div>';
 
         html += '<div style="margin: 1rem 0;">';
@@ -593,7 +593,7 @@
           html += '<p class="text-muted">No workflows yet for this department.</p>';
         } else {
           html += '<table id="dept-table"><thead><tr>';
-          html += '<th>Work Type</th><th>Owner</th><th>Steps</th><th>Total (mins)</th>';
+          html += '<th>Work Type</th><th>Owner</th><th>Steps</th><th>Total (hrs)</th>';
           html += '<th>Resolve (Normal)</th><th>Feasible?</th><th>Updated</th>';
           html += '<th style="width:60px;"></th>';
           html += '</tr></thead><tbody>';
@@ -620,7 +620,7 @@
             html += '<td class="clickable-work-type"><strong style="color:#3498db; cursor:pointer;">' + wf.workType + '</strong> <span class="origin-badge ' + originClass + '">' + originLabel + '</span></td>';
             html += '<td>' + (owner ? owner.name : 'Unknown') + '</td>';
             html += '<td>' + (wf.steps ? wf.steps.length : 0) + '</td>';
-            html += '<td>' + validation.summary.totalExpectedMins + '</td>';
+            html += '<td>' + (validation.summary.totalExpectedMins / 60).toFixed(1) + '</td>';
             html += '<td>' + slaResolveDisplay + '</td>';
             html += '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
             html += '<td>' + updated + '</td>';
@@ -1011,32 +1011,39 @@
 
         // Find template from defaultTemplates by id
         const template = (App.defaultTemplates || []).find(t => t.id === value);
-        if (!template) return;
+        if (!template) {
+          console.warn('Template not found:', value);
+          return;
+        }
+
+        console.log('Loading template:', template);
 
         // Populate form fields
-        document.getElementById('wf-department').value = template.departmentId;
-        document.getElementById('wf-work-type').value = template.name;
-        document.getElementById('wf-business-hours').value = template.businessHoursId;
-        document.getElementById('wf-owner').value = template.ownerRoleId;
+        document.getElementById('wf-department').value = template.departmentId || '';
+        document.getElementById('wf-work-type').value = template.workType || template.name || '';
+        document.getElementById('wf-business-hours').value = template.businessHoursId || '';
+        document.getElementById('wf-owner').value = template.ownerRole || template.ownerRoleId || '';
 
         // Set origin if available
         if (template.origin) {
-          const originRadios = document.getElementsByName('origin');
-          originRadios.forEach(r => r.checked = r.value === template.origin);
+          const originRadio = document.querySelector('input[name="wf-origin"][value="' + template.origin + '"]');
+          if (originRadio) originRadio.checked = true;
         }
 
         // Load steps
-        this.steps = template.steps.map((s, i) => ({
+        this.steps = (template.steps || []).map((s, i) => ({
           id: 'step_' + Date.now() + '_' + i,
-          title: s.name,
-          roleId: s.roleId,
-          expectedMins: s.mins
+          title: s.title || s.name || '',
+          roleId: s.roleId || '',
+          expectedMins: s.expectedMins || s.mins || 0
         }));
 
+        // Render everything
         this.renderSteps();
+        this.renderSLAPolicy();
         this.onDepartmentChange();
 
-        App.showToast('Template "' + template.name + '" loaded successfully!', 'success');
+        App.showToast('Template "' + (template.workType || template.name) + '" loaded successfully!', 'success');
       },
 
       onDepartmentChange() {
@@ -1695,11 +1702,15 @@
           const startBD = (startMins / minsPerDay).toFixed(1);
           const resolveBD = (resolveMins / minsPerDay).toFixed(1);
 
+          const ackHrs = (ackMins / 60).toFixed(1);
+          const startHrs = (startMins / 60).toFixed(1);
+          const resolveHrs = (resolveMins / 60).toFixed(1);
+
           html += '<tr>';
           html += '<td><strong>' + p.name + '</strong></td>';
-          html += '<td>' + ackBD + ' <span class="text-muted" style="font-size:0.8rem;">(≈ ' + ackMins + ' mins)</span></td>';
-          html += '<td>' + startBD + ' <span class="text-muted" style="font-size:0.8rem;">(≈ ' + startMins + ' mins)</span></td>';
-          html += '<td>' + resolveBD + ' <span class="text-muted" style="font-size:0.8rem;">(≈ ' + resolveMins + ' mins)</span></td>';
+          html += '<td>' + ackBD + ' BD <span class="text-muted" style="font-size:0.8rem;">(≈ ' + ackHrs + ' hrs)</span></td>';
+          html += '<td>' + startBD + ' BD <span class="text-muted" style="font-size:0.8rem;">(≈ ' + startHrs + ' hrs)</span></td>';
+          html += '<td>' + resolveBD + ' BD <span class="text-muted" style="font-size:0.8rem;">(≈ ' + resolveHrs + ' hrs)</span></td>';
           html += '</tr>';
         });
 
@@ -1965,7 +1976,7 @@
         html += '<dt>Owner:</dt><dd>' + (owner ? owner.name : 'Unknown') + '</dd>';
         html += '<dt>Business Hours:</dt><dd>' + (bh ? bh.name : 'Unknown') + ' (' + (bh ? bh.start : '') + ' - ' + (bh ? bh.end : '') + ', ' + this.formatDays(bh ? bh.days : []) + ')</dd>';
         html += '<dt>Total Steps:</dt><dd>' + workflow.steps.length + '</dd>';
-        html += '<dt>Total Duration:</dt><dd>' + totalMins + ' minutes (' + (totalMins / 60).toFixed(1) + ' hours)</dd>';
+        html += '<dt>Total Duration:</dt><dd>' + (totalMins / 60).toFixed(1) + ' hours</dd>';
         html += '<dt>Status:</dt><dd><span class="badge badge-' + (workflow.status || 'draft') + '">' + (workflow.status || 'draft') + '</span></dd>';
         html += '<dt>Updated:</dt><dd>' + (workflow.updatedAt ? new Date(workflow.updatedAt).toLocaleDateString() : 'Never') + '</dd>';
         html += '</dl></div>';
@@ -1983,7 +1994,7 @@
           const role = catalogs.roles.find(r => r.id === step.roleId);
           html += '<div class="summary-step">';
           html += '<div class="summary-step-title">' + (idx + 1) + '. ' + step.title + '</div>';
-          html += '<div class="summary-step-meta">Responsible: ' + (role ? role.name : 'Unknown') + ' | Duration: ' + step.expectedMins + ' minutes</div>';
+          html += '<div class="summary-step-meta">Responsible: ' + (role ? role.name : 'Unknown') + ' | Duration: ' + (step.expectedMins / 60).toFixed(1) + ' hours</div>';
           html += '</div>';
         });
         html += '</div>';

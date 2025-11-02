@@ -1565,6 +1565,193 @@ const App = {
   }
 };
 
+// ============================
+// TIME UTILITIES
+// ============================
+App.time = {
+  /**
+   * Parse datetime-local input to Date object
+   */
+  parseLocal(input) {
+    if (!input) return new Date();
+    return new Date(input);
+  },
+
+  /**
+   * Add minutes to a date (naive, ignores business hours)
+   */
+  addMinutes(date, minutes) {
+    const result = new Date(date);
+    result.setMinutes(result.getMinutes() + minutes);
+    return result;
+  },
+
+  /**
+   * Find next open time for a business hours profile
+   */
+  nextOpen(date, bhProfile) {
+    if (!bhProfile || !bhProfile.hoursPerDay) return date;
+
+    // Simple implementation: assume 9-5 Mon-Fri
+    const d = new Date(date);
+    const day = d.getDay(); // 0=Sun, 6=Sat
+    const hour = d.getHours();
+
+    // If weekend, move to Monday 9am
+    if (day === 0) {
+      d.setDate(d.getDate() + 1);
+      d.setHours(9, 0, 0, 0);
+      return d;
+    }
+    if (day === 6) {
+      d.setDate(d.getDate() + 2);
+      d.setHours(9, 0, 0, 0);
+      return d;
+    }
+
+    // If after hours, move to next day 9am
+    const endHour = 9 + (bhProfile.hoursPerDay || 9);
+    if (hour < 9) {
+      d.setHours(9, 0, 0, 0);
+      return d;
+    }
+    if (hour >= endHour) {
+      d.setDate(d.getDate() + 1);
+      // Check if next day is weekend
+      if (d.getDay() === 6) d.setDate(d.getDate() + 2);
+      if (d.getDay() === 0) d.setDate(d.getDate() + 1);
+      d.setHours(9, 0, 0, 0);
+      return d;
+    }
+
+    return d;
+  },
+
+  /**
+   * Add minutes respecting business hours calendar
+   */
+  addMinutesWithinCalendar(date, minutes, bhProfile) {
+    if (!bhProfile || minutes === 0) return date;
+
+    const minsPerDay = (bhProfile.hoursPerDay || 9) * 60;
+    let remaining = minutes;
+    let current = new Date(date);
+
+    // Ensure we start at a valid time
+    current = this.nextOpen(current, bhProfile);
+
+    while (remaining > 0) {
+      // How many minutes left in current day?
+      const startHour = 9;
+      const endHour = startHour + (bhProfile.hoursPerDay || 9);
+      const currentHour = current.getHours();
+      const currentMin = current.getMinutes();
+
+      const minsLeftToday = (endHour - currentHour) * 60 - currentMin;
+
+      if (remaining <= minsLeftToday) {
+        // Can finish today
+        current.setMinutes(current.getMinutes() + remaining);
+        remaining = 0;
+      } else {
+        // Need to continue tomorrow
+        remaining -= minsLeftToday;
+        current.setDate(current.getDate() + 1);
+        current.setHours(startHour, 0, 0, 0);
+        // Skip weekends
+        if (current.getDay() === 6) current.setDate(current.getDate() + 2);
+        if (current.getDay() === 0) current.setDate(current.getDate() + 1);
+      }
+    }
+
+    return current;
+  },
+
+  /**
+   * Get first N working time bands from start
+   */
+  workingBands(start, bhProfile, count) {
+    const bands = [];
+    let current = this.nextOpen(new Date(start), bhProfile);
+    const startHour = 9;
+    const endHour = startHour + (bhProfile?.hoursPerDay || 9);
+
+    for (let i = 0; i < count; i++) {
+      const bandStart = new Date(current);
+      bandStart.setHours(startHour, 0, 0, 0);
+      const bandEnd = new Date(current);
+      bandEnd.setHours(endHour, 0, 0, 0);
+
+      bands.push({
+        start: bandStart.toISOString().substring(11, 16), // HH:mm
+        end: bandEnd.toISOString().substring(11, 16),
+        date: bandStart.toLocaleDateString()
+      });
+
+      // Move to next working day
+      current.setDate(current.getDate() + 1);
+      if (current.getDay() === 6) current.setDate(current.getDate() + 2);
+      if (current.getDay() === 0) current.setDate(current.getDate() + 1);
+    }
+
+    return bands;
+  },
+
+  /**
+   * Calculate buffer minutes to edge of band before due time
+   */
+  bufferToEdge(start, due, bhProfile) {
+    const startTime = new Date(start);
+    const dueTime = new Date(due);
+    const diffMs = dueTime - startTime;
+    const diffMins = Math.floor(diffMs / 60000);
+    return Math.max(0, diffMins);
+  }
+};
+
+// ============================
+// VALIDATORS
+// ============================
+App.validateSLA = function(sla) {
+  const errors = [];
+  const warnings = [];
+
+  const required = ['departmentId', 'workType', 'ownerRoleId', 'businessHoursId'];
+  required.forEach(k => {
+    if (sla?.[k] == null || sla[k] === '') {
+      errors.push(`Missing ${k}`);
+    }
+  });
+
+  // Check SLA structure
+  if (!sla?.slaByPriority) {
+    errors.push('Missing slaByPriority');
+  } else {
+    const priorities = App.state?.catalogs?.priorities || [];
+    priorities.forEach(p => {
+      const pSla = sla.slaByPriority[p.id];
+      if (!pSla) {
+        warnings.push(`Missing SLA for priority ${p.name}`);
+      } else {
+        if (pSla.ackMins > pSla.startMins) {
+          warnings.push(`${p.name}: Ack > Start time`);
+        }
+        if (pSla.startMins > pSla.resolveMins) {
+          errors.push(`${p.name}: Start > Resolve time`);
+        }
+      }
+    });
+  }
+
+  // Check business hours exists
+  const bhExists = App.state?.catalogs?.businessHours?.find(bh => bh.id === sla?.businessHoursId);
+  if (!bhExists) {
+    errors.push('Unknown business_hours_id');
+  }
+
+  return { errors, warnings };
+};
+
 // Expose App to window scope for inline scripts and onclick handlers
 window.App = App;
 

@@ -97,6 +97,140 @@
         <div id="settings-content"></div>
       </div>
 
+      <!-- Simulate Screen -->
+      <div id="screen-simulate" class="screen">
+        <h2>Workflow Simulator</h2>
+        <p class="text-muted">Test workflow execution step-by-step with configurable scenarios.</p>
+
+        <div class="simulate">
+          <div class="left">
+            <section id="sim-controls">
+              <div class="controls-grid">
+                <div class="control-group">
+                  <label for="sim-dept">Department</label>
+                  <select id="sim-dept" onchange="SimulateScreen.onDeptChange()"></select>
+                </div>
+                <div class="control-group">
+                  <label for="sim-request-type">Request Type</label>
+                  <select id="sim-request-type" onchange="SimulateScreen.onRequestTypeChange()"></select>
+                </div>
+                <div class="control-group">
+                  <label for="sim-scenario">Scenario</label>
+                  <select id="sim-scenario">
+                    <option value="happy">Happy Path</option>
+                    <option value="after-hours">After Hours</option>
+                    <option value="waiting">Waiting on Requester</option>
+                    <option value="blocker">Dependency Blocker</option>
+                    <option value="high-queue">High Queue</option>
+                  </select>
+                </div>
+                <div class="control-group">
+                  <label for="sim-start-time">Start Time</label>
+                  <input type="datetime-local" id="sim-start-time">
+                </div>
+                <div class="control-group">
+                  <label for="sim-queue-delay">Queue Delay (minutes)</label>
+                  <input type="number" id="sim-queue-delay" min="0" value="0">
+                </div>
+                <div class="control-group">
+                  <label for="sim-failure-rate">Failure Rate (%)</label>
+                  <input type="range" id="sim-failure-rate" min="0" max="50" value="0">
+                  <span id="sim-failure-rate-value">0%</span>
+                </div>
+                <div class="control-group">
+                  <label for="sim-speed">Speed</label>
+                  <select id="sim-speed">
+                    <option value="slow">Slow</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="fast">Fast</option>
+                  </select>
+                </div>
+              </div>
+              <div class="sim-actions">
+                <button class="btn-primary" id="sim-play" onclick="SimulateScreen.play()">▶ Play</button>
+                <button class="btn-secondary" id="sim-pause" onclick="SimulateScreen.pause()" disabled>⏸ Pause</button>
+                <button class="btn-secondary" id="sim-next" onclick="SimulateScreen.next()">⏭ Next</button>
+                <button class="btn-secondary" id="sim-reset" onclick="SimulateScreen.reset()">🔄 Reset</button>
+              </div>
+            </section>
+
+            <section id="sim-steps">
+              <div class="step-card" data-step="load">
+                <span class="badge">PENDING</span>
+                <h4>1. Load SLA</h4>
+                <div class="body"></div>
+              </div>
+              <div class="step-card" data-step="sanity">
+                <span class="badge">PENDING</span>
+                <h4>2. Sanity Checks</h4>
+                <div class="body"></div>
+              </div>
+              <div class="step-card" data-step="calendar">
+                <span class="badge">PENDING</span>
+                <h4>3. Clock & Calendar</h4>
+                <div class="body"></div>
+              </div>
+              <div class="step-card" data-step="first-response">
+                <span class="badge">PENDING</span>
+                <h4>4. First Response</h4>
+                <div class="body"></div>
+              </div>
+              <div class="step-card" data-step="resolution">
+                <span class="badge">PENDING</span>
+                <h4>5. Resolution</h4>
+                <div class="body"></div>
+              </div>
+              <div class="step-card" data-step="escalations">
+                <span class="badge">PENDING</span>
+                <h4>6. Escalations</h4>
+                <div class="body"></div>
+              </div>
+              <div class="step-card" data-step="verdict">
+                <span class="badge">PENDING</span>
+                <h4>7. Verdict</h4>
+                <div class="body"></div>
+              </div>
+            </section>
+          </div>
+
+          <div class="right" id="sim-stats">
+            <h3>Live Stats</h3>
+            <div class="tiles">
+              <div class="tile">
+                <div class="label">Feasible</div>
+                <div id="stat-feasible" class="value">–</div>
+              </div>
+              <div class="tile">
+                <div class="label">Buffer (min)</div>
+                <div id="stat-buffer" class="value">–</div>
+              </div>
+              <div class="tile">
+                <div class="label">FR target</div>
+                <div id="stat-fr" class="value">–</div>
+              </div>
+              <div class="tile">
+                <div class="label">RES target</div>
+                <div id="stat-res" class="value">–</div>
+              </div>
+              <div class="tile">
+                <div class="label">Esc fired</div>
+                <div id="stat-esc" class="value">–</div>
+              </div>
+              <div class="tile">
+                <div class="label">Errors</div>
+                <div id="stat-errors" class="value">–</div>
+              </div>
+              <div class="tile">
+                <div class="label">Warnings</div>
+                <div id="stat-warnings" class="value">–</div>
+              </div>
+            </div>
+            <h4>Timeline</h4>
+            <div id="sim-timeline" class="timeline"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Build Screen -->
       <div id="screen-build" class="screen">
         <h2>Workflow Builder</h2>

@@ -588,7 +588,7 @@
         html += '<th>Total mins</th>';
         html += '<th title="Computed using business-hours if enabled on each workflow">Resolve (Normal)</th>';
         html += '<th>Updated</th>';
-        html += '<th style="width:60px;"></th>';
+        html += '<th style="width:140px;">Actions</th>';
         html += '</tr></thead><tbody>';
 
         workflows.forEach(wf => {
@@ -623,7 +623,7 @@
           html += '<td class="clickable-cell">' + totalMins + '</td>';
           html += '<td class="clickable-cell">' + slaResolveDisplay + '</td>';
           html += '<td class="clickable-cell">' + updated + '</td>';
-          html += '<td><button class="btn-sm btn-ghost row-delete" data-id="' + wf.id + '" aria-label="Delete workflow" title="Delete workflow">🗑</button></td>';
+          html += '<td><button class="btn-sm btn-primary" onclick="location.hash=\'#/simulate?dept=' + wf.departmentId + '&code=' + wf.id + '\'" title="Simulate workflow" aria-label="Simulate workflow">▶️</button> <button class="btn-sm btn-ghost row-delete" data-id="' + wf.id + '" aria-label="Delete workflow" title="Delete workflow">🗑</button></td>';
           html += '</tr>';
         });
 
@@ -728,7 +728,7 @@
           html += '<table id="dept-table"><thead><tr>';
           html += '<th>Work Type</th><th>Owner</th><th>Steps</th><th>Total (hrs)</th>';
           html += '<th>Resolve (Normal)</th><th>Updated</th>';
-          html += '<th style="width:60px;"></th>';
+          html += '<th style="width:140px;">Actions</th>';
           html += '</tr></thead><tbody>';
 
           filteredWorkflows.forEach(wf => {
@@ -756,7 +756,7 @@
             html += '<td>' + (validation.summary.totalExpectedMins / 60).toFixed(1) + '</td>';
             html += '<td>' + slaResolveDisplay + '</td>';
             html += '<td>' + updated + '</td>';
-            html += '<td><button class="btn-sm btn-ghost row-delete" data-id="' + wf.id + '" aria-label="Delete workflow" title="Delete workflow">🗑</button></td>';
+            html += '<td><button class="btn-sm btn-primary" onclick="location.hash=\'#/simulate?dept=' + wf.departmentId + '&code=' + wf.id + '\'" title="Simulate workflow" aria-label="Simulate workflow">▶️</button> <button class="btn-sm btn-ghost row-delete" data-id="' + wf.id + '" aria-label="Delete workflow" title="Delete workflow">🗑</button></td>';
             html += '</tr>';
           });
 

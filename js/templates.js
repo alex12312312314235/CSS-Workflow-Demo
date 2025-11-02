@@ -242,5 +242,26 @@ const WorkflowTemplates = {
    */
   getTemplatesForDept(deptId) {
     return this.byDept[deptId] || [];
+  },
+
+  /**
+   * Flatten all templates to array for dropdown
+   */
+  getAllTemplatesAsArray() {
+    const arr = [];
+    Object.keys(this.byDept).forEach(deptId => {
+      this.byDept[deptId].forEach((t, idx) => {
+        arr.push({
+          id: `${deptId}_${idx}`,
+          departmentId: deptId,
+          name: t.workType,
+          ...t
+        });
+      });
+    });
+    return arr;
   }
 };
+
+// Expose WorkflowTemplates to window scope
+window.WorkflowTemplates = WorkflowTemplates;

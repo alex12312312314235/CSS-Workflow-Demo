@@ -9,6 +9,10 @@ const LS = {
 };
 
 const App = {
+  __booted: false, // Boot flag
+  stepUnitDefault: 'bd', // Default step unit for UI: 'bd' | 'hr' (never 'min' in UI)
+  defaultTemplates: [], // Single source for templates
+
   state: {
     catalogs: null,
     templates: null,
@@ -132,28 +136,28 @@ const App = {
       hd: [
         {
           workType: 'Nutritional Analysis',
-          ownerRoleId: 'h_d_lead',
-          businessHoursId: 'std',
+          ownerRoleId: 'dietitian',
+          businessHoursId: 'bh_std',
           steps: [
-            { title: 'Intake triage', roleId: 'h_d_lead', expectedMins: 30 },
-            { title: 'Data collection', roleId: 'i_i_analyst', expectedMins: 180 },
+            { title: 'Intake triage', roleId: 'hod_hd', expectedMins: 30 },
+            { title: 'Data collection', roleId: 'data_analyst', expectedMins: 180 },
             { title: 'Lab analysis', roleId: 'food_tech', expectedMins: 240 },
-            { title: 'Label update', roleId: 'h_d_lead', expectedMins: 60 }
+            { title: 'Label update', roleId: 'dietitian', expectedMins: 60 }
           ],
-          slaPreset: 'standard'
+          slaPreset: 'medium'
         }
       ],
-      ss: [
+      sands: [
         {
           workType: 'Allergen Update',
-          ownerRoleId: 's_s_lead',
-          businessHoursId: 'std',
+          ownerRoleId: 'spec_analyst',
+          businessHoursId: 'bh_std',
           steps: [
-            { title: 'Intake & triage', roleId: 's_s_lead', expectedMins: 60 },
+            { title: 'Intake & triage', roleId: 'spec_analyst', expectedMins: 60 },
             { title: 'Verification', roleId: 'food_tech', expectedMins: 240 },
-            { title: 'Publish & notify', roleId: 'exec_sous', expectedMins: 60 }
+            { title: 'Publish & notify', roleId: 'hod_sands', expectedMins: 60 }
           ],
-          slaPreset: 'standard'
+          slaPreset: 'medium'
         }
       ],
       ft: [],
@@ -164,17 +168,17 @@ const App = {
 
   // SLA Presets
   SLA_PRESETS: {
-    conservative: {
+    low: {
       p1: { ackMins: 60, startMins: 120, resolveMins: 960 },
       p2: { ackMins: 120, startMins: 480, resolveMins: 2880 },
       p3: { ackMins: 1440, startMins: 4320, resolveMins: 15120 }
     },
-    standard: {
+    medium: {
       p1: { ackMins: 30, startMins: 60, resolveMins: 480 },
       p2: { ackMins: 120, startMins: 240, resolveMins: 1440 },
       p3: { ackMins: 1440, startMins: 2880, resolveMins: 10080 }
     },
-    aggressive: {
+    high: {
       p1: { ackMins: 15, startMins: 30, resolveMins: 240 },
       p2: { ackMins: 60, startMins: 120, resolveMins: 720 },
       p3: { ackMins: 720, startMins: 1440, resolveMins: 5040 }
@@ -241,6 +245,120 @@ const App = {
     if (!minutes && minutes !== 0) return '0.0';
     const minsPerDay = this.minutesPerBusinessDay(bhProfile);
     return (minutes / minsPerDay).toFixed(1);
+  },
+
+  /**
+   * Alias for minutesPerBusinessDay - returns minutes per BD for a given business hours profile
+   */
+  minsPerBD(bhProfile) {
+    return this.minutesPerBusinessDay(bhProfile);
+  },
+
+  /**
+   * Convert minutes to BD
+   */
+  minsToBD(mins, bhProfile) {
+    const minsPerDay = this.minsPerBD(bhProfile);
+    return mins / minsPerDay;
+  },
+
+  /**
+   * Convert BD to minutes
+   */
+  bdToMins(bd, bhProfile) {
+    const minsPerDay = this.minsPerBD(bhProfile);
+    return Math.round(bd * minsPerDay);
+  },
+
+  /**
+   * Convert hours to minutes
+   */
+  hoursToMins(hours) {
+    return Math.round(hours * 60);
+  },
+
+  /**
+   * Convert minutes to hours
+   */
+  minsToHours(mins) {
+    return mins / 60;
+  },
+
+  /**
+   * Rank roles by seniority for auto-escalation
+   * Returns roles sorted by seniority (most senior first)
+   */
+  rankRolesBySeniority(roles, departmentId) {
+    const seniorityKeywords = ['vp', 'head', 'hod', 'director', 'senior', 'manager', 'lead'];
+
+    return roles.map(role => {
+      // Calculate seniority score based on keywords in ID and name
+      let score = 0;
+      const roleText = (role.id + ' ' + role.name).toLowerCase();
+
+      seniorityKeywords.forEach((keyword, index) => {
+        if (roleText.includes(keyword)) {
+          // Earlier keywords (like 'vp') get higher scores
+          score += (seniorityKeywords.length - index) * 10;
+        }
+      });
+
+      return { ...role, seniorityScore: score };
+    })
+    .filter(role => role.seniorityScore > 0) // Only roles with keywords
+    .sort((a, b) => b.seniorityScore - a.seniorityScore);
+  },
+
+  /**
+   * Get senior role candidates for escalation (guarded)
+   * Returns VP / Sr Manager / HoD tier by department if present, otherwise fallback
+   */
+  getSeniorRoleCandidates(deptId) {
+    try {
+      const cats = this.state?.catalogs;
+      if (!cats || !cats.roles) return [];
+      return this.rankRolesBySeniority(cats.roles, deptId);
+    } catch (e) {
+      console.warn('getSeniorRoleCandidates failed', e);
+      return [];
+    }
+  },
+
+  /**
+   * Get recommended escalation role for a priority level
+   * @param {string} priorityId - Priority ID (p1, p2, p3)
+   * @param {string} departmentId - Department ID
+   * @returns {string|null} - Recommended role ID or null
+   */
+  getRecommendedEscalationRole(priorityId, departmentId) {
+    const rankedRoles = this.rankRolesBySeniority(this.state.catalogs.roles, departmentId);
+
+    if (rankedRoles.length === 0) return null;
+
+    // p1 (Critical/High) → most senior (VP)
+    if (priorityId === 'p1') {
+      return rankedRoles[0]?.id || null;
+    }
+
+    // p2 (High/Medium) → department head (HOD/Head)
+    if (priorityId === 'p2') {
+      const head = rankedRoles.find(r =>
+        r.id.includes('hod') || r.id.includes('head') ||
+        r.name.toLowerCase().includes('head')
+      );
+      return head?.id || rankedRoles[1]?.id || rankedRoles[0]?.id || null;
+    }
+
+    // p3 (Normal/Low) → Senior Manager/Manager
+    if (priorityId === 'p3') {
+      const manager = rankedRoles.find(r =>
+        r.id.includes('manager') || r.id.includes('senior') ||
+        r.name.toLowerCase().includes('manager') || r.name.toLowerCase().includes('senior')
+      );
+      return manager?.id || rankedRoles[2]?.id || rankedRoles[1]?.id || rankedRoles[0]?.id || null;
+    }
+
+    return null;
   },
 
   /**
@@ -404,6 +522,86 @@ const App = {
   },
 
   /**
+   * Migrate SLA preset labels from conservative/standard/aggressive to low/medium/high
+   * (wrapped with guards)
+   */
+  migrateSLAPresetLabels() {
+    try {
+      const list = this.getWorkflows();
+      if (!list || !Array.isArray(list)) return;
+
+      let changed = false;
+
+      const presetMap = {
+        'conservative': 'low',
+        'standard': 'medium',
+        'aggressive': 'high'
+      };
+
+      list.forEach(w => {
+        // Check if workflow has old preset label in metadata
+        if (w?.meta?.slaPreset) {
+          const oldPreset = w.meta.slaPreset;
+          if (presetMap[oldPreset]) {
+            w.meta.slaPreset = presetMap[oldPreset];
+            changed = true;
+          }
+        }
+      });
+
+      if (changed) {
+        this.setWorkflows(list);
+        console.log('Migrated SLA preset labels to low/medium/high');
+      }
+    } catch (e) {
+      console.warn('migrateSLAPresetLabels failed', e);
+    }
+  },
+
+  /**
+   * Wrap all migrations in a safe runner
+   */
+  runMigrationsSafe() {
+    try {
+      if (this.migrateCatalogs_v11) {
+        this.migrateCatalogs_v11();
+      }
+    } catch (e) {
+      console.error('Migration migrateCatalogs_v11 error:', e);
+    }
+
+    try {
+      if (this.migrateScheduleRef) {
+        this.migrateScheduleRef();
+      }
+    } catch (e) {
+      console.error('Migration migrateScheduleRef error:', e);
+    }
+
+    try {
+      if (this.migrateSLAPresetLabels) {
+        this.migrateSLAPresetLabels();
+      }
+    } catch (e) {
+      console.error('Migration migrateSLAPresetLabels error:', e);
+    }
+  },
+
+  /**
+   * Ensure catalogs are never empty - restore known-good defaults if needed
+   */
+  ensureCatalogs() {
+    const cat = this.state.catalogs;
+    const broken = !cat || !cat.departments?.length || !cat.roles?.length || !cat.businessHours?.length;
+
+    if (broken) {
+      console.warn('Catalogs missing or empty — restoring defaults');
+      this.state.catalogs = JSON.parse(JSON.stringify(this.DEFAULT_CATALOG));
+      this.setCatalogs(this.state.catalogs);
+    }
+  },
+
+  /**
    * Render Business Hours banner showing conversion rate
    */
   renderBHBanner(containerId, businessHoursId) {
@@ -549,21 +747,37 @@ const App = {
   boot() {
     console.log('Booting CSS SLA Configurator...');
 
-    // 1) getCatalogs() now enforces schema version and forces rebuild if needed
-    this.getCatalogs();
+    // 1) Load catalogs from storage or defaults - single source
+    const cat = this.getCatalogs();
+    this.state.catalogs = cat;
 
-    // 2) Run migrations (if catalogs were valid)
-    if (this.migrateCatalogs_v11) {
-      this.migrateCatalogs_v11();
-    }
-    if (this.migrateScheduleRef) {
-      this.migrateScheduleRef();
+    // 2) Attach templates from WorkflowTemplates (available via templates.js)
+    if (typeof WorkflowTemplates !== 'undefined') {
+      this.defaultTemplates = WorkflowTemplates.getAllTemplatesAsArray();
+    } else {
+      console.warn('WorkflowTemplates not loaded yet');
+      this.defaultTemplates = [];
     }
 
-    // 3) Seed demo workflows only if none exist
+    // 3) Run migrations in safe wrapper
+    this.runMigrationsSafe();
+
+    // 4) Ensure catalogs are never empty
+    this.ensureCatalogs();
+
+    // 5) Seed demo workflows only if none exist
     this.seedDemo();
 
-    console.log('Boot complete');
+    // 6) Set boot flag
+    this.__booted = true;
+
+    console.log('Boot complete', {
+      booted: this.__booted,
+      catalogs: !!this.state.catalogs,
+      departments: this.state.catalogs?.departments?.length || 0,
+      roles: this.state.catalogs?.roles?.length || 0,
+      templates: this.defaultTemplates?.length || 0
+    });
   },
 
   /**
@@ -608,21 +822,18 @@ const App = {
   },
 
   /**
-   * Initialize the application
+   * Initialize the application (deterministic boot + single source)
    */
   async init() {
     console.log('Initializing CSS SLA Configurator...');
 
-    // Boot sequence (synchronous, runs first)
+    // Boot sequence (synchronous, runs first - loads catalogs once)
     this.boot();
 
     // Check UI health and show repair banner if needed
     this.ensureHealthyStateUI();
 
-    // Load catalogs
-    await this.loadCatalogs();
-
-    // Load templates
+    // Load templates (async from file, fallback to defaults)
     await this.loadTemplates();
 
     // Load workflows from localStorage
@@ -637,8 +848,8 @@ const App = {
     // Setup router
     this.setupRouter();
 
-    // Render initial route
-    this.router();
+    // Render initial route (with catalog guard)
+    await this.renderCurrentRoute();
 
     // Setup navigation
     this.setupNavigation();
@@ -650,17 +861,8 @@ const App = {
   },
 
   /**
-   * Load catalog data into state
-   */
-  async loadCatalogs() {
-    // Use getCatalogs() which auto-repairs if invalid
-    this.state.catalogs = this.getCatalogs();
-    window.catalog = this.state.catalogs; // Expose for debugging
-    console.log('Catalogs loaded into state');
-  },
-
-  /**
-   * Load templates
+   * Load templates (async from file, fallback to defaults)
+   * Note: In-code templates from WorkflowTemplates are already attached in boot()
    */
   async loadTemplates() {
     try {
@@ -669,16 +871,41 @@ const App = {
       const response = await fetch('./data/templates.json' + cacheBust, { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to load templates');
 
-      this.state.templates = await response.json();
+      const data = await response.json();
+      this.state.templates = data;
+
       console.log('Loaded templates from file');
       window.templates = this.state.templates; // Expose for debugging
     } catch (error) {
       console.error('Failed to load templates:', error);
-      console.warn('Using default template data');
-      // Use default templates
-      this.state.templates = JSON.parse(JSON.stringify(this.DEFAULT_TEMPLATES));
+      console.warn('Using in-code templates from WorkflowTemplates');
+      // Use default templates (already in this.defaultTemplates from boot())
+      this.state.templates = this.DEFAULT_TEMPLATES;
       window.templates = this.state.templates; // Expose for debugging
     }
+  },
+
+  /**
+   * Flatten templates object to array for dropdown
+   */
+  _flattenTemplatesToArray(templatesData) {
+    const arr = [];
+    const templates = templatesData.templates || templatesData;
+
+    Object.keys(templates).forEach(deptId => {
+      if (Array.isArray(templates[deptId])) {
+        templates[deptId].forEach((t, idx) => {
+          arr.push({
+            id: `${deptId}_${idx}`,
+            departmentId: deptId,
+            name: t.workType || t.name || `Template ${idx + 1}`,
+            ...t
+          });
+        });
+      }
+    });
+
+    return arr;
   },
 
   /**
@@ -930,6 +1157,12 @@ const App = {
    * Router - handle navigation
    */
   router() {
+    // Catalog guard: ensure catalogs are loaded before routing
+    if (!this.state?.catalogs?.departments?.length) {
+      console.warn('Router: catalogs missing, cannot route yet');
+      return;
+    }
+
     let hash = window.location.hash || '#/home';
 
     // Handle share link
@@ -1190,8 +1423,16 @@ const App = {
 
   /**
    * Re-render current route (for refreshing after deletes)
+   * With catalog guard to prevent empty state
    */
-  renderCurrentRoute() {
+  async renderCurrentRoute() {
+    // Guard: ensure catalogs are present before rendering
+    if (!this.state?.catalogs?.departments?.length) {
+      console.warn('Catalogs missing at render — re-init and re-render');
+      await this.init();
+      return;
+    }
+
     // Reload workflows from storage
     this.loadWorkflows();
     // Re-run the router to refresh the current screen
@@ -1296,9 +1537,7 @@ const App = {
   }
 };
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => App.init());
-} else {
-  App.init();
-}
+// Expose App to window scope for inline scripts and onclick handlers
+window.App = App;
+
+// DO NOT call App.init() here - it will be called from index.html after screens are defined

@@ -1,9 +1,6 @@
 // Workflow templates by department
 // These are used for the Build "Add from Template" feature
 
-// Ensure window.App exists
-window.App = window.App || {};
-
 const WorkflowTemplates = {
   byDept: {
     cd: [
@@ -266,6 +263,5 @@ const WorkflowTemplates = {
   }
 };
 
-// Attach templates globally to window.App.defaultTemplates
-window.App.defaultTemplates = WorkflowTemplates.getAllTemplatesAsArray();
-console.log('Templates attached to window.App.defaultTemplates:', window.App.defaultTemplates.length);
+// Expose WorkflowTemplates to window scope
+window.WorkflowTemplates = WorkflowTemplates;

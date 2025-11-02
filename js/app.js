@@ -751,9 +751,12 @@ const App = {
     const cat = this.getCatalogs();
     this.state.catalogs = cat;
 
-    // 2) Attach templates to App.defaultTemplates (read from window.App if already present)
-    if (!this.defaultTemplates || this.defaultTemplates.length === 0) {
-      this.defaultTemplates = (window.App && window.App.defaultTemplates) || [];
+    // 2) Attach templates from WorkflowTemplates (available via templates.js)
+    if (typeof WorkflowTemplates !== 'undefined') {
+      this.defaultTemplates = WorkflowTemplates.getAllTemplatesAsArray();
+    } else {
+      console.warn('WorkflowTemplates not loaded yet');
+      this.defaultTemplates = [];
     }
 
     // 3) Run migrations in safe wrapper
@@ -858,7 +861,8 @@ const App = {
   },
 
   /**
-   * Load templates (async from file, fallback to defaults, attach to App.defaultTemplates)
+   * Load templates (async from file, fallback to defaults)
+   * Note: In-code templates from WorkflowTemplates are already attached in boot()
    */
   async loadTemplates() {
     try {
@@ -870,19 +874,13 @@ const App = {
       const data = await response.json();
       this.state.templates = data;
 
-      // Attach to App.defaultTemplates for UI consumption
-      this.defaultTemplates = this._flattenTemplatesToArray(data);
-      window.App.defaultTemplates = this.defaultTemplates;
-
-      console.log('Loaded templates from file', this.defaultTemplates.length);
+      console.log('Loaded templates from file');
       window.templates = this.state.templates; // Expose for debugging
     } catch (error) {
       console.error('Failed to load templates:', error);
-      console.warn('Using default template data');
-      // Use default templates
-      this.state.templates = JSON.parse(JSON.stringify(this.DEFAULT_TEMPLATES));
-      this.defaultTemplates = this._flattenTemplatesToArray(this.state.templates);
-      window.App.defaultTemplates = this.defaultTemplates;
+      console.warn('Using in-code templates from WorkflowTemplates');
+      // Use default templates (already in this.defaultTemplates from boot())
+      this.state.templates = this.DEFAULT_TEMPLATES;
       window.templates = this.state.templates; // Expose for debugging
     }
   },
@@ -1538,6 +1536,9 @@ const App = {
     event.target.value = '';
   }
 };
+
+// Expose App to window scope for inline scripts and onclick handlers
+window.App = App;
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {

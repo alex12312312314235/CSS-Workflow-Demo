@@ -1199,7 +1199,7 @@ const App = {
     }
 
     // Parse route - support both #/catalog and #/settings
-    const match = hash.match(/#\/(home|catalog|settings|build|dept\/([^/]+)|wf\/([^/]+)|review)/);
+    const match = hash.match(/#\/(home|catalog|settings|build|simulate|dept\/([^/]+)|wf\/([^/]+)|review)/);
 
     // Hide all screens first
     document.querySelectorAll('.screen').forEach(screen => {

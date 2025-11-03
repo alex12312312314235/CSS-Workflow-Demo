@@ -1246,3 +1246,228 @@ tr.origin-neutral {
 .repair-bar .btn-ghost:hover {
   background: rgba(133, 100, 4, 0.1);
 }
+
+/* ======================
+   Simulator Styles
+   ====================== */
+.simulate {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+.simulate .left {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.simulate .right {
+  position: sticky;
+  top: 1rem;
+  height: fit-content;
+}
+
+#sim-controls {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.control-group label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.control-group select,
+.control-group input[type="datetime-local"],
+.control-group input[type="number"] {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.control-group input[type="range"] {
+  width: calc(100% - 50px);
+}
+
+.sim-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.sim-actions button {
+  flex: 1;
+  min-width: 100px;
+}
+
+#sim-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.step-card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  padding: 1rem;
+  border-left: 4px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.step-card h4 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 1rem;
+}
+
+.step-card .badge {
+  float: right;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #e0e0e0;
+  color: #666;
+}
+
+.step-card .badge.pass {
+  background: #d4edda;
+  color: #155724;
+}
+
+.step-card .badge.warn {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.step-card .badge.fail {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.step-card .body {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.sim-details {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 1rem;
+  font-size: 0.85rem;
+}
+
+.sim-details dt {
+  font-weight: 600;
+  color: #666;
+}
+
+.sim-details dd {
+  margin: 0;
+  color: #333;
+}
+
+.sim-details ul {
+  margin: 0.5rem 0 0 0;
+  padding-left: 1.5rem;
+}
+
+#sim-stats {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+}
+
+#sim-stats h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+#sim-stats h4 {
+  margin: 1.5rem 0 0.75rem 0;
+  font-size: 0.95rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.tile {
+  background: #f8f9fa;
+  padding: 0.75rem;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid #e0e0e0;
+}
+
+.tile .label {
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.tile .value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.timeline {
+  height: 12px;
+  background: #e0e0e0;
+  border-radius: 6px;
+  position: relative;
+  margin-top: 0.5rem;
+}
+
+.timeline .marker {
+  position: absolute;
+  top: -4px;
+  width: 8px;
+  height: 20px;
+  border-radius: 3px;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .simulate {
+    grid-template-columns: 1fr;
+  }
+  
+  .simulate .right {
+    position: static;
+  }
+  
+  .controls-grid {
+    grid-template-columns: 1fr;
+  }
+}

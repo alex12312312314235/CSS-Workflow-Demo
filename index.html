@@ -97,6 +97,140 @@
         <div id="settings-content"></div>
       </div>
 
+      <!-- Simulate Screen -->
+      <div id="screen-simulate" class="screen">
+        <h2>Workflow Simulator</h2>
+        <p class="text-muted">Test workflow execution step-by-step with configurable scenarios.</p>
+
+        <div class="simulate">
+          <div class="left">
+            <section id="sim-controls">
+              <div class="controls-grid">
+                <div class="control-group">
+                  <label for="sim-dept">Department</label>
+                  <select id="sim-dept" onchange="SimulateScreen.onDeptChange()"></select>
+                </div>
+                <div class="control-group">
+                  <label for="sim-request-type">Request Type</label>
+                  <select id="sim-request-type" onchange="SimulateScreen.onRequestTypeChange()"></select>
+                </div>
+                <div class="control-group">
+                  <label for="sim-scenario">Scenario</label>
+                  <select id="sim-scenario">
+                    <option value="happy">Happy Path</option>
+                    <option value="after-hours">After Hours</option>
+                    <option value="waiting">Waiting on Requester</option>
+                    <option value="blocker">Dependency Blocker</option>
+                    <option value="high-queue">High Queue</option>
+                  </select>
+                </div>
+                <div class="control-group">
+                  <label for="sim-start-time">Start Time</label>
+                  <input type="datetime-local" id="sim-start-time">
+                </div>
+                <div class="control-group">
+                  <label for="sim-queue-delay">Queue Delay (minutes)</label>
+                  <input type="number" id="sim-queue-delay" min="0" value="0">
+                </div>
+                <div class="control-group">
+                  <label for="sim-failure-rate">Failure Rate (%)</label>
+                  <input type="range" id="sim-failure-rate" min="0" max="50" value="0">
+                  <span id="sim-failure-rate-value">0%</span>
+                </div>
+                <div class="control-group">
+                  <label for="sim-speed">Speed</label>
+                  <select id="sim-speed">
+                    <option value="slow">Slow</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="fast">Fast</option>
+                  </select>
+                </div>
+              </div>
+              <div class="sim-actions">
+                <button class="btn-primary" id="sim-play" onclick="SimulateScreen.play()">▶ Play</button>
+                <button class="btn-secondary" id="sim-pause" onclick="SimulateScreen.pause()" disabled>⏸ Pause</button>
+                <button class="btn-secondary" id="sim-next" onclick="SimulateScreen.next()">⏭ Next</button>
+                <button class="btn-secondary" id="sim-reset" onclick="SimulateScreen.reset()">🔄 Reset</button>
+              </div>
+            </section>
+
+            <section id="sim-steps">
+              <div class="step-card" data-step="load">
+                <span class="badge">PENDING</span>
+                <h4>1. Load SLA</h4>
+                <div class="body"></div>
+              </div>
+              <div class="step-card" data-step="sanity">
+                <span class="badge">PENDING</span>
+                <h4>2. Sanity Checks</h4>
+                <div class="body"></div>
+              </div>
+              <div class="step-card" data-step="calendar">
+                <span class="badge">PENDING</span>
+                <h4>3. Clock & Calendar</h4>
+                <div class="body"></div>
+              </div>
+              <div class="step-card" data-step="first-response">
+                <span class="badge">PENDING</span>
+                <h4>4. First Response</h4>
+                <div class="body"></div>
+              </div>
+              <div class="step-card" data-step="resolution">
+                <span class="badge">PENDING</span>
+                <h4>5. Resolution</h4>
+                <div class="body"></div>
+              </div>
+              <div class="step-card" data-step="escalations">
+                <span class="badge">PENDING</span>
+                <h4>6. Escalations</h4>
+                <div class="body"></div>
+              </div>
+              <div class="step-card" data-step="verdict">
+                <span class="badge">PENDING</span>
+                <h4>7. Verdict</h4>
+                <div class="body"></div>
+              </div>
+            </section>
+          </div>
+
+          <div class="right" id="sim-stats">
+            <h3>Live Stats</h3>
+            <div class="tiles">
+              <div class="tile">
+                <div class="label">Feasible</div>
+                <div id="stat-feasible" class="value">–</div>
+              </div>
+              <div class="tile">
+                <div class="label">Buffer (min)</div>
+                <div id="stat-buffer" class="value">–</div>
+              </div>
+              <div class="tile">
+                <div class="label">FR target</div>
+                <div id="stat-fr" class="value">–</div>
+              </div>
+              <div class="tile">
+                <div class="label">RES target</div>
+                <div id="stat-res" class="value">–</div>
+              </div>
+              <div class="tile">
+                <div class="label">Esc fired</div>
+                <div id="stat-esc" class="value">–</div>
+              </div>
+              <div class="tile">
+                <div class="label">Errors</div>
+                <div id="stat-errors" class="value">–</div>
+              </div>
+              <div class="tile">
+                <div class="label">Warnings</div>
+                <div id="stat-warnings" class="value">–</div>
+              </div>
+            </div>
+            <h4>Timeline</h4>
+            <div id="sim-timeline" class="timeline"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Build Screen -->
       <div id="screen-build" class="screen">
         <h2>Workflow Builder</h2>
@@ -295,6 +429,7 @@
   <script src="./js/sharelink.js?v=102"></script>
   <script src="./js/templates.js?v=102"></script>
   <script src="./js/app.js?v=102"></script>
+  <script src="./js/simulator.js?v=102"></script>
 
   <!-- Screen Implementations -->
   <script>
@@ -453,7 +588,7 @@
         html += '<th>Total mins</th>';
         html += '<th title="Computed using business-hours if enabled on each workflow">Resolve (Normal)</th>';
         html += '<th>Updated</th>';
-        html += '<th style="width:60px;"></th>';
+        html += '<th style="width:140px;">Actions</th>';
         html += '</tr></thead><tbody>';
 
         workflows.forEach(wf => {
@@ -488,7 +623,7 @@
           html += '<td class="clickable-cell">' + totalMins + '</td>';
           html += '<td class="clickable-cell">' + slaResolveDisplay + '</td>';
           html += '<td class="clickable-cell">' + updated + '</td>';
-          html += '<td><button class="btn-sm btn-ghost row-delete" data-id="' + wf.id + '" aria-label="Delete workflow" title="Delete workflow">🗑</button></td>';
+          html += '<td><button class="btn-sm btn-primary" onclick="location.hash=\'#/simulate?dept=' + wf.departmentId + '&code=' + wf.id + '\'" title="Simulate workflow" aria-label="Simulate workflow">▶️</button> <button class="btn-sm btn-ghost row-delete" data-id="' + wf.id + '" aria-label="Delete workflow" title="Delete workflow">🗑</button></td>';
           html += '</tr>';
         });
 
@@ -593,7 +728,7 @@
           html += '<table id="dept-table"><thead><tr>';
           html += '<th>Work Type</th><th>Owner</th><th>Steps</th><th>Total (hrs)</th>';
           html += '<th>Resolve (Normal)</th><th>Updated</th>';
-          html += '<th style="width:60px;"></th>';
+          html += '<th style="width:140px;">Actions</th>';
           html += '</tr></thead><tbody>';
 
           filteredWorkflows.forEach(wf => {
@@ -621,7 +756,7 @@
             html += '<td>' + (validation.summary.totalExpectedMins / 60).toFixed(1) + '</td>';
             html += '<td>' + slaResolveDisplay + '</td>';
             html += '<td>' + updated + '</td>';
-            html += '<td><button class="btn-sm btn-ghost row-delete" data-id="' + wf.id + '" aria-label="Delete workflow" title="Delete workflow">🗑</button></td>';
+            html += '<td><button class="btn-sm btn-primary" onclick="location.hash=\'#/simulate?dept=' + wf.departmentId + '&code=' + wf.id + '\'" title="Simulate workflow" aria-label="Simulate workflow">▶️</button> <button class="btn-sm btn-ghost row-delete" data-id="' + wf.id + '" aria-label="Delete workflow" title="Delete workflow">🗑</button></td>';
             html += '</tr>';
           });
 
@@ -2214,12 +2349,210 @@
       }
     };
 
+    // ============================
+    // SIMULATE SCREEN
+    // ============================
+    const SimulateScreen = {
+      render() {
+        this.populateControls();
+        this.checkDeepLink();
+        this.loadPersistedControls();
+        this.attachEventListeners();
+      },
+
+      populateControls() {
+        // Populate departments
+        const deptSelect = document.getElementById('sim-dept');
+        const departments = [...new Set(App.state.workflows.map(w => w.departmentId))];
+        let html = '<option value="">-- Select Department --</option>';
+        departments.forEach(deptId => {
+          const dept = App.state.catalogs.departments.find(d => d.id === deptId);
+          if (dept) {
+            html += `<option value="${deptId}">${dept.name}</option>`;
+          }
+        });
+        deptSelect.innerHTML = html;
+
+        // Set default start time to now
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('sim-start-time').value = now.toISOString().slice(0, 16);
+      },
+
+      onDeptChange() {
+        const deptId = document.getElementById('sim-dept').value;
+        const requestTypeSelect = document.getElementById('sim-request-type');
+
+        if (!deptId) {
+          requestTypeSelect.innerHTML = '<option value="">-- Select Department First --</option>';
+          return;
+        }
+
+        // Filter workflows by department
+        const workflows = App.state.workflows.filter(w => w.departmentId === deptId);
+        let html = '<option value="">-- Select Request Type --</option>';
+        workflows.forEach(w => {
+          html += `<option value="${w.id}">${w.workType}</option>`;
+        });
+        requestTypeSelect.innerHTML = html;
+      },
+
+      onRequestTypeChange() {
+        // Save to localStorage
+        this.persistControls();
+      },
+
+      checkDeepLink() {
+        const hash = window.location.hash;
+        const params = new URLSearchParams(hash.split('?')[1]);
+        const dept = params.get('dept');
+        const code = params.get('code');
+
+        if (dept && code) {
+          document.getElementById('sim-dept').value = dept;
+          this.onDeptChange();
+
+          // Find workflow by code
+          setTimeout(() => {
+            const workflow = App.state.workflows.find(w =>
+              w.departmentId === dept &&
+              (w.id === code || w.workType.includes(code))
+            );
+            if (workflow) {
+              document.getElementById('sim-request-type').value = workflow.id;
+            }
+          }, 100);
+        }
+      },
+
+      attachEventListeners() {
+        // Failure rate slider
+        const slider = document.getElementById('sim-failure-rate');
+        const valueSpan = document.getElementById('sim-failure-rate-value');
+        slider.addEventListener('input', () => {
+          valueSpan.textContent = slider.value + '%';
+          this.persistControls();
+        });
+
+        // Other controls
+        ['sim-scenario', 'sim-start-time', 'sim-queue-delay', 'sim-speed'].forEach(id => {
+          document.getElementById(id)?.addEventListener('change', () => this.persistControls());
+        });
+      },
+
+      persistControls() {
+        const controls = {
+          dept: document.getElementById('sim-dept').value,
+          requestType: document.getElementById('sim-request-type').value,
+          scenario: document.getElementById('sim-scenario').value,
+          startTime: document.getElementById('sim-start-time').value,
+          queueDelay: document.getElementById('sim-queue-delay').value,
+          failureRate: document.getElementById('sim-failure-rate').value,
+          speed: document.getElementById('sim-speed').value
+        };
+        localStorage.setItem('simulator', JSON.stringify(controls));
+      },
+
+      loadPersistedControls() {
+        try {
+          const stored = localStorage.getItem('simulator');
+          if (!stored) return;
+
+          const controls = JSON.parse(stored);
+
+          if (controls.dept) {
+            document.getElementById('sim-dept').value = controls.dept;
+            this.onDeptChange();
+          }
+
+          setTimeout(() => {
+            if (controls.requestType) document.getElementById('sim-request-type').value = controls.requestType;
+            if (controls.scenario) document.getElementById('sim-scenario').value = controls.scenario;
+            if (controls.startTime) document.getElementById('sim-start-time').value = controls.startTime;
+            if (controls.queueDelay) document.getElementById('sim-queue-delay').value = controls.queueDelay;
+            if (controls.failureRate) {
+              document.getElementById('sim-failure-rate').value = controls.failureRate;
+              document.getElementById('sim-failure-rate-value').textContent = controls.failureRate + '%';
+            }
+            if (controls.speed) document.getElementById('sim-speed').value = controls.speed;
+          }, 150);
+        } catch (e) {
+          console.warn('Failed to load persisted controls:', e);
+        }
+      },
+
+      play() {
+        const params = this.collectParams();
+        if (!params) return;
+
+        // Disable play, enable pause
+        document.getElementById('sim-play').disabled = true;
+        document.getElementById('sim-pause').disabled = false;
+
+        // Set speed from control
+        App.simulator.state.speed = document.getElementById('sim-speed').value;
+
+        // Run simulation
+        App.simulator.run(params);
+      },
+
+      pause() {
+        App.simulator.pause();
+      },
+
+      next() {
+        const params = this.collectParams();
+        if (!params) return;
+
+        // Set speed and ensure we have params
+        App.simulator.state.speed = document.getElementById('sim-speed').value;
+        if (!App.simulator.state.params) {
+          App.simulator.state.params = params;
+          App.simulator.state.steps = App.simulator.buildSteps(params);
+        }
+
+        App.simulator.next();
+      },
+
+      reset() {
+        App.simulator.reset();
+      },
+
+      collectParams() {
+        const workflowId = document.getElementById('sim-request-type').value;
+        if (!workflowId) {
+          alert('Please select a request type');
+          return null;
+        }
+
+        const workflow = App.state.workflows.find(w => w.id === workflowId);
+        if (!workflow) {
+          alert('Workflow not found');
+          return null;
+        }
+
+        const bh = App.state.catalogs.businessHours.find(b => b.id === workflow.businessHoursId);
+        const priority = App.state.catalogs.priorities[1]; // Default to P2
+
+        return {
+          sla: workflow,
+          bh: bh,
+          priority: priority,
+          scenario: document.getElementById('sim-scenario').value,
+          startTime: document.getElementById('sim-start-time').value,
+          queueDelay: document.getElementById('sim-queue-delay').value,
+          failureRate: parseInt(document.getElementById('sim-failure-rate').value) || 0
+        };
+      }
+    };
+
     // Expose screen objects to window scope for onclick handlers
     window.HomeScreen = HomeScreen;
     window.BuildScreen = BuildScreen;
     window.CatalogScreen = CatalogScreen;
     window.DeptScreen = DeptScreen;
     window.SummaryDrawer = SummaryDrawer;
+    window.SimulateScreen = SimulateScreen;
 
     // Initialize App AFTER all screens are defined
     if (document.readyState === 'loading') {

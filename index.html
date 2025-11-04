@@ -873,8 +873,8 @@
 
         departments.forEach((d, i) => {
           html += '<tr>';
-          html += '<td><input type="text" value="' + d.id + '" onchange="CatalogScreen.updateDept(' + i + ', \'id\', this.value)"></td>';
-          html += '<td><input type="text" value="' + d.name + '" onchange="CatalogScreen.updateDept(' + i + ', \'name\', this.value)"></td>';
+          html += '<td><input type="text" value="' + (d.id || '') + '" onchange="CatalogScreen.updateDept(' + i + ', \'id\', this.value)"></td>';
+          html += '<td><input type="text" value="' + (d.name || '') + '" onchange="CatalogScreen.updateDept(' + i + ', \'name\', this.value)"></td>';
           html += '<td><button class="btn-danger btn-sm" onclick="CatalogScreen.deleteDept(' + i + ')">Delete</button></td>';
           html += '</tr>';
         });
@@ -891,8 +891,8 @@
 
         roles.forEach((r, i) => {
           html += '<tr>';
-          html += '<td><input type="text" value="' + r.id + '" onchange="CatalogScreen.updateRole(' + i + ', \'id\', this.value)"></td>';
-          html += '<td><input type="text" value="' + r.name + '" onchange="CatalogScreen.updateRole(' + i + ', \'name\', this.value)"></td>';
+          html += '<td><input type="text" value="' + (r.id || '') + '" onchange="CatalogScreen.updateRole(' + i + ', \'id\', this.value)"></td>';
+          html += '<td><input type="text" value="' + (r.name || '') + '" onchange="CatalogScreen.updateRole(' + i + ', \'name\', this.value)"></td>';
           html += '<td><button class="btn-danger btn-sm" onclick="CatalogScreen.deleteRole(' + i + ')">Delete</button></td>';
           html += '</tr>';
         });
@@ -911,9 +911,9 @@
 
         businessHours.forEach((bh, i) => {
           html += '<tr>';
-          html += '<td><input type="text" value="' + bh.id + '" onchange="CatalogScreen.updateBH(' + i + ', \'id\', this.value)"></td>';
-          html += '<td><input type="text" value="' + bh.name + '" onchange="CatalogScreen.updateBH(' + i + ', \'name\', this.value)"></td>';
-          html += '<td><input type="number" min="1" max="24" step="0.5" value="' + bh.hoursPerDay + '" onchange="CatalogScreen.updateBH(' + i + ', \'hoursPerDay\', parseFloat(this.value))"></td>';
+          html += '<td><input type="text" value="' + (bh.id || '') + '" onchange="CatalogScreen.updateBH(' + i + ', \'id\', this.value)"></td>';
+          html += '<td><input type="text" value="' + (bh.name || '') + '" onchange="CatalogScreen.updateBH(' + i + ', \'name\', this.value)"></td>';
+          html += '<td><input type="number" min="1" max="24" step="0.5" value="' + (bh.hoursPerDay !== undefined ? bh.hoursPerDay : '') + '" onchange="CatalogScreen.updateBH(' + i + ', \'hoursPerDay\', parseFloat(this.value))"></td>';
           html += '<td><button class="btn-danger btn-sm" onclick="CatalogScreen.deleteBH(' + i + ')">Delete</button></td>';
           html += '</tr>';
         });
@@ -930,11 +930,11 @@
 
         priorities.forEach((p, i) => {
           html += '<tr>';
-          html += '<td><input type="text" value="' + p.id + '" onchange="CatalogScreen.updatePriority(' + i + ', \'id\', this.value)"></td>';
-          html += '<td><input type="text" value="' + p.name + '" onchange="CatalogScreen.updatePriority(' + i + ', \'name\', this.value)"></td>';
-          html += '<td><input type="number" value="' + p.ackMins + '" onchange="CatalogScreen.updatePriority(' + i + ', \'ackMins\', parseInt(this.value))"></td>';
-          html += '<td><input type="number" value="' + p.startMins + '" onchange="CatalogScreen.updatePriority(' + i + ', \'startMins\', parseInt(this.value))"></td>';
-          html += '<td><input type="number" value="' + p.resolveMins + '" onchange="CatalogScreen.updatePriority(' + i + ', \'resolveMins\', parseInt(this.value))"></td>';
+          html += '<td><input type="text" value="' + (p.id || '') + '" onchange="CatalogScreen.updatePriority(' + i + ', \'id\', this.value)"></td>';
+          html += '<td><input type="text" value="' + (p.name || '') + '" onchange="CatalogScreen.updatePriority(' + i + ', \'name\', this.value)"></td>';
+          html += '<td><input type="number" value="' + (p.ackMins !== undefined ? p.ackMins : '') + '" onchange="CatalogScreen.updatePriority(' + i + ', \'ackMins\', parseInt(this.value))"></td>';
+          html += '<td><input type="number" value="' + (p.startMins !== undefined ? p.startMins : '') + '" onchange="CatalogScreen.updatePriority(' + i + ', \'startMins\', parseInt(this.value))"></td>';
+          html += '<td><input type="number" value="' + (p.resolveMins !== undefined ? p.resolveMins : '') + '" onchange="CatalogScreen.updatePriority(' + i + ', \'resolveMins\', parseInt(this.value))"></td>';
           html += '<td><button class="btn-danger btn-sm" onclick="CatalogScreen.deletePriority(' + i + ')">Delete</button></td>';
           html += '</tr>';
         });

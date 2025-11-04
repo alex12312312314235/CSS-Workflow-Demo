@@ -30,6 +30,12 @@
         </svg>
         Settings
       </a>
+      <a href="#/simulate" class="nav-link" data-route="simulate">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align: -2px; margin-right: 6px;">
+          <path d="M3 2l10 6-10 6V2z"/>
+        </svg>
+        Simulator
+      </a>
     </nav>
 
     <!-- Main Content Area -->
@@ -1409,11 +1415,11 @@
 
       renderSLAPolicy(existingSLA) {
         existingSLA = existingSLA || {};
-        const container = document.getElementById('sla-policy-rows');
+        const container = document.getElementById('sla-summary-table');
 
         // Guard: container must exist (only exists on Build screen)
         if (!container) {
-          console.warn('sla-policy-rows container not found (not on Build screen)');
+          console.warn('sla-summary-table container not found (not on Build screen)');
           return;
         }
 
@@ -1431,7 +1437,15 @@
         const bhProfile = App.state.catalogs.businessHours.find(bh => bh.id === bhId) || App.state.catalogs.businessHours[0];
         const minsPerDay = App.minutesPerBusinessDay(bhProfile);
 
-        let html = '';
+        let html = '<table style="width:100%;"><thead><tr>';
+        html += '<th>Priority</th>';
+        html += '<th>Acknowledge</th>';
+        html += '<th>Start</th>';
+        html += '<th>Resolve</th>';
+        html += '<th>Escalate After</th>';
+        html += '<th>Escalate To</th>';
+        html += '</tr></thead><tbody>';
+
         priorities.forEach(p => {
           const sla = existingSLA[p.id] || {
             ackMins: p.ackMins,
@@ -1506,6 +1520,7 @@
           html += '</tr>';
         });
 
+        html += '</tbody></table>';
         container.innerHTML = html;
 
         // Validate escalations after rendering

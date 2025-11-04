@@ -1199,7 +1199,7 @@ const App = {
     }
 
     // Parse route - support both #/catalog and #/settings
-    const match = hash.match(/#\/(home|catalog|settings|build|dept\/([^/]+)|wf\/([^/]+)|review)/);
+    const match = hash.match(/#\/(home|catalog|settings|build|simulate|dept\/([^/]+)|wf\/([^/]+)|review)/);
 
     // Hide all screens first
     document.querySelectorAll('.screen').forEach(screen => {
@@ -1264,7 +1264,9 @@ const App = {
       CatalogScreen.render();
     } else if (route === 'simulate') {
       document.getElementById('screen-simulate').style.display = 'block';
-      SimulateScreen.render();
+      if (typeof SimulateScreen !== 'undefined' && SimulateScreen.render) {
+        SimulateScreen.render();
+      }
     } else if (route === 'build') {
       document.getElementById('screen-build').style.display = 'block';
       BuildScreen.render();

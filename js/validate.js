@@ -109,6 +109,17 @@ const Validator = {
    * @returns {object} {perDay, perWeek}
    */
   calculateBusinessHoursCoverage(bhProfile) {
+    // Handle simplified format with just hoursPerDay
+    if (!bhProfile.start && bhProfile.hoursPerDay !== undefined) {
+      const minsPerDay = bhProfile.hoursPerDay * 60;
+      const workDaysPerWeek = 5; // Default Mon-Fri
+      return {
+        perDay: minsPerDay,
+        perWeek: minsPerDay * workDaysPerWeek
+      };
+    }
+
+    // Handle detailed format with start/end/days
     const [startH, startM] = bhProfile.start.split(':').map(Number);
     const [endH, endM] = bhProfile.end.split(':').map(Number);
     const minsPerDay = (endH * 60 + endM) - (startH * 60 + startM);
@@ -128,6 +139,11 @@ const Validator = {
    * @returns {Date} End timestamp
    */
   minutesWithinBusinessHours(startTs, minutes, bhProfile) {
+    // Handle simplified format - just add minutes as calendar time
+    if (!bhProfile.start && bhProfile.hoursPerDay !== undefined) {
+      return new Date(startTs.getTime() + minutes * 60 * 1000);
+    }
+
     const [startH, startM] = bhProfile.start.split(':').map(Number);
     const [endH, endM] = bhProfile.end.split(':').map(Number);
     const dayStartMins = startH * 60 + startM;

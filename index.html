@@ -954,11 +954,18 @@
         this.render();
       },
       deleteDept(idx) {
-        if (confirm('Delete this department?')) {
-          App.state.catalogs.departments.splice(idx, 1);
-          App.saveCatalogs();
-          this.render();
-        }
+        const dept = App.state.catalogs.departments[idx];
+        App.confirm({
+          title: 'Delete Department?',
+          message: 'This will delete "' + (dept?.name || 'this department') + '". This cannot be undone.',
+          confirmText: 'Delete',
+          cancelText: 'Cancel',
+          onConfirm: () => {
+            App.state.catalogs.departments.splice(idx, 1);
+            App.saveCatalogs();
+            this.render();
+          }
+        });
       },
 
       updateRole(idx, field, value) {
@@ -971,11 +978,18 @@
         this.render();
       },
       deleteRole(idx) {
-        if (confirm('Delete this role?')) {
-          App.state.catalogs.roles.splice(idx, 1);
-          App.saveCatalogs();
-          this.render();
-        }
+        const role = App.state.catalogs.roles[idx];
+        App.confirm({
+          title: 'Delete Role?',
+          message: 'This will delete "' + (role?.name || 'this role') + '". This cannot be undone.',
+          confirmText: 'Delete',
+          cancelText: 'Cancel',
+          onConfirm: () => {
+            App.state.catalogs.roles.splice(idx, 1);
+            App.saveCatalogs();
+            this.render();
+          }
+        });
       },
 
       updateBH(idx, field, value) {
@@ -992,11 +1006,18 @@
         this.render();
       },
       deleteBH(idx) {
-        if (confirm('Delete this business hours profile?')) {
-          App.state.catalogs.businessHours.splice(idx, 1);
-          App.saveCatalogs();
-          this.render();
-        }
+        const bh = App.state.catalogs.businessHours[idx];
+        App.confirm({
+          title: 'Delete Business Hours Profile?',
+          message: 'This will delete "' + (bh?.name || 'this profile') + '". This cannot be undone.',
+          confirmText: 'Delete',
+          cancelText: 'Cancel',
+          onConfirm: () => {
+            App.state.catalogs.businessHours.splice(idx, 1);
+            App.saveCatalogs();
+            this.render();
+          }
+        });
       },
 
       updatePriority(idx, field, value) {
@@ -1015,32 +1036,51 @@
         this.render();
       },
       deletePriority(idx) {
-        if (confirm('Delete this priority?')) {
-          App.state.catalogs.priorities.splice(idx, 1);
-          App.saveCatalogs();
-          this.render();
-        }
+        const priority = App.state.catalogs.priorities[idx];
+        App.confirm({
+          title: 'Delete Priority?',
+          message: 'This will delete "' + (priority?.name || 'this priority') + '". This cannot be undone.',
+          confirmText: 'Delete',
+          cancelText: 'Cancel',
+          onConfirm: () => {
+            App.state.catalogs.priorities.splice(idx, 1);
+            App.saveCatalogs();
+            this.render();
+          }
+        });
       },
 
       resetToDefaults() {
-        if (confirm('Reset all catalog data to defaults? This will overwrite your changes.')) {
-          localStorage.removeItem(LS.CATALOGS);
-          localStorage.removeItem(LS.SLA_CATALOG);
-          localStorage.removeItem('schema_version'); // Clear version to force reset
-          App.getCatalogs(); // will recreate defaults from hard defaults
-          App.state.catalogs = App.getCatalogs();
-          window.location.reload(); // Full reload
-        }
+        App.confirm({
+          title: 'Reset to Defaults?',
+          message: 'Reset all catalog data to defaults? This will overwrite your changes and reload the page.',
+          confirmText: 'Reset',
+          cancelText: 'Cancel',
+          onConfirm: () => {
+            localStorage.removeItem(LS.CATALOGS);
+            localStorage.removeItem(LS.SLA_CATALOG);
+            localStorage.removeItem('schema_version'); // Clear version to force reset
+            App.getCatalogs(); // will recreate defaults from hard defaults
+            App.state.catalogs = App.getCatalogs();
+            window.location.reload(); // Full reload
+          }
+        });
       },
 
       seedDemoWorkflows() {
-        if (confirm('Seed demo workflows? This will clear existing workflows.')) {
-          App.setWorkflows([]); // Clear existing
-          App.seedDemoIfEmpty(); // Seed new demo
-          App.loadWorkflows(); // Reload into state
-          alert('Demo workflows seeded! Reloading...');
-          window.location.reload(); // Full reload
-        }
+        App.confirm({
+          title: 'Seed Demo Workflows?',
+          message: 'This will clear existing workflows and seed demo data.',
+          confirmText: 'Seed',
+          cancelText: 'Cancel',
+          onConfirm: () => {
+            App.setWorkflows([]); // Clear existing
+            App.seedDemoIfEmpty(); // Seed new demo
+            App.loadWorkflows(); // Reload into state
+            alert('Demo workflows seeded! Reloading...');
+            window.location.reload(); // Full reload
+          }
+        });
       }
     };
 
@@ -1724,6 +1764,12 @@
         const bhProfile = App.state.catalogs.businessHours?.find(bh => bh.id === bhId) || App.state.catalogs.businessHours?.[0];
         const minsPerDay = App.minsPerBD(bhProfile);
 
+        // Initialize slaComposer objects if not present
+        if (!this.slaComposer.factors) this.slaComposer.factors = {};
+        if (!this.slaComposer.buffers) this.slaComposer.buffers = {};
+        if (!this.slaComposer.ackValues) this.slaComposer.ackValues = {};
+        if (!this.slaComposer.startValues) this.slaComposer.startValues = {};
+
         // Set factors and buffers based on preset
         const priorities = App.state.catalogs?.priorities || [];
 
@@ -1745,10 +1791,6 @@
             this.slaComposer.startValues[p.id] = Math.round(0.1 * minsPerDay); // 0.1 BD
           }
         });
-
-        // Initialize slaComposer objects if not present
-        if (!this.slaComposer.ackValues) this.slaComposer.ackValues = {};
-        if (!this.slaComposer.startValues) this.slaComposer.startValues = {};
 
         // Recompute resolve from steps
         this.recomputeResolveFromSteps();

@@ -313,26 +313,12 @@
               <div class="sla-table">
                 <h3>SLA Targets by Priority</h3>
                 <p class="text-muted" style="margin: -0.5rem 0 1rem 0; font-size: 0.9rem;">
-                  <strong>Resolve</strong> is calculated from total workflow step time × priority factor + buffer. Adjust factors/buffers to tune room for review and handoffs. <strong>Ack/Start</strong> remain editable.
+                  Define response and resolution times for each priority in business hours.
                 </p>
 
-                <div class="sla-presets">
-                  <button type="button" class="preset-btn" data-preset="low" onclick="BuildScreen.applySLAPreset('low')">Low</button>
-                  <button type="button" class="preset-btn" data-preset="medium" onclick="BuildScreen.applySLAPreset('medium')">Medium</button>
-                  <button type="button" class="preset-btn" data-preset="high" onclick="BuildScreen.applySLAPreset('high')">High</button>
+                <div id="sla-config-table" style="margin: 1rem 0;">
+                  <!-- SLA configuration table will be rendered here -->
                 </div>
-
-                <div id="sla-summary-table" style="margin: 1rem 0;">
-                  <!-- SLA preview table will be rendered here -->
-                </div>
-
-                <details style="margin: 1rem 0;">
-                  <summary style="cursor: pointer; font-weight: 500; color: #666;">Advanced: tune SLA composer (factors & buffers)</summary>
-                  <p class="text-muted" style="margin: 0.5rem 0 1rem 0; font-size: 0.9rem;">
-                    Fine-tune how Resolve is computed for each priority. Factor scales total step time; Buffer adds fixed cushion.
-                  </p>
-                  <div id="sla-composer-controls"></div>
-                </details>
               </div>
 
               <!-- Notes Section -->
@@ -1091,9 +1077,15 @@
       steps: [],
       currentWorkflowId: null,
       stepUnit: 'bd', // Default step duration unit: 'bd' | 'hr' (UI never shows 'min')
-      slaUnits: {}, // Track unit selection per priority { p1: {ack:'businessDays', start:'businessDays', resolve:'businessDays', escalateAfter:'businessDays'}, ... }
       interpretAsBH: true, // Default: interpret as business hours
-      slaComposer: { factors: {}, buffers: {} }, // SLA composer state { factors: {p1:1.0,...}, buffers: {p1:0,...} }
+
+      // SLA Configuration by priority (in business hours)
+      // Priority IDs: 'p1' (High), 'p2' (Medium), 'p3' (Low)
+      slaConfig: {
+        p1: { firstResponseHours: 1, followUpHours: 2, resolutionHours: 48 },    // High
+        p2: { firstResponseHours: 8, followUpHours: 24, resolutionHours: 72 },   // Medium
+        p3: { firstResponseHours: 12, followUpHours: 48, resolutionHours: 168 }  // Low
+      },
 
       updateDiagnostics() {
         const diagEl = document.getElementById('diagnostics-line');
@@ -1141,7 +1133,7 @@
         } else {
           this.steps = [];
           this.renderSteps();
-          this.renderSLAPolicy();
+          this.renderSLATable();
         }
       },
 
@@ -1205,7 +1197,7 @@
 
         // Render everything
         this.renderSteps();
-        this.renderSLAPolicy();
+        this.renderSLATable();
         this.onDepartmentChange();
 
         App.showToast('Template "' + (template.workType || template.name) + '" loaded successfully!', 'success');
@@ -1355,29 +1347,22 @@
 
         this.steps = workflow.steps || [];
 
+        // Load SLA configuration from workflow's slaByPriority
+        if (workflow.slaByPriority) {
+          Object.keys(workflow.slaByPriority).forEach(pid => {
+            const sla = workflow.slaByPriority[pid];
+            if (!this.slaConfig[pid]) {
+              this.slaConfig[pid] = { firstResponseHours: 0, followUpHours: 0, resolutionHours: 0 };
+            }
+            // Convert minutes back to business hours (divide by 60)
+            this.slaConfig[pid].firstResponseHours = Math.round((sla.ackMins || 0) / 60);
+            this.slaConfig[pid].resolutionHours = Math.round((sla.resolveMins || 0) / 60);
+            this.slaConfig[pid].followUpHours = sla.followUpHours || Math.round((sla.ackMins || 0) / 60);
+          });
+        }
+
         // Restore meta information
         if (workflow.meta) {
-          // Restore SLA composer state
-          if (workflow.meta.slaComposer) {
-            this.slaComposer = workflow.meta.slaComposer;
-          } else {
-            // Initialize from workflow SLA if no composer state
-            this.slaComposer = { factors: {}, buffers: {}, ackValues: {}, startValues: {}, resolveValues: {} };
-            if (workflow.slaByPriority) {
-              Object.keys(workflow.slaByPriority).forEach(pid => {
-                const sla = workflow.slaByPriority[pid];
-                this.slaComposer.ackValues[pid] = sla.ackMins || 60;
-                this.slaComposer.startValues[pid] = sla.startMins || 120;
-                this.slaComposer.resolveValues[pid] = sla.resolveMins || 0;
-                this.slaComposer.factors[pid] = 1.0;
-                this.slaComposer.buffers[pid] = 0;
-              });
-            }
-          }
-
-          if (workflow.meta.slaUnits) {
-            this.slaUnits = workflow.meta.slaUnits;
-          }
           if (workflow.meta.interpretAsBusinessHours !== undefined) {
             this.interpretAsBH = workflow.meta.interpretAsBusinessHours;
           }
@@ -1389,7 +1374,7 @@
         }
 
         this.renderSteps();
-        this.renderSLASummary();
+        this.renderSLATable();
       },
 
       renderSteps() {
@@ -1448,352 +1433,135 @@
         });
 
         container.innerHTML = html;
-
-        // Recompute SLA after rendering steps
-        this.recomputeResolveFromSteps();
       },
 
-      renderSLAPolicy(existingSLA) {
-        existingSLA = existingSLA || {};
-        const container = document.getElementById('sla-summary-table');
+      // Render simple SLA configuration table
+      renderSLATable() {
+        const container = document.getElementById('sla-config-table');
 
         // Guard: container must exist (only exists on Build screen)
         if (!container) {
-          console.warn('sla-summary-table container not found (not on Build screen)');
           return;
         }
 
         // Guard: ensure catalogs are loaded
-        if (!App.state.catalogs || !App.state.catalogs.priorities || !App.state.catalogs.roles) {
-          container.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+        if (!App.state.catalogs || !App.state.catalogs.priorities) {
+          container.innerHTML = '<p class="text-muted">Loading...</p>';
           return;
         }
 
+        // Load saved SLA config from localStorage if available
+        this.loadSLAConfig();
+
         const priorities = App.state.catalogs.priorities;
-        const roles = App.state.catalogs.roles;
 
-        // Get current business hours profile for conversions
-        const bhId = document.getElementById('wf-business-hours')?.value;
-        const bhProfile = App.state.catalogs.businessHours.find(bh => bh.id === bhId) || App.state.catalogs.businessHours[0];
-        const minsPerDay = App.minutesPerBusinessDay(bhProfile);
-
-        let html = '<table style="width:100%;"><thead><tr>';
-        html += '<th>Priority</th>';
-        html += '<th>Acknowledge</th>';
-        html += '<th>Start</th>';
-        html += '<th>Resolve</th>';
-        html += '<th>Escalate After</th>';
-        html += '<th>Escalate To</th>';
+        let html = '<table style="width:100%; border-collapse: collapse;">';
+        html += '<thead><tr style="background: #f5f5f5;">';
+        html += '<th style="padding:0.75rem; text-align:left; border-bottom:2px solid #ddd;">Priority</th>';
+        html += '<th style="padding:0.75rem; text-align:left; border-bottom:2px solid #ddd;">First Response</th>';
+        html += '<th style="padding:0.75rem; text-align:left; border-bottom:2px solid #ddd;">Follow-up</th>';
+        html += '<th style="padding:0.75rem; text-align:left; border-bottom:2px solid #ddd;">Target Resolution</th>';
         html += '</tr></thead><tbody>';
 
         priorities.forEach(p => {
-          const sla = existingSLA[p.id] || {
-            ackMins: p.ackMins,
-            startMins: p.startMins,
-            resolveMins: p.resolveMins,
-            escalate: {}
-          };
+          const config = this.slaConfig[p.id] || { firstResponseHours: 0, followUpHours: 0, resolutionHours: 0 };
 
-          // Get units for this priority (default to businessDays for all fields)
-          const units = this.slaUnits[p.id] || { ack: 'businessDays', start: 'businessDays', resolve: 'businessDays', escalateAfter: 'businessDays' };
+          html += '<tr style="border-bottom:1px solid #eee;">';
+          html += '<td style="padding:0.75rem;"><strong>' + p.name + '</strong></td>';
 
-          html += '<tr>';
-          html += '<td><strong>' + p.name + '</strong></td>';
+          // First Response
+          html += '<td style="padding:0.75rem;">';
+          html += '<input type="number" min="0" step="1" value="' + config.firstResponseHours + '" ';
+          html += 'id="sla-first-response-' + p.id + '" ';
+          html += 'onchange="BuildScreen.updateSLAConfig(\'' + p.id + '\', \'firstResponseHours\', parseInt(this.value))" ';
+          html += 'style="width:80px; padding:0.25rem 0.5rem; margin-right:0.5rem;"> ';
+          html += '<span class="text-muted" style="font-size:0.9rem;">Business Hours</span>';
+          html += '</td>';
 
-          // Helper function to render a field
-          const renderField = (field, fieldMins, maxBD, maxHours) => {
-            const unit = units[field];
-            let value, min, max, step, helperText;
+          // Follow-up
+          html += '<td style="padding:0.75rem;">';
+          html += '<span class="text-muted" style="font-size:0.9rem; margin-right:0.5rem;">Every</span> ';
+          html += '<input type="number" min="0" step="1" value="' + config.followUpHours + '" ';
+          html += 'id="sla-follow-up-' + p.id + '" ';
+          html += 'onchange="BuildScreen.updateSLAConfig(\'' + p.id + '\', \'followUpHours\', parseInt(this.value))" ';
+          html += 'style="width:80px; padding:0.25rem 0.5rem; margin-right:0.5rem;"> ';
+          html += '<span class="text-muted" style="font-size:0.9rem;">Hours</span>';
+          html += '</td>';
 
-            if (unit === 'hours') {
-              value = (fieldMins / 60).toFixed(1);
-              min = 0;
-              max = maxHours;
-              step = 0.5;
-              helperText = '≈ ' + fieldMins + ' mins';
-            } else { // businessDays
-              value = (fieldMins / minsPerDay).toFixed(1);
-              min = 0;
-              max = maxBD;
-              step = 0.5;
-              helperText = '≈ ' + fieldMins + ' mins<br>1 BD = ' + minsPerDay + ' mins';
-            }
+          // Target Resolution
+          html += '<td style="padding:0.75rem;">';
+          html += '<input type="number" min="0" step="1" value="' + config.resolutionHours + '" ';
+          html += 'id="sla-resolution-' + p.id + '" ';
+          html += 'onchange="BuildScreen.updateSLAConfig(\'' + p.id + '\', \'resolutionHours\', parseInt(this.value))" ';
+          html += 'style="width:80px; padding:0.25rem 0.5rem; margin-right:0.5rem;"> ';
+          html += '<span class="text-muted" style="font-size:0.9rem;">Business Hours</span>';
+          html += '</td>';
 
-            let fieldHtml = '<td style="min-width:220px;">';
-            // Unit selector (show if advanced mode enabled)
-            fieldHtml += '<div style="display:flex; gap:0.25rem; align-items:center; margin-bottom:0.25rem;">';
-            fieldHtml += '<input type="number" step="' + step + '" value="' + value + '" id="sla-' + field + '-' + p.id + '" data-priority="' + p.id + '" data-field="' + field + '" onchange="BuildScreen.updateSLAHelper(\'' + p.id + '\', \'' + field + '\')" style="width:80px;">';
-            fieldHtml += '<select id="sla-' + field + '-unit-' + p.id + '" onchange="BuildScreen.changeSLAUnit(\'' + p.id + '\', \'' + field + '\', this.value)" style="width:90px; font-size:0.85rem;">';
-            fieldHtml += '<option value="businessDays"' + (unit === 'businessDays' ? ' selected' : '') + '>BD</option>';
-            fieldHtml += '<option value="hours"' + (unit === 'hours' ? ' selected' : '') + '>hours</option>';
-            fieldHtml += '</select>';
-            fieldHtml += '</div>';
-            // Slider
-            fieldHtml += '<input type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + value + '" id="sla-' + field + '-slider-' + p.id + '" oninput="BuildScreen.syncInputAndHelper(\'' + p.id + '\', \'' + field + '\')" style="width:100%; margin-bottom:0.25rem;">';
-            fieldHtml += '<div class="text-muted" id="sla-' + field + '-helper-' + p.id + '" style="font-size:0.75rem;">';
-            fieldHtml += helperText;
-            fieldHtml += '</div>';
-            fieldHtml += '</td>';
-            return fieldHtml;
-          };
-
-          // Acknowledge column: 0-5 BD or 0-40 hours
-          html += renderField('ack', sla.ackMins, 5, 40);
-
-          // Start Work column: 0-10 BD or 0-80 hours
-          html += renderField('start', sla.startMins, 10, 80);
-
-          // Resolve column: 0-20 BD or 0-240 hours
-          html += renderField('resolve', sla.resolveMins, 20, 240);
-
-          // Escalate After column: 0-20 BD or 0-240 hours (same as Resolve)
-          const escalateMins = (sla.escalate && sla.escalate.afterMins) ? sla.escalate.afterMins : 0;
-          html += renderField('escalateAfter', escalateMins, 20, 240);
-
-          // Escalate To Role
-          html += '<td style="min-width:150px;"><select data-priority="' + p.id + '" data-field="escalateToRoleId" style="width:100%;"><option value="">None</option>';
-          roles.forEach(r => {
-            const selected = (sla.escalate && sla.escalate.toRoleId === r.id) ? 'selected' : '';
-            html += '<option value="' + r.id + '" ' + selected + '>' + r.name + '</option>';
-          });
-          html += '</select></td>';
           html += '</tr>';
         });
 
         html += '</tbody></table>';
         container.innerHTML = html;
-
-        // Validate escalations after rendering
-        setTimeout(() => this.validateEscalations(), 100);
       },
 
-      changeSLAUnit(priorityId, field, newUnit) {
-        if (!this.slaUnits[priorityId]) {
-          this.slaUnits[priorityId] = { ack: 'mins', start: 'mins', resolve: 'mins' };
+      // Update SLA config value and save to localStorage
+      updateSLAConfig(priorityId, field, value) {
+        if (!this.slaConfig[priorityId]) {
+          this.slaConfig[priorityId] = { firstResponseHours: 0, followUpHours: 0, resolutionHours: 0 };
         }
-        this.slaUnits[priorityId][field] = newUnit;
-        // Re-render to update display
-        this.renderSLAPolicy(this.collectSLAData());
+        this.slaConfig[priorityId][field] = value || 0;
+        this.saveSLAConfig();
       },
 
-      syncSlider(priorityId, field) {
-        // When input changes, update slider
-        const input = document.getElementById('sla-' + field + '-' + priorityId);
-        const slider = document.getElementById('sla-' + field + '-slider-' + priorityId);
-        if (input && slider) {
-          slider.value = input.value || 0;
+      // Save SLA config to localStorage
+      saveSLAConfig() {
+        try {
+          localStorage.setItem('sla_config', JSON.stringify(this.slaConfig));
+        } catch (e) {
+          console.warn('Failed to save SLA config:', e);
         }
       },
 
-      syncInput(priorityId, field) {
-        // When slider changes, update input
-        const input = document.getElementById('sla-' + field + '-' + priorityId);
-        const slider = document.getElementById('sla-' + field + '-slider-' + priorityId);
-        if (input && slider) {
-          input.value = slider.value;
-        }
-      },
-
-      syncInputAndHelper(priorityId, field) {
-        // When slider changes, update input and helper text
-        const input = document.getElementById('sla-' + field + '-' + priorityId);
-        const slider = document.getElementById('sla-' + field + '-slider-' + priorityId);
-        if (input && slider) {
-          input.value = slider.value;
-        }
-        this.updateSLAHelper(priorityId, field);
-      },
-
-      updateSLAHelper(priorityId, field) {
-        // Update the helper text to show calculated minutes
-        const input = document.getElementById('sla-' + field + '-' + priorityId);
-        const helper = document.getElementById('sla-' + field + '-helper-' + priorityId);
-        const slider = document.getElementById('sla-' + field + '-slider-' + priorityId);
-
-        if (!input || !helper) return;
-
-        // Sync slider if needed
-        if (slider) {
-          slider.value = input.value || 0;
-        }
-
-        // Get current business hours profile
-        const bhId = document.getElementById('wf-business-hours')?.value;
-        const bhProfile = App.state.catalogs.businessHours.find(bh => bh.id === bhId) || App.state.catalogs.businessHours[0];
-        const minsPerDay = App.minutesPerBusinessDay(bhProfile);
-
-        // Get current unit for this field
-        const units = this.slaUnits[priorityId] || { ack: 'businessDays', start: 'businessDays', resolve: 'businessDays' };
-        const unit = units[field];
-
-        // Convert to minutes
-        const value = parseFloat(input.value) || 0;
-        const minutes = App.convertUserSlaToMinutes(value, unit, bhProfile);
-
-        // Update helper text
-        helper.innerHTML = '≈ ' + minutes + ' mins<br>1 BD = ' + minsPerDay + ' mins';
-
-        // Validate escalations after SLA change
-        this.validateEscalations();
-      },
-
-      validateEscalations() {
-        // Check that escalateAfter < resolve for each priority
-        const violations = [];
-        const priorities = App.state.catalogs?.priorities || [];
-
-        const bhId = document.getElementById('wf-business-hours')?.value;
-        const bhProfile = App.state.catalogs?.businessHours?.find(bh => bh.id === bhId) || App.state.catalogs?.businessHours?.[0];
-
-        priorities.forEach(p => {
-          const units = this.slaUnits[p.id] || { ack: 'businessDays', start: 'businessDays', resolve: 'businessDays', escalateAfter: 'businessDays' };
-
-          const resolveInput = document.getElementById('sla-resolve-' + p.id);
-          const escalateAfterInput = document.getElementById('sla-escalateAfter-' + p.id);
-
-          if (resolveInput && escalateAfterInput) {
-            const resolveValue = parseFloat(resolveInput.value) || 0;
-            const escalateAfterValue = parseFloat(escalateAfterInput.value) || 0;
-
-            const resolveMins = App.convertUserSlaToMinutes(resolveValue, units.resolve, bhProfile);
-            const escalateAfterMins = App.convertUserSlaToMinutes(escalateAfterValue, units.escalateAfter, bhProfile);
-
-            // Only validate if escalateAfter is set (> 0)
-            if (escalateAfterMins > 0 && escalateAfterMins >= resolveMins) {
-              violations.push({
-                priority: p.name,
-                escalateAfter: escalateAfterMins,
-                resolve: resolveMins
-              });
-            }
+      // Load SLA config from localStorage
+      loadSLAConfig() {
+        try {
+          const saved = localStorage.getItem('sla_config');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            // Merge with defaults to ensure all priorities have values
+            Object.keys(this.slaConfig).forEach(pid => {
+              if (parsed[pid]) {
+                this.slaConfig[pid] = parsed[pid];
+              }
+            });
           }
-        });
-
-        this.showEscalationWarning(violations);
-        return violations.length === 0;
-      },
-
-      showEscalationWarning(violations) {
-        const strip = document.getElementById('validation-strip');
-        const saveBtn = document.querySelector('.btn-success');
-
-        if (!strip) return;
-
-        if (violations.length > 0) {
-          let html = '<div class="alert-warn">';
-          html += '<strong>⚠ Escalation Timing Error:</strong> Escalate After must be strictly less than Resolve time.<br>';
-          violations.forEach(v => {
-            html += '• <strong>' + v.priority + '</strong>: Escalate After (' + v.escalateAfter + ' mins) ≥ Resolve (' + v.resolve + ' mins)<br>';
-          });
-          html += '</div>';
-          strip.innerHTML = html;
-
-          // Disable Save button
-          if (saveBtn) {
-            saveBtn.disabled = true;
-            saveBtn.style.opacity = '0.5';
-            saveBtn.style.cursor = 'not-allowed';
-          }
-        } else {
-          strip.innerHTML = '';
-
-          // Enable Save button
-          if (saveBtn) {
-            saveBtn.disabled = false;
-            saveBtn.style.opacity = '1';
-            saveBtn.style.cursor = 'pointer';
-          }
+        } catch (e) {
+          console.warn('Failed to load SLA config:', e);
         }
       },
 
+      // Collect SLA data from the simplified configuration table
+      // Converts business hours to minutes for internal storage
       collectSLAData() {
         const slaByPriority = {};
         const priorities = App.state.catalogs.priorities;
 
-        const bhId = document.getElementById('wf-business-hours')?.value;
-        const bhProfile = App.state.catalogs.businessHours.find(bh => bh.id === bhId) || App.state.catalogs.businessHours[0];
-
         priorities.forEach(p => {
-          const units = this.slaUnits[p.id] || { ack: 'businessDays', start: 'businessDays', resolve: 'businessDays', escalateAfter: 'businessDays' };
+          const config = this.slaConfig[p.id] || { firstResponseHours: 0, followUpHours: 0, resolutionHours: 0 };
 
-          // Get user input values
-          const ackInput = document.getElementById('sla-ack-' + p.id);
-          const startInput = document.getElementById('sla-start-' + p.id);
-          const resolveInput = document.getElementById('sla-resolve-' + p.id);
-          const escalateAfterInput = document.getElementById('sla-escalateAfter-' + p.id);
-
-          const ackValue = ackInput ? parseFloat(ackInput.value) : 0;
-          const startValue = startInput ? parseFloat(startInput.value) : 0;
-          const resolveValue = resolveInput ? parseFloat(resolveInput.value) : 0;
-          const escalateAfterValue = escalateAfterInput ? parseFloat(escalateAfterInput.value) : 0;
-
-          // Convert to minutes
-          const ackMins = App.convertUserSlaToMinutes(ackValue, units.ack, bhProfile);
-          const startMins = App.convertUserSlaToMinutes(startValue, units.start, bhProfile);
-          const resolveMins = App.convertUserSlaToMinutes(resolveValue, units.resolve, bhProfile);
-          const escalateAfterMins = App.convertUserSlaToMinutes(escalateAfterValue, units.escalateAfter, bhProfile);
-
-          const escalateToRoleSelect = document.querySelector('select[data-priority="' + p.id + '"][data-field="escalateToRoleId"]');
-
+          // Convert business hours to minutes
+          // Note: Using 60 minutes per hour for simplicity (not BD conversion)
+          // The engine will handle BD conversion internally if needed
           slaByPriority[p.id] = {
-            ackMins: ackMins,
-            startMins: startMins,
-            resolveMins: resolveMins,
+            ackMins: config.firstResponseHours * 60,      // First Response → Acknowledge
+            startMins: config.firstResponseHours * 60,    // Same as first response for now
+            resolveMins: config.resolutionHours * 60,     // Target Resolution → Resolve
+            followUpHours: config.followUpHours,          // Store for reference (informational)
             escalate: {}
           };
-
-          // Only save escalate data if there's a value
-          if (escalateAfterMins > 0) {
-            slaByPriority[p.id].escalate.afterMins = escalateAfterMins;
-          }
-
-          if (escalateToRoleSelect && escalateToRoleSelect.value) {
-            slaByPriority[p.id].escalate.toRoleId = escalateToRoleSelect.value;
-          }
         });
 
         return slaByPriority;
-      },
-
-      applySLAPreset(presetName) {
-        document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
-        const activeBtn = document.querySelector('.preset-btn[data-preset="' + presetName + '"]');
-        if (activeBtn) activeBtn.classList.add('active');
-
-        const bhId = document.getElementById('wf-business-hours')?.value;
-        const bhProfile = App.state.catalogs.businessHours?.find(bh => bh.id === bhId) || App.state.catalogs.businessHours?.[0];
-        const minsPerDay = App.minsPerBD(bhProfile);
-
-        // Initialize slaComposer objects if not present
-        if (!this.slaComposer.factors) this.slaComposer.factors = {};
-        if (!this.slaComposer.buffers) this.slaComposer.buffers = {};
-        if (!this.slaComposer.ackValues) this.slaComposer.ackValues = {};
-        if (!this.slaComposer.startValues) this.slaComposer.startValues = {};
-
-        // Set factors and buffers based on preset
-        const priorities = App.state.catalogs?.priorities || [];
-
-        priorities.forEach(p => {
-          if (presetName === 'low') {
-            this.slaComposer.factors[p.id] = 1.2;
-            this.slaComposer.buffers[p.id] = Math.round(0.2 * minsPerDay); // 0.2 BD buffer
-            this.slaComposer.ackValues[p.id] = Math.round(0.1 * minsPerDay); // 0.1 BD
-            this.slaComposer.startValues[p.id] = Math.round(0.2 * minsPerDay); // 0.2 BD
-          } else if (presetName === 'medium') {
-            this.slaComposer.factors[p.id] = 1.0;
-            this.slaComposer.buffers[p.id] = Math.round(0.1 * minsPerDay); // 0.1 BD buffer
-            this.slaComposer.ackValues[p.id] = Math.round(0.1 * minsPerDay); // 0.1 BD
-            this.slaComposer.startValues[p.id] = Math.round(0.2 * minsPerDay); // 0.2 BD
-          } else if (presetName === 'high') {
-            this.slaComposer.factors[p.id] = 0.9;
-            this.slaComposer.buffers[p.id] = 0; // No buffer
-            this.slaComposer.ackValues[p.id] = Math.round(0.05 * minsPerDay); // 0.05 BD
-            this.slaComposer.startValues[p.id] = Math.round(0.1 * minsPerDay); // 0.1 BD
-          }
-        });
-
-        // Recompute resolve from steps
-        this.recomputeResolveFromSteps();
       },
 
       addStep() {
@@ -1826,164 +1594,8 @@
       },
 
       onBusinessHoursChange() {
-        // Re-render steps and SLA to reflect new BD conversion
+        // Re-render steps to reflect new BD conversion
         this.renderSteps();
-        this.recomputeResolveFromSteps();
-      },
-
-      recomputeResolveFromSteps() {
-        // Auto-compute Resolve SLA from steps using factors and buffers
-        const totalMins = (this.steps || []).reduce((a, s) => a + (s.expectedMins || 0), 0);
-
-        if (!App.state.catalogs?.priorities) return;
-
-        const priorities = App.state.catalogs.priorities;
-
-        priorities.forEach(p => {
-          const factor = this.slaComposer.factors[p.id] || 1.0;
-          const buffer = this.slaComposer.buffers[p.id] || 0; // in minutes
-          const resolveMins = Math.max(0, Math.round(totalMins * factor + buffer));
-
-          // Store in slaComposer for reference
-          if (!this.slaComposer.resolveValues) this.slaComposer.resolveValues = {};
-          this.slaComposer.resolveValues[p.id] = resolveMins;
-        });
-
-        // Update the SLA display
-        this.renderSLASummary();
-      },
-
-      renderSLASummary() {
-        const container = document.getElementById('sla-summary-table');
-        if (!container) return;
-
-        if (!App.state.catalogs?.priorities) {
-          container.innerHTML = '<p class="text-muted">Loading...</p>';
-          return;
-        }
-
-        const priorities = App.state.catalogs.priorities;
-        const bhId = document.getElementById('wf-business-hours')?.value;
-        const bhProfile = App.state.catalogs.businessHours?.find(bh => bh.id === bhId) || App.state.catalogs.businessHours?.[0];
-        const minsPerDay = App.minsPerBD(bhProfile);
-
-        let html = '<table style="width:100%;">';
-        html += '<thead><tr>';
-        html += '<th>Priority</th>';
-        html += '<th>Acknowledge (BD)</th>';
-        html += '<th>Start Work (BD)</th>';
-        html += '<th>Resolve (BD) <em>auto</em></th>';
-        html += '</tr></thead><tbody>';
-
-        priorities.forEach(p => {
-          const ackMins = this.slaComposer.ackValues?.[p.id] || 60;
-          const startMins = this.slaComposer.startValues?.[p.id] || 120;
-          const resolveMins = this.slaComposer.resolveValues?.[p.id] || 0;
-
-          const ackBD = (ackMins / minsPerDay).toFixed(1);
-          const startBD = (startMins / minsPerDay).toFixed(1);
-          const resolveBD = (resolveMins / minsPerDay).toFixed(1);
-
-          const ackHrs = (ackMins / 60).toFixed(1);
-          const startHrs = (startMins / 60).toFixed(1);
-          const resolveHrs = (resolveMins / 60).toFixed(1);
-
-          html += '<tr>';
-          html += '<td><strong>' + p.name + '</strong></td>';
-          html += '<td>' + ackBD + ' BD <span class="text-muted" style="font-size:0.8rem;">(≈ ' + ackHrs + ' hrs)</span></td>';
-          html += '<td>' + startBD + ' BD <span class="text-muted" style="font-size:0.8rem;">(≈ ' + startHrs + ' hrs)</span></td>';
-          html += '<td>' + resolveBD + ' BD <span class="text-muted" style="font-size:0.8rem;">(≈ ' + resolveHrs + ' hrs)</span></td>';
-          html += '</tr>';
-        });
-
-        html += '</tbody></table>';
-        container.innerHTML = html;
-
-        // Render BH banner (bhId already declared at line 1677)
-        if (bhId) {
-          App.renderBHBanner('sla-summary-table', bhId);
-        }
-
-        // Render SLA composer controls (factors & buffers)
-        this.renderSLAComposerControls();
-      },
-
-      renderSLAComposerControls() {
-        const container = document.getElementById('sla-composer-controls');
-        if (!container) return;
-
-        if (!App.state.catalogs?.priorities) {
-          container.innerHTML = '<p class="text-muted">Loading...</p>';
-          return;
-        }
-
-        const priorities = App.state.catalogs.priorities;
-        const bhId = document.getElementById('wf-business-hours')?.value;
-        const bhProfile = App.state.catalogs.businessHours?.find(bh => bh.id === bhId) || App.state.catalogs.businessHours?.[0];
-        const minsPerDay = App.minsPerBD(bhProfile);
-
-        let html = '<div style="display:grid; gap:1.5rem;">';
-
-        priorities.forEach(p => {
-          const factor = this.slaComposer.factors?.[p.id] || 1.0;
-          const bufferMins = this.slaComposer.buffers?.[p.id] || 0;
-          const bufferBD = (bufferMins / minsPerDay).toFixed(1);
-
-          html += '<div style="border:1px solid #e0e0e0; padding:1rem; border-radius:6px; background:#f9f9f9;">';
-          html += '<h4 style="margin:0 0 1rem 0; color:#333;">' + p.name + '</h4>';
-
-          // Factor slider
-          html += '<div style="margin-bottom:1rem;">';
-          html += '<label style="display:block; font-weight:500; margin-bottom:0.5rem;">Factor (multiplier): <span id="factor-value-' + p.id + '">' + factor.toFixed(2) + '</span></label>';
-          html += '<input type="range" min="0.5" max="2.0" step="0.1" value="' + factor + '" ';
-          html += 'style="width:100%; height:8px; background: linear-gradient(to right, #e74c3c 0%, #f39c12 25%, #2ecc71 50%, #3498db 75%, #9b59b6 100%); border-radius:4px;" ';
-          html += 'oninput="BuildScreen.updateSLAFactor(\'' + p.id + '\', parseFloat(this.value))">';
-          html += '<div class="text-muted" style="font-size:0.75rem; margin-top:0.25rem;">Lower = tighter SLA, Higher = more generous</div>';
-          html += '</div>';
-
-          // Buffer slider
-          html += '<div>';
-          html += '<label style="display:block; font-weight:500; margin-bottom:0.5rem;">Buffer: <span id="buffer-value-' + p.id + '">' + bufferBD + ' BD</span> <span class="text-muted" style="font-size:0.85rem;">(≈ ' + bufferMins + ' mins)</span></label>';
-          html += '<input type="range" min="0" max="2.0" step="0.1" value="' + bufferBD + '" ';
-          html += 'style="width:100%; height:8px; background: linear-gradient(to right, #3498db 0%, #2ecc71 50%, #f39c12 100%); border-radius:4px;" ';
-          html += 'oninput="BuildScreen.updateSLABuffer(\'' + p.id + '\', parseFloat(this.value))">';
-          html += '<div class="text-muted" style="font-size:0.75rem; margin-top:0.25rem;">Extra time added after factored calculation</div>';
-          html += '</div>';
-
-          html += '</div>';
-        });
-
-        html += '</div>';
-        container.innerHTML = html;
-      },
-
-      updateSLAFactor(priorityId, factor) {
-        if (!this.slaComposer.factors) this.slaComposer.factors = {};
-        this.slaComposer.factors[priorityId] = factor;
-
-        // Update display
-        const valueEl = document.getElementById('factor-value-' + priorityId);
-        if (valueEl) valueEl.textContent = factor.toFixed(2);
-
-        // Recompute resolve
-        this.recomputeResolveFromSteps();
-      },
-
-      updateSLABuffer(priorityId, bufferBD) {
-        const bhId = document.getElementById('wf-business-hours')?.value;
-        const bhProfile = App.state.catalogs.businessHours?.find(bh => bh.id === bhId) || App.state.catalogs.businessHours?.[0];
-        const minsPerDay = App.minsPerBD(bhProfile);
-        const bufferMins = Math.round(bufferBD * minsPerDay);
-
-        if (!this.slaComposer.buffers) this.slaComposer.buffers = {};
-        this.slaComposer.buffers[priorityId] = bufferMins;
-
-        // Update display
-        const valueEl = document.getElementById('buffer-value-' + priorityId);
-        if (valueEl) valueEl.textContent = bufferBD.toFixed(1) + ' BD';
-
-        // Recompute resolve
-        this.recomputeResolveFromSteps();
       },
 
       deleteStep(idx) {
@@ -2073,7 +1685,7 @@
           this.steps = [];
           this.currentWorkflowId = null;
           this.renderSteps();
-          this.renderSLAPolicy();
+          this.renderSLATable();
           document.getElementById('validation-messages').innerHTML = '';
           document.getElementById('validation-strip').innerHTML = '';
           document.getElementById('template-select').value = '';

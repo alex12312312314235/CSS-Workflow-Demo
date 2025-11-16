@@ -46,6 +46,45 @@ const WorkflowTemplates = {
           { title: 'Spec Pack', roleId: 'spec_analyst', expectedMins: 240 }
         ],
         sla: { ack: 60, start: 240, resolve: 3600 } // 6-7 BD
+      },
+      {
+        workType: 'New Dish Development – Economy Class',
+        origin: 'client',
+        ownerRole: 'cd_chef',
+        businessHoursId: 'bh_std',
+        steps: [
+          { title: 'Brief', roleId: 'cd_chef', expectedMins: 60 },
+          { title: 'Concept Development', roleId: 'cd_chef', expectedMins: 180 },
+          { title: 'CSS Gate', roleId: 'hod_cd', expectedMins: 30 },
+          { title: 'Recipe Testing', roleId: 'cd_chef', expectedMins: 360 },
+          { title: 'Cost Analysis', roleId: 'spec_analyst', expectedMins: 120 },
+          { title: 'Spec Pack', roleId: 'spec_analyst', expectedMins: 180 }
+        ],
+        sla: {
+          p1: { firstResponseHours: 2, followUpHours: 4, resolutionHours: 72 },
+          p2: { firstResponseHours: 8, followUpHours: 16, resolutionHours: 96 },
+          p3: { firstResponseHours: 12, followUpHours: 24, resolutionHours: 120 }
+        }
+      },
+      {
+        workType: 'Seasonal Refresh – Business Class',
+        origin: 'internal',
+        ownerRole: 'cd_chef',
+        businessHoursId: 'bh_std',
+        steps: [
+          { title: 'Brief', roleId: 'sm_cd', expectedMins: 60 },
+          { title: 'Market Research', roleId: 'cd_chef', expectedMins: 120 },
+          { title: 'Concept Selection', roleId: 'cd_chef', expectedMins: 180 },
+          { title: 'CSS Gate', roleId: 'hod_cd', expectedMins: 60 },
+          { title: 'Recipe Development', roleId: 'cd_chef', expectedMins: 360 },
+          { title: 'Showcase', roleId: 'cd_chef', expectedMins: 120 },
+          { title: 'Spec Pack', roleId: 'spec_analyst', expectedMins: 240 }
+        ],
+        sla: {
+          p1: { firstResponseHours: 2, followUpHours: 4, resolutionHours: 72 },
+          p2: { firstResponseHours: 8, followUpHours: 16, resolutionHours: 96 },
+          p3: { firstResponseHours: 12, followUpHours: 24, resolutionHours: 120 }
+        }
       }
     ],
 
@@ -87,6 +126,77 @@ const WorkflowTemplates = {
           { title: 'Report', roleId: 'spec_analyst', expectedMins: 240 }
         ],
         sla: { ack: 120, start: 240, resolve: 4320 } // 8 BD
+      },
+      {
+        workType: 'Recipe Standardization – Route Alignment',
+        origin: 'internal',
+        ownerRole: 'spec_analyst',
+        businessHoursId: 'bh_std',
+        steps: [
+          { title: 'Brief', roleId: 'spec_analyst', expectedMins: 30 },
+          { title: 'Recipe Review', roleId: 'spec_analyst', expectedMins: 180 },
+          { title: 'CSS Gate', roleId: 'sm_sands', expectedMins: 30 },
+          { title: 'Standardization', roleId: 'spec_analyst', expectedMins: 240 },
+          { title: 'Spec Update', roleId: 'spec_analyst', expectedMins: 120 }
+        ],
+        sla: {
+          p1: { firstResponseHours: 2, followUpHours: 4, resolutionHours: 48 },
+          p2: { firstResponseHours: 8, followUpHours: 16, resolutionHours: 72 },
+          p3: { firstResponseHours: 12, followUpHours: 24, resolutionHours: 96 }
+        }
+      },
+      {
+        workType: 'Spec Update – Packaging Change',
+        origin: 'client',
+        ownerRole: 'spec_analyst',
+        businessHoursId: 'bh_std',
+        steps: [
+          { title: 'Brief', roleId: 'spec_analyst', expectedMins: 20 },
+          { title: 'Impact Assessment', roleId: 'spec_analyst', expectedMins: 60 },
+          { title: 'CSS Gate', roleId: 'sm_sands', expectedMins: 30 },
+          { title: 'Spec Pack Update', roleId: 'spec_analyst', expectedMins: 120 }
+        ],
+        sla: {
+          p1: { firstResponseHours: 1, followUpHours: 2, resolutionHours: 24 },
+          p2: { firstResponseHours: 4, followUpHours: 8, resolutionHours: 48 },
+          p3: { firstResponseHours: 8, followUpHours: 16, resolutionHours: 72 }
+        }
+      },
+      {
+        workType: 'Calorie Validation – Menu Item',
+        origin: 'client',
+        ownerRole: 'spec_analyst',
+        businessHoursId: 'bh_std',
+        steps: [
+          { title: 'Brief', roleId: 'spec_analyst', expectedMins: 15 },
+          { title: 'Recipe Analysis', roleId: 'spec_analyst', expectedMins: 90 },
+          { title: 'Nutritional Calculation', roleId: 'dietitian', expectedMins: 120 },
+          { title: 'CSS Gate', roleId: 'sm_sands', expectedMins: 30 },
+          { title: 'Validation Report', roleId: 'spec_analyst', expectedMins: 60 }
+        ],
+        sla: {
+          p1: { firstResponseHours: 1, followUpHours: 2, resolutionHours: 24 },
+          p2: { firstResponseHours: 4, followUpHours: 8, resolutionHours: 48 },
+          p3: { firstResponseHours: 8, followUpHours: 16, resolutionHours: 72 }
+        }
+      },
+      {
+        workType: 'Master Spec Review – Annual Update',
+        origin: 'internal',
+        ownerRole: 'spec_analyst',
+        businessHoursId: 'bh_std',
+        steps: [
+          { title: 'Brief', roleId: 'hod_sands', expectedMins: 60 },
+          { title: 'Spec Audit', roleId: 'spec_analyst', expectedMins: 360 },
+          { title: 'Cross-functional Review', roleId: 'food_tech', expectedMins: 180 },
+          { title: 'CSS Gate', roleId: 'hod_sands', expectedMins: 60 },
+          { title: 'Update & Publish', roleId: 'spec_analyst', expectedMins: 240 }
+        ],
+        sla: {
+          p1: { firstResponseHours: 4, followUpHours: 8, resolutionHours: 72 },
+          p2: { firstResponseHours: 8, followUpHours: 16, resolutionHours: 96 },
+          p3: { firstResponseHours: 12, followUpHours: 24, resolutionHours: 120 }
+        }
       }
     ],
 
@@ -103,7 +213,29 @@ const WorkflowTemplates = {
           { title: 'Lab Plan & Trial', roleId: 'food_tech', expectedMins: 360 },
           { title: 'Report', roleId: 'food_tech', expectedMins: 240 }
         ],
-        sla: { ack: 60, start: 240, resolve: 4320 } // 8 BD (incl. trials)
+        sla: {
+          p1: { firstResponseHours: 1, followUpHours: 2, resolutionHours: 48 },
+          p2: { firstResponseHours: 4, followUpHours: 8, resolutionHours: 72 },
+          p3: { firstResponseHours: 8, followUpHours: 16, resolutionHours: 96 }
+        }
+      },
+      {
+        workType: 'Shelf-life Validation (Frozen)',
+        origin: 'client',
+        ownerRole: 'food_tech',
+        businessHoursId: 'bh_std',
+        steps: [
+          { title: 'Brief', roleId: 'food_tech', expectedMins: 30 },
+          { title: 'Feasibility', roleId: 'food_tech', expectedMins: 60 },
+          { title: 'CSS Gate', roleId: 'hod_ft', expectedMins: 30 },
+          { title: 'Lab Plan & Trial', roleId: 'food_tech', expectedMins: 480 },
+          { title: 'Report', roleId: 'food_tech', expectedMins: 240 }
+        ],
+        sla: {
+          p1: { firstResponseHours: 1, followUpHours: 2, resolutionHours: 72 },
+          p2: { firstResponseHours: 4, followUpHours: 8, resolutionHours: 96 },
+          p3: { firstResponseHours: 8, followUpHours: 16, resolutionHours: 120 }
+        }
       },
       {
         workType: 'Product Safety Review – HACCP',
@@ -117,7 +249,11 @@ const WorkflowTemplates = {
           { title: 'HACCP Plan', roleId: 'food_tech', expectedMins: 360 },
           { title: 'Report', roleId: 'food_tech', expectedMins: 180 }
         ],
-        sla: { ack: 60, start: 120, resolve: 4320 } // 8 BD
+        sla: {
+          p1: { firstResponseHours: 1, followUpHours: 2, resolutionHours: 48 },
+          p2: { firstResponseHours: 4, followUpHours: 8, resolutionHours: 72 },
+          p3: { firstResponseHours: 8, followUpHours: 16, resolutionHours: 96 }
+        }
       },
       {
         workType: 'Supplier Audit – Quality Assurance',
@@ -130,7 +266,65 @@ const WorkflowTemplates = {
           { title: 'CSS Gate', roleId: 'hod_ft', expectedMins: 60 },
           { title: 'Report', roleId: 'food_tech', expectedMins: 360 }
         ],
-        sla: { ack: 120, start: 240, resolve: 5400 } // ~10 BD
+        sla: {
+          p1: { firstResponseHours: 2, followUpHours: 4, resolutionHours: 72 },
+          p2: { firstResponseHours: 8, followUpHours: 16, resolutionHours: 96 },
+          p3: { firstResponseHours: 12, followUpHours: 24, resolutionHours: 120 }
+        }
+      },
+      {
+        workType: 'Ingredient Qualification – New Supplier',
+        origin: 'client',
+        ownerRole: 'food_tech',
+        businessHoursId: 'bh_std',
+        steps: [
+          { title: 'Brief', roleId: 'food_tech', expectedMins: 30 },
+          { title: 'Spec Review', roleId: 'food_tech', expectedMins: 60 },
+          { title: 'Sample Testing', roleId: 'food_tech', expectedMins: 360 },
+          { title: 'CSS Gate', roleId: 'hod_ft', expectedMins: 30 },
+          { title: 'Qualification Report', roleId: 'food_tech', expectedMins: 180 }
+        ],
+        sla: {
+          p1: { firstResponseHours: 1, followUpHours: 2, resolutionHours: 48 },
+          p2: { firstResponseHours: 4, followUpHours: 8, resolutionHours: 72 },
+          p3: { firstResponseHours: 8, followUpHours: 16, resolutionHours: 96 }
+        }
+      },
+      {
+        workType: 'Allergen Investigation – Cross-Contact',
+        origin: 'client',
+        ownerRole: 'food_tech',
+        businessHoursId: 'bh_std',
+        steps: [
+          { title: 'Brief', roleId: 'food_tech', expectedMins: 15 },
+          { title: 'Site Investigation', roleId: 'food_tech', expectedMins: 240 },
+          { title: 'Risk Assessment', roleId: 'food_tech', expectedMins: 120 },
+          { title: 'CSS Gate', roleId: 'hod_ft', expectedMins: 30 },
+          { title: 'Report', roleId: 'food_tech', expectedMins: 120 }
+        ],
+        sla: {
+          p1: { firstResponseHours: 1, followUpHours: 2, resolutionHours: 24 },
+          p2: { firstResponseHours: 2, followUpHours: 4, resolutionHours: 48 },
+          p3: { firstResponseHours: 4, followUpHours: 8, resolutionHours: 72 }
+        }
+      },
+      {
+        workType: 'Root Cause Analysis – Quality Incident',
+        origin: 'client',
+        ownerRole: 'food_tech',
+        businessHoursId: 'bh_std',
+        steps: [
+          { title: 'Brief', roleId: 'food_tech', expectedMins: 30 },
+          { title: 'Data Collection', roleId: 'food_tech', expectedMins: 180 },
+          { title: 'Analysis & Testing', roleId: 'food_tech', expectedMins: 360 },
+          { title: 'CSS Gate', roleId: 'hod_ft', expectedMins: 60 },
+          { title: 'CAPA Report', roleId: 'food_tech', expectedMins: 240 }
+        ],
+        sla: {
+          p1: { firstResponseHours: 1, followUpHours: 2, resolutionHours: 48 },
+          p2: { firstResponseHours: 4, followUpHours: 8, resolutionHours: 72 },
+          p3: { firstResponseHours: 8, followUpHours: 16, resolutionHours: 96 }
+        }
       }
     ],
 
@@ -175,6 +369,42 @@ const WorkflowTemplates = {
           { title: 'Report', roleId: 'dietitian', expectedMins: 120 }
         ],
         sla: { ack: 60, start: 120, resolve: 2700 } // 5 BD
+      },
+      {
+        workType: 'Menu Compliance – Dietary Guidelines',
+        origin: 'internal',
+        ownerRole: 'dietitian',
+        businessHoursId: 'bh_std',
+        steps: [
+          { title: 'Brief', roleId: 'dietitian', expectedMins: 30 },
+          { title: 'Menu Audit', roleId: 'dietitian', expectedMins: 240 },
+          { title: 'Compliance Analysis', roleId: 'dietitian', expectedMins: 180 },
+          { title: 'CSS Gate', roleId: 'hod_hd', expectedMins: 30 },
+          { title: 'Report & Recommendations', roleId: 'dietitian', expectedMins: 120 }
+        ],
+        sla: {
+          p1: { firstResponseHours: 2, followUpHours: 4, resolutionHours: 48 },
+          p2: { firstResponseHours: 8, followUpHours: 16, resolutionHours: 72 },
+          p3: { firstResponseHours: 12, followUpHours: 24, resolutionHours: 96 }
+        }
+      },
+      {
+        workType: 'Special Meal Approval – Cultural/Religious',
+        origin: 'client',
+        ownerRole: 'dietitian',
+        businessHoursId: 'bh_std',
+        steps: [
+          { title: 'Brief', roleId: 'dietitian', expectedMins: 30 },
+          { title: 'Requirements Review', roleId: 'dietitian', expectedMins: 60 },
+          { title: 'CSS Gate', roleId: 'sm_hd', expectedMins: 30 },
+          { title: 'Meal Plan Design', roleId: 'dietitian', expectedMins: 180 },
+          { title: 'Approval & Documentation', roleId: 'hod_hd', expectedMins: 60 }
+        ],
+        sla: {
+          p1: { firstResponseHours: 1, followUpHours: 2, resolutionHours: 24 },
+          p2: { firstResponseHours: 4, followUpHours: 8, resolutionHours: 48 },
+          p3: { firstResponseHours: 8, followUpHours: 16, resolutionHours: 72 }
+        }
       }
     ],
 

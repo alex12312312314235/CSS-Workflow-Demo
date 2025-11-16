@@ -245,15 +245,6 @@
 
         <div class="build-layout">
           <div class="build-form">
-            <!-- Template Selector -->
-            <div class="template-selector" id="template-selector-section">
-              <label>Start from Template (optional)</label>
-              <select id="template-select" onchange="BuildScreen.loadTemplate(this.value)">
-                <option value="">-- Select a template --</option>
-              </select>
-              <p class="text-muted">Choose a pre-configured workflow template to get started quickly</p>
-            </div>
-
             <form id="workflow-form">
               <!-- Workflow Header -->
               <div class="workflow-header">
@@ -1099,7 +1090,6 @@
       },
 
       render() {
-        this.populateTemplates();
         this.populateDropdowns();
         this.updateDiagnostics();
 
@@ -1204,10 +1194,7 @@
       },
 
       onDepartmentChange() {
-        const deptId = document.getElementById('wf-department').value;
-        if (deptId) {
-          this.populateTemplates();
-        }
+        // Department changed - could add logic here if needed
       },
 
       showTemplateModal() {
@@ -1223,27 +1210,20 @@
           return;
         }
 
-        const deptName = App.state.catalogs.departments.find(d => d.id === deptId)?.name || deptId;
-
-        App.confirm({
-          title: 'Insert Template – ' + deptName,
-          message: 'Choose a template to insert steps and SLA targets:\n\n' +
-                   templates.map((t, i) => (i + 1) + '. ' + t.workType).join('\n'),
-          confirmText: 'Cancel',
-          cancelText: 'Back',
-          onConfirm: () => {
-            // Show custom template picker
-            this.showTemplatePicker(templates);
-          }
-        });
+        // Directly show the template picker
+        this.showTemplatePicker(templates);
       },
 
       showTemplatePicker(templates) {
+        const deptId = document.getElementById('wf-department').value;
+        const deptName = App.state.catalogs.departments.find(d => d.id === deptId)?.name || 'Department';
+
         const wrap = document.createElement('div');
         wrap.className = 'modal-overlay';
 
         let html = '<div class="modal-card" style="max-width:600px;">';
-        html += '<h3>Choose Template</h3>';
+        html += '<h3>Insert Template – ' + deptName + '</h3>';
+        html += '<p class="text-muted" style="margin-top:-0.5rem; margin-bottom:1rem;">Choose a template to insert steps and SLA targets:</p>';
         html += '<div style="max-height:400px; overflow-y:auto;">';
 
         templates.forEach((tmpl, idx) => {
@@ -1257,7 +1237,7 @@
         });
 
         html += '</div>';
-        html += '<div class="actions" style="margin-top:1rem;"><button class="btn-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Close</button></div>';
+        html += '<div class="actions" style="margin-top:1rem;"><button class="btn-secondary" onclick="this.closest(\'.modal-overlay\').remove()">Close</button></div>';
         html += '</div>';
 
         wrap.innerHTML = html;
@@ -1688,7 +1668,6 @@
           this.renderSLATable();
           document.getElementById('validation-messages').innerHTML = '';
           document.getElementById('validation-strip').innerHTML = '';
-          document.getElementById('template-select').value = '';
         }
       },
 
@@ -1734,15 +1713,24 @@
       },
 
       captureWorkflow() {
-        // Build SLA from composer (Ack/Start from values, Resolve auto-computed)
+        // SLA ADAPTER: Convert new simple SLA config (business hours) to legacy format (minutes)
+        // This maintains compatibility with validators and the rest of the workflow engine
         const slaByPriority = {};
         const priorities = App.state.catalogs?.priorities || [];
 
         priorities.forEach(p => {
+          const config = this.slaConfig[p.id] || { firstResponseHours: 0, followUpHours: 0, resolutionHours: 0 };
+
+          // Convert business hours to minutes
+          // firstResponseHours → ackMins (acknowledge time)
+          // firstResponseHours → startMins (start work time, same as acknowledge)
+          // resolutionHours → resolveMins (target resolution time)
           slaByPriority[p.id] = {
-            ackMins: this.slaComposer.ackValues?.[p.id] || 60,
-            startMins: this.slaComposer.startValues?.[p.id] || 120,
-            resolveMins: this.slaComposer.resolveValues?.[p.id] || 0
+            ackMins: config.firstResponseHours * 60,
+            startMins: config.firstResponseHours * 60,
+            resolveMins: config.resolutionHours * 60,
+            followUpHours: config.followUpHours,  // Store for reference
+            escalate: {}
           };
         });
 
@@ -1755,10 +1743,8 @@
 
         // Build metadata
         const meta = {
-          slaUnits: this.slaUnits,
           interpretAsBusinessHours: this.interpretAsBH,
-          notes: notes,
-          slaComposer: this.slaComposer
+          notes: notes
         };
 
         // Generate ID if needed
